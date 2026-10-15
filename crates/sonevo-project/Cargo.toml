@@ -1,0 +1,18 @@
+[package]
+name = "sonevo-project"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "A song: its model, and the open folder it is saved as"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+getrandom.workspace = true
+blake3.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

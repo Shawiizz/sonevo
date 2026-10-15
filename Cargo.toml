@@ -12,7 +12,18 @@ license = "GPL-3.0-or-later"
 [workspace.dependencies]
 sonevo-clap = { path = "crates/sonevo-clap" }
 sonevo-plugin-ipc = { path = "crates/sonevo-plugin-ipc" }
+sonevo-project = { path = "crates/sonevo-project" }
+sonevo-dsp = { path = "crates/sonevo-dsp" }
+sonevo-engine = { path = "crates/sonevo-engine" }
+sonevo-audio = { path = "crates/sonevo-audio" }
 
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+getrandom = "0.4"
+blake3 = "1"
+rtrb = "0.4"
+tempfile = "3"
 clap-sys = "0.5"
 libloading = "0.9"
 cpal = "0.18"
