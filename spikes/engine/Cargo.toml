@@ -1,0 +1,13 @@
+[package]
+name = "engine-spike"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "Sonevo's engine tried: a pattern played into a plugin of its own process, measured"
+
+[dependencies]
+sonevo-clap.workspace = true
+sonevo-plugin-ipc.workspace = true
+cpal = { workspace = true, features = ["realtime", "asio"] }

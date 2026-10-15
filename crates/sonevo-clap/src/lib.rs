@@ -38,7 +38,9 @@ fn fail(what: impl Into<String>) -> ClapError {
     ClapError(what.into())
 }
 
-/// A note starting or ending at a frame of the block.
+/// A note starting or ending at a frame of the block; laid out as C does, it can be shared
+/// with another process.
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Note {
     /// The frame of the block it falls on.
@@ -281,6 +283,20 @@ impl Instance {
         let status =
             unsafe { (*self.plugin).process.map_or(CLAP_PROCESS_ERROR, |go| go(self.plugin, &process)) };
         status != CLAP_PROCESS_ERROR
+    }
+}
+
+impl Instance {
+    /// Ends the processing, on the audio thread, before the instance goes back to the main
+    /// one to be dropped.
+    pub fn stop(&mut self) {
+        if self.state == State::Processing {
+            // SAFETY: on the audio thread, processing
+            if let Some(stop) = unsafe { (*self.plugin).stop_processing } {
+                unsafe { stop(self.plugin) };
+            }
+            self.state = State::Active;
+        }
     }
 }
 

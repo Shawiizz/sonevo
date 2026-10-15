@@ -18,6 +18,21 @@ Sonevo is at its very start. What it aims for:
 
 Windows first (ASIO and WASAPI), macOS and Linux after.
 
+## Trying the engine
+
+The engine's first spike plays a pattern into a small synth of its own, the synth in a
+process of its own, and measures what it costs ([results](docs/spikes/engine.md)):
+
+```
+cargo build --release -p engine-spike -p sonevo-plugin-host -p sonevo-test-synth
+target/release/engine-spike --seconds 10
+target/release/engine-spike --kill-every 2      # the plugin's process killed every two seconds
+target/release/engine-spike --asio <driver> --buffer 128
+target/release/engine-spike --here              # the plugin in the engine's process, to compare
+```
+
+ASIO needs libclang to build: `pip install --target .tools/libclang libclang==18.1.1`.
+
 ## Licence
 
 GPL-3.0-or-later.

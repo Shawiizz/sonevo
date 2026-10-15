@@ -1,0 +1,3 @@
+[env]
+# libclang for the ASIO bindings (bindgen): copied from Prisme's, or installed by pip install --target .tools/libclang libclang==18.1.1
+LIBCLANG_PATH = { value = ".tools/libclang/clang/native", relative = true }

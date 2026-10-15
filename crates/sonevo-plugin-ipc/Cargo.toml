@@ -1,0 +1,13 @@
+[package]
+name = "sonevo-plugin-ipc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+sonevo-clap.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
