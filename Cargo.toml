@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "plugins/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+license = "GPL-3.0-or-later"
+
+[workspace.dependencies]
+sonevo-clap = { path = "crates/sonevo-clap" }
+sonevo-plugin-ipc = { path = "crates/sonevo-plugin-ipc" }
+
+clap-sys = "0.5"
+libloading = "0.9"
+cpal = "0.18"
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_Memory",
+  "Win32_System_Threading",
+] }
+
+[profile.release]
+debug = 1
