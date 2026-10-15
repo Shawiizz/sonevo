@@ -906,6 +906,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sonevo-dsp"
+version = "0.1.0"
+dependencies = [
+ "sonevo-project",
+]
+
+[[package]]
 name = "sonevo-plugin-host"
 version = "0.1.0"
 dependencies = [

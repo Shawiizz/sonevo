@@ -1,0 +1,13 @@
+[package]
+name = "sonevo-dsp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "Sonevo's own instruments and effects"
+
+[dependencies]
+
+[dev-dependencies]
+sonevo-project.workspace = true

@@ -1,0 +1,156 @@
+//! Sonevo's own instruments and effects: they play with nothing installed, and as fast as
+//! the engine itself, being part of it.
+//!
+//! Every one is a [`Processor`]: settings described by [`Param`]s, set by index, and blocks
+//! played without allocating. An instrument writes its sound; an effect changes the sound
+//! in place.
+
+mod drums;
+pub mod effects;
+mod param;
+mod sampler;
+mod synth;
+mod util;
+
+pub use param::{Param, Scale};
+pub use sampler::Sample;
+
+use std::sync::Arc;
+
+/// A note starting or ending on a frame of the block.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Event {
+    pub at: u32,
+    pub key: u8,
+    /// From 0 to 1.
+    pub velocity: f32,
+    pub on: bool,
+}
+
+/// What a block is played in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Context {
+    pub sample_rate: f32,
+    /// Beats a minute.
+    pub tempo: f64,
+}
+
+pub trait Processor: Send {
+    /// Sets the setting `index` of [`Builtin::params`], in its own units.
+    fn set(&mut self, index: usize, value: f64);
+
+    /// Plays a block: `events` in time order, `left` and `right` as long as each other.
+    fn process(&mut self, context: &Context, events: &[Event], left: &mut [f32], right: &mut [f32]);
+
+    /// Silence: every voice ended, every tail cut.
+    fn reset(&mut self);
+
+    /// Gives the sampler its sound: the one it had back, to be dropped off the audio thread.
+    fn set_sample(&mut self, sample: Option<Arc<Sample>>) -> Option<Arc<Sample>> {
+        sample
+    }
+}
+
+/// A device built into Sonevo.
+pub struct Builtin {
+    /// The name songs know it by (`sonevo.synth`).
+    pub name: &'static str,
+    /// Its name as shown.
+    pub label: &'static str,
+    pub instrument: bool,
+    pub params: &'static [Param],
+    make: fn(sample_rate: f32) -> Box<dyn Processor>,
+}
+
+impl Builtin {
+    /// A new one, at its default settings.
+    pub fn make(&self, sample_rate: f32) -> Box<dyn Processor> {
+        let mut made = (self.make)(sample_rate);
+        for (i, param) in self.params.iter().enumerate() {
+            made.set(i, param.default);
+        }
+        made
+    }
+
+    pub fn param(&self, id: &str) -> Option<usize> {
+        self.params.iter().position(|p| p.id == id)
+    }
+}
+
+pub const BUILTINS: &[Builtin] = &[
+    Builtin {
+        name: "sonevo.synth",
+        label: "Synth",
+        instrument: true,
+        params: synth::PARAMS,
+        make: |rate| Box::new(synth::Synth::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.drums",
+        label: "Drums",
+        instrument: true,
+        params: drums::PARAMS,
+        make: |rate| Box::new(drums::Drums::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.sampler",
+        label: "Sampler",
+        instrument: true,
+        params: sampler::PARAMS,
+        make: |rate| Box::new(sampler::Sampler::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.eq",
+        label: "EQ",
+        instrument: false,
+        params: effects::eq::PARAMS,
+        make: |rate| Box::new(effects::eq::Eq::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.compressor",
+        label: "Compressor",
+        instrument: false,
+        params: effects::compressor::PARAMS,
+        make: |rate| Box::new(effects::compressor::Compressor::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.delay",
+        label: "Delay",
+        instrument: false,
+        params: effects::delay::PARAMS,
+        make: |rate| Box::new(effects::delay::Delay::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.reverb",
+        label: "Reverb",
+        instrument: false,
+        params: effects::reverb::PARAMS,
+        make: |rate| Box::new(effects::reverb::Reverb::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.distortion",
+        label: "Distortion",
+        instrument: false,
+        params: effects::distortion::PARAMS,
+        make: |rate| Box::new(effects::distortion::Distortion::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.filter",
+        label: "Filter",
+        instrument: false,
+        params: effects::filter::PARAMS,
+        make: |rate| Box::new(effects::filter::Filter::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.limiter",
+        label: "Limiter",
+        instrument: false,
+        params: effects::limiter::PARAMS,
+        make: |rate| Box::new(effects::limiter::Limiter::new(rate)),
+    },
+];
+
+/// The built-in device songs know as `name`.
+pub fn builtin(name: &str) -> Option<&'static Builtin> {
+    BUILTINS.iter().find(|b| b.name == name)
+}

@@ -17,6 +17,9 @@ pub mod builtin {
     pub const DISTORTION: &str = "sonevo.distortion";
     pub const FILTER: &str = "sonevo.filter";
     pub const LIMITER: &str = "sonevo.limiter";
+
+    pub const ALL: [&str; 10] =
+        [SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER];
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
