@@ -56,6 +56,14 @@ type Drag =
       <span class="swatch" [style.background]="studio.channel()?.color"></span>
       <span>{{ studio.channel()?.name }}</span>
       <span class="in">{{ t('in') }} {{ studio.pattern()?.name }}</span>
+      <button
+        class="s-bar-btn write"
+        [class.on]="studio.writing()"
+        (click)="write()"
+        [title]="t('Write the keys played into the pattern, as it goes round')"
+      >
+        <s-icon name="record" [filled]="true" [size]="10" /> {{ t('Write') }}
+      </button>
       <span class="s-grow"></span>
       <select
         class="scale"
@@ -125,6 +133,10 @@ type Drag =
     .in {
       color: var(--s-text-3);
       font-weight: 400;
+    }
+    .write.on {
+      color: var(--s-record);
+      background: color-mix(in srgb, var(--s-record) 14%, transparent);
     }
     .scale {
       height: 26px;
@@ -703,6 +715,18 @@ export class PianoRoll implements OnDestroy {
   protected zoom(by: number): void {
     this.perTick = Math.min(1, Math.max(4 / PPQ, this.perTick * by));
     this.surface?.redraw();
+  }
+
+  /** Writing on or off: on, the pattern plays alone, going round. */
+  protected write(): void {
+    const on = !this.studio.writing();
+    this.studio.writing.set(on);
+    const pattern = this.studio.pattern();
+    if (on && pattern) {
+      void this.studio.setMode(pattern.id).then(() => {
+        if (!this.studio.status().playing) this.studio.togglePlay();
+      });
+    }
   }
 
   protected lengthen(): void {

@@ -15,6 +15,7 @@ import {
   ParamInfo,
   PPQ,
   PluginInfo,
+  STEP,
   SampleInfo,
   Status,
   Target,
@@ -59,6 +60,11 @@ export class Studio {
   readonly deviceId = signal<Id | null>(null);
   readonly dock = signal<Dock>('rack');
   readonly metronome = signal(false);
+  /** Keys played are written into the pattern as it goes round. */
+  readonly writing = signal(false);
+  private statusAt = 0;
+  /** The keys down being written, and where in the pattern each went down. */
+  private readonly down = new Map<number, number>();
 
   readonly pattern = computed<Pattern | null>(() => {
     const song = this.song();
@@ -98,7 +104,11 @@ export class Studio {
     this.devices.set(devices);
     this.plugins.set(plugins);
     this.show(view);
-    await api.onStatus((status) => this.status.set(status));
+    await api.onStatus((status) => {
+      this.status.set(status);
+      this.statusAt = performance.now();
+    });
+    await api.onKey((key, on) => this.played(key, on ? 0.8 : 0, on));
   }
 
   /** The song as the engine's side sent it back. */
@@ -311,6 +321,47 @@ export class Studio {
 
   async setMode(pattern: Id | null): Promise<void> {
     this.show(await api.setMode(pattern));
+  }
+
+  /** Where playing is now, between two statuses, in the pattern going round. */
+  private patternTick(): number | null {
+    const view = this.view();
+    const pattern = this.pattern();
+    const status = this.status();
+    if (!view?.patternMode || !pattern || !status.playing) return null;
+    const since = (performance.now() - this.statusAt) / 60000;
+    const tick = status.position + since * (this.song()?.tempo ?? 120) * PPQ;
+    return tick % Math.max(1, pattern.length);
+  }
+
+  /**
+   * A key played on the computer's keyboard or a MIDI one: while writing, the pattern playing
+   * gets the note, from where the key went down to where it came up, on the grid's steps.
+   */
+  played(key: number, velocity: number, on: boolean): void {
+    if (!this.writing()) return;
+    const at = this.patternTick();
+    const pattern = this.pattern();
+    const channel = this.channel();
+    if (at === null || !pattern || !channel) return;
+    if (on) {
+      this.down.set(key, at);
+      return;
+    }
+    const start = this.down.get(key);
+    this.down.delete(key);
+    if (start === undefined) return;
+    const step = STEP;
+    const from = (Math.round(start / step) * step) % pattern.length;
+    let length = at - start;
+    if (length <= 0) length += pattern.length;
+    const note: Note = {
+      start: from,
+      length: Math.max(step, Math.round(length / step) * step),
+      key,
+      velocity: velocity || 0.8,
+    };
+    void this.setNotes(pattern.id, channel.id, [...this.notes(pattern.id, channel.id), note]);
   }
 
   togglePlay(): void {

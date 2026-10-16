@@ -255,6 +255,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Write the keys played into the pattern, as it goes round':
+    'Écrire dans le pattern les touches jouées, pendant qu’il tourne',
+  Write: 'Écrire',
   'Open its window': 'Ouvrir sa fenêtre',
   'This plugin has no window of its own.': 'Ce plugin n’a pas de fenêtre à lui.',
   'What a click draws': 'Ce qu’un clic dessine',

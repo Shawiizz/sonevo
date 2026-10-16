@@ -528,6 +528,7 @@ export class App {
     const note = Math.min(127, (this.octave() - 1) * 12 + step);
     this.held.set(event.code, { channel: channel.id, key: note });
     void api.note(channel.id, note, 0.8, true);
+    this.studio.played(note, 0.8, true);
   }
 
   @HostListener('window:keyup', ['$event'])
@@ -536,6 +537,7 @@ export class App {
     if (!held) return;
     this.held.delete(event.code);
     void api.note(held.channel, held.key, 0, false);
+    this.studio.played(held.key, 0.8, false);
   }
 
   @HostListener('window:blur')
