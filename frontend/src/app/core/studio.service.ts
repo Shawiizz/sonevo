@@ -70,6 +70,8 @@ export class Studio {
   private writes = Promise.resolve();
   /** Knobs moved as the song plays are written into automation clips. */
   readonly recordingMoves = signal(false);
+  /** The mix check open. */
+  readonly checking = signal(false);
   /** The moves of each knob held, by its target, until it is let go of. */
   private moves = new Map<string, { target: Target; name: string; points: Point[] }>();
   /** The keys down being written, and where in the pattern each went down. */

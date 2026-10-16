@@ -67,6 +67,15 @@ export const api = {
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
   myTemplates: () => invoke<string[]>('my_templates'),
+  checkMix: () =>
+    invoke<{
+      loudness: number | null;
+      peak: number;
+      rumble: number;
+      air: number;
+      correlation: number;
+      limited: boolean;
+    }>('check_mix'),
   saveTemplate: (name: string) => invoke<void>('save_template', { name }),
   deleteTemplate: (name: string) => invoke<void>('delete_template', { name }),
   stretchSample: (sample: string, factor: number) =>

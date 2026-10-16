@@ -713,6 +713,42 @@ fn tempfile_path(name: &str) -> PathBuf {
     folder.join(name)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MixCheck {
+    loudness: Option<f64>,
+    peak: f64,
+    rumble: f64,
+    air: f64,
+    correlation: f64,
+    /// Whether the master ends with a limiter.
+    limited: bool,
+}
+
+/// The song played through and looked at as a whole, for advice on its mix.
+#[tauri::command(async)]
+fn check_mix(app: State<App>) -> MixCheck {
+    let (song, folder) = {
+        let studio = app.studio();
+        (studio.song.clone(), studio.working_folder().to_owned())
+    };
+    let rendered = sonevo_engine::render(&song, Some(&folder), 48_000);
+    let found = sonevo_engine::analyse(&rendered.left, &rendered.right, rendered.sample_rate);
+    let limited = song
+        .master
+        .effects
+        .iter()
+        .any(|d| d.enabled && d.builtin_name() == Some(sonevo_project::builtin::LIMITER));
+    MixCheck {
+        loudness: found.loudness,
+        peak: if found.peak.is_finite() { found.peak } else { -120.0 },
+        rumble: found.rumble,
+        air: found.air,
+        correlation: found.correlation,
+        limited,
+    }
+}
+
 /// The MIDI file at `path`, its tracks that play notes.
 #[tauri::command]
 fn midi_file(path: PathBuf) -> Answer<Midi> {
@@ -946,6 +982,7 @@ pub fn run() {
             midi_file,
             export_midi,
             stretch_sample,
+            check_mix,
             my_templates,
             save_template,
             delete_template,

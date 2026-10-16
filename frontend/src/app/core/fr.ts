@@ -256,6 +256,29 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Mix check': 'Contrôle du mix',
+  'Check the mix': 'Contrôler le mix',
+  'Listening to the whole song…': 'Écoute de tout le morceau…',
+  'The song clips: its loudest moments go past the top. Turn the master down a little, or put a limiter on it.':
+    'Le morceau sature : ses moments les plus forts dépassent le maximum. Baisse un peu le master, ou mets-y un limiteur.',
+  'Nothing plays yet: place patterns in the playlist first.':
+    "Rien ne joue encore : place d'abord des patterns dans la playlist.",
+  'The song is quiet ({lufs} LUFS): streaming services play songs at about -14. A limiter on the master, pushed a little, brings it up.':
+    'Le morceau est faible ({lufs} LUFS) : les services de streaming jouent les morceaux vers -14. Un limiteur sur le master, un peu poussé, le remonte.',
+  'The song is very loud ({lufs} LUFS): streaming services will turn it down, and it may sound squashed. Ease the limiter off.':
+    'Le morceau est très fort ({lufs} LUFS) : les services de streaming le baisseront, et il peut sonner écrasé. Relâche le limiteur.',
+  'The master has no limiter: one at the end keeps the loudest moments from clipping.':
+    "Le master n'a pas de limiteur : un limiteur à la fin empêche les moments les plus forts de saturer.",
+  'Much of the sound is rumble under 40 Hz, felt more than heard: cut the lows of the parts that do not need them, with an EQ set to "Cut the lows".':
+    "Une bonne part du son est un grondement sous 40 Hz, plus senti qu'entendu : coupe les graves des parties qui n'en ont pas besoin, avec un EQ réglé sur « Couper les graves ».",
+  'The song sounds dull: little of it is over 8 kHz. Hats, or an EQ set "Brighter", let air in.':
+    "Le morceau sonne terne : peu de son au-dessus de 8 kHz. Des charleys, ou un EQ réglé « Plus brillant », donnent de l'air.",
+  'The song is bright, even harsh: much of it is over 8 kHz. Turn the highs of the brightest parts down.':
+    'Le morceau est brillant, voire criard : beaucoup de son au-dessus de 8 kHz. Baisse les aigus des parties les plus brillantes.',
+  'The two sides cancel each other out in part: on a phone, in mono, the song may sound thin. Narrow the widest parts (chorus, unison, auto-pan).':
+    "Les deux côtés s'annulent en partie : sur un téléphone, en mono, le morceau peut sonner maigre. Resserre les parties les plus larges (chorus, unisson, auto-pan).",
+  'Nothing to worry about: the song is balanced, as loud as songs are ({lufs} LUFS).':
+    "Rien d'inquiétant : le morceau est équilibré, aussi fort que les morceaux le sont ({lufs} LUFS).",
   'Keep this song as a template…': 'Garder ce morceau comme modèle…',
   'Name of the template': 'Nom du modèle',
   'Kept as a template': 'Gardé comme modèle',

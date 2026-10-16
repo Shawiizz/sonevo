@@ -23,6 +23,7 @@ import { ExportDialog } from './shell/export-dialog';
 import { Guide } from './shell/guide';
 import { RecoveryDialog } from './shell/recovery-dialog';
 import { SettingsDialog } from './shell/settings-dialog';
+import { MixCheck } from './shell/mix-check';
 import { Shortcuts } from './shell/shortcuts';
 import { Titlebar } from './shell/titlebar';
 import { Transport } from './shell/transport';
@@ -90,6 +91,7 @@ const PIANO: Record<string, number> = {
     RecoveryDialog,
     RenameField,
     SettingsDialog,
+    MixCheck,
     Shortcuts,
     Titlebar,
     Transport,
@@ -211,6 +213,9 @@ const PIANO: Record<string, number> = {
     }
     @if (files.exporting()) {
       <app-export-dialog (closed)="files.exporting.set(false)" />
+    }
+    @if (studio.checking()) {
+      <app-mix-check (closed)="studio.checking.set(false)" />
     }
     @if (shortcutsOpen()) {
       <app-shortcuts (closed)="shortcutsOpen.set(false)" />
@@ -449,6 +454,7 @@ export class App {
       { label: t('Cut every sound'), run: () => api.panic() },
       { label: t('Settings'), run: () => this.settingsOpen.set(true) },
       { label: t('Shortcuts'), key: 'F1', run: () => this.shortcutsOpen.set(true) },
+      { label: t('Check the mix'), run: () => this.studio.checking.set(true) },
     ];
     for (const p of this.studio.song()?.patterns ?? []) {
       list.push({

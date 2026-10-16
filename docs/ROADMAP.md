@@ -164,6 +164,9 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 - ✅ Export WAV 16, 24 ou 32 bits, ou **FLAC** 16 ou 24 bits (sans perte, encodeur maison),
   44,1 / 48 / 96 kHz : le morceau, la boucle, ou **chaque piste de mixage seule (stems)**.
+- ✅ **Contrôle du mix** (sous le spectre, et dans les commandes) : le morceau rendu et regardé en
+  entier, des conseils en mots simples (saturation, sonie, grondement sous 40 Hz, son terne ou
+  criard, côtés qui s'annulent en mono, pas de limiteur).
 - ✅ **Sonie** mesurée à l'export (LUFS intégrés selon l'UIT-R BS.1770, et la crête), avec ce
   que les services de streaming en font.
 - ✅ Un morceau de démonstration au premier lancement (16 mesures de house).

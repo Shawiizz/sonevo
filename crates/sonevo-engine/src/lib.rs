@@ -2,6 +2,7 @@
 //! is compiled on the [`Engine`]'s side into a graph the [`Renderer`] swaps in between two
 //! blocks; old graphs come back to be freed, so that the audio thread never frees nor allocates.
 
+mod analysis;
 mod compile;
 mod flac;
 mod graph;
@@ -12,6 +13,7 @@ mod samples;
 mod scope;
 mod wav;
 
+pub use analysis::{analyse, Analysis};
 pub use compile::{played_notes, Mode, Plugins};
 pub use flac::write_flac;
 pub use loudness::loudness;

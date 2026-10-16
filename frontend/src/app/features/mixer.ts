@@ -142,6 +142,9 @@ const MAX_FADER = gainToFader(1.25);
       >
         <span class="title">{{ t('Spectrum') }}</span>
         <s-spectrum />
+        <button class="s-btn check" (click)="studio.checking.set(true)">
+          {{ t('Check the mix') }}
+        </button>
       </div>
       <button class="new" (click)="studio.addInsert()" [title]="t('Add a mixer track')">
         <s-icon name="plus" [size]="18" />
