@@ -141,7 +141,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Dans la gamme seulement** : les notes dessinées ou déplacées se rangent sur la gamme choisie.
 - ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
   épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
-- ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.
+- ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas ; **écrire un rythme**
+  house, hip-hop, trap ou breakbeat sur les voies de batterie.
 - ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
 - ✅ La **réduction de gain** du compresseur et du limiteur, en direct dans leur panneau.
 - ✅ La **courbe de l'égaliseur** dans son panneau, qui suit les boutons pendant qu'on les tourne.

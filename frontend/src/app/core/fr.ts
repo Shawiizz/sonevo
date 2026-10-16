@@ -256,6 +256,12 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Write a beat for me': 'Écrire un rythme pour moi',
+  'The drums play a beat of the style chosen': 'La batterie joue un rythme du style choisi',
+  'Hip-hop': 'Hip-hop',
+  Breakbeat: 'Breakbeat',
+  'Add drums first: a kick, a snare, a clap or hats.':
+    "Ajoute d'abord de la batterie : un kick, une caisse claire, un clap ou des charleys.",
   'Count a bar in before recording, to get ready':
     "Compter une mesure avant d'enregistrer, pour se préparer",
   'In the scale only': 'Dans la gamme seulement',

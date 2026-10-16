@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { builtinName, Channel, COLORS, Insert, newId, Note, STEP } from '../core/models';
+import { builtinName, Channel, COLORS, Edit, Insert, newId, Note, STEP } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -20,6 +20,27 @@ interface Row {
 }
 
 const STEP_KEY = 60;
+
+/** Beats a style each, the steps of a bar by drum sound: 0 kick, 1 snare, 2 closed hat, 3 clap,
+ * 4 open hat. */
+const BEATS: { name: string; steps: Record<number, number[]> }[] = [
+  {
+    name: 'House',
+    steps: { 0: [0, 4, 8, 12], 3: [4, 12], 2: [2, 6, 10, 14], 4: [14] },
+  },
+  {
+    name: 'Hip-hop',
+    steps: { 0: [0, 7, 10], 1: [4, 12], 3: [4, 12], 2: [0, 2, 4, 6, 8, 10, 12, 14] },
+  },
+  {
+    name: 'Trap',
+    steps: { 0: [0, 10], 3: [8], 1: [8], 2: [0, 2, 4, 6, 8, 10, 11, 12, 13, 14, 15] },
+  },
+  {
+    name: 'Breakbeat',
+    steps: { 0: [0, 10], 1: [4, 12], 3: [4, 12], 2: [0, 2, 4, 6, 8, 10, 12, 14], 4: [7] },
+  },
+];
 const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', 'Rim', 'Cowbell'];
 
 /**
@@ -123,6 +144,13 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
     <div class="foot">
       <button class="s-bar-btn" (click)="addMenu($event)">
         <s-icon name="plus" /> {{ t('Add a channel') }}
+      </button>
+      <button
+        class="s-bar-btn"
+        (click)="beatMenu($event)"
+        [title]="t('The drums play a beat of the style chosen')"
+      >
+        <s-icon name="dice" /> {{ t('Write a beat for me') }}
       </button>
       <span class="hint">{{
         t('Click a step to place a note; double-click a name for the piano roll.')
@@ -414,6 +442,48 @@ export class ChannelRack {
   }
 
   /** A step-long note every `every` steps of the pattern, in place of its notes. */
+  protected beatMenu(event: MouseEvent): void {
+    this.menus.below(
+      event,
+      BEATS.map((beat) => ({ label: this.t(beat.name), run: () => this.writeBeat(beat.steps) })),
+    );
+  }
+
+  /** Each drum channel's notes in the pattern made those of its sound in `steps`, every bar. */
+  private writeBeat(steps: Record<number, number[]>): void {
+    const song = this.studio.song();
+    const pattern = this.studio.pattern();
+    if (!song || !pattern) return;
+    const bar = this.studio.bar();
+    const edits: Edit[] = [];
+    for (const channel of song.channels) {
+      if (builtinName(channel.instrument) !== 'sonevo.drums') continue;
+      const sound = Math.round(this.studio.value(channel.instrument, 'sound'));
+      const hits = steps[sound];
+      if (!hits) continue;
+      const notes: Note[] = [];
+      for (let at = 0; at < pattern.length; at += bar) {
+        for (const step of hits) {
+          const start = at + step * STEP;
+          if (start < pattern.length) {
+            notes.push({
+              start,
+              length: STEP,
+              key: STEP_KEY,
+              velocity: step % 4 === 0 ? 0.9 : 0.7,
+            });
+          }
+        }
+      }
+      edits.push({ type: 'setNotes', pattern: pattern.id, channel: channel.id, notes });
+    }
+    if (!edits.length) {
+      this.studio.fail(this.t('Add drums first: a kick, a snare, a clap or hats.'));
+      return;
+    }
+    void this.studio.edit({ type: 'batch', edits });
+  }
+
   private fill(channel: Channel, every: number): void {
     const pattern = this.studio.pattern();
     if (!pattern) return;
