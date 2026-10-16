@@ -149,6 +149,11 @@ pub struct AudioClip {
     pub offset: i64,
     pub sample: Arc<Sample>,
     pub gain: f32,
+    /// The mixer track it plays into.
+    pub insert: usize,
+    pub fade_in: i64,
+    pub fade_out: i64,
+    pub reverse: bool,
 }
 
 pub struct Graph {

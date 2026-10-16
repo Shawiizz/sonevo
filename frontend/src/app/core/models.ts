@@ -73,6 +73,8 @@ export interface Track {
   id: Id;
   name: string;
   mute?: boolean;
+  /** The mixer track its sound clips play into; none is the master. */
+  insert?: Id;
 }
 
 export type Target =
@@ -91,7 +93,14 @@ export interface Point {
 
 export type ClipContent =
   | { type: 'pattern'; pattern: Id }
-  | { type: 'audio'; sample: string; gain: number }
+  | {
+      type: 'audio';
+      sample: string;
+      gain: number;
+      fadeIn?: Ticks;
+      fadeOut?: Ticks;
+      reverse?: boolean;
+    }
   | { type: 'automation'; target: Target; points: Point[] };
 
 export interface Clip {

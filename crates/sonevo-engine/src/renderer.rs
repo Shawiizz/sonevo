@@ -478,26 +478,35 @@ impl Renderer {
         let per_frame = ticks_per_frame(graph.tempo, self.sample_rate);
         let seconds_per_tick = 60.0 / (graph.tempo * PPQ as f64);
         let (start, end) = (self.position, self.position + per_frame * frames as f64);
-        let (master, loop_end) = (graph.master(), graph.loop_end as f64);
+        let loop_end = graph.loop_end as f64;
         let Graph { audio, inserts, .. } = graph;
-        let insert = &mut inserts[master];
         for clip in audio.iter().filter(|c| (c.start as f64) < end && (c.end as f64) > start) {
+            let insert = &mut inserts[clip.insert];
             let sample = &clip.sample;
             let rate = f64::from(sample.sample_rate);
+            let last = sample.frames() as f64 - 2.0;
             for i in 0..frames {
                 let tick = start + i as f64 * per_frame;
                 if tick < clip.start as f64 || tick >= clip.end as f64 || tick >= loop_end {
                     continue;
                 }
-                let at = (tick - clip.start as f64 + clip.offset as f64) * seconds_per_tick * rate;
-                let index = at as usize;
-                if index + 1 >= sample.frames() {
+                let along = (tick - clip.start as f64 + clip.offset as f64) * seconds_per_tick * rate;
+                let at = if clip.reverse { last - along } else { along };
+                if at < 0.0 || at > last {
                     continue;
                 }
+                let index = at as usize;
                 let fraction = (at - index as f64) as f32;
                 let lerp = |s: &[f32]| s[index] + (s[index + 1] - s[index]) * fraction;
-                insert.left[i] += lerp(&sample.left) * clip.gain;
-                insert.right[i] += lerp(&sample.right) * clip.gain;
+                let mut gain = clip.gain;
+                if clip.fade_in > 0 {
+                    gain *= ((tick - clip.start as f64) / clip.fade_in as f64).min(1.0) as f32;
+                }
+                if clip.fade_out > 0 {
+                    gain *= ((clip.end as f64 - tick) / clip.fade_out as f64).min(1.0) as f32;
+                }
+                insert.left[i] += lerp(&sample.left) * gain;
+                insert.right[i] += lerp(&sample.right) * gain;
             }
         }
     }

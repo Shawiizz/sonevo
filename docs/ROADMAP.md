@@ -53,6 +53,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Vumètres et position envoyés à l'interface 30 fois par seconde.
 - ✅ Un gros morceau (49 000 notes, 400 clips) se recompile en 40 ms ; l'exemple
   `cargo run --release -p sonevo-engine --example big` le mesure.
+- ✅ **Clips audio** : chaque piste de la playlist joue ses sons dans la piste de mixage
+  choisie (pour leur mettre des effets) ; fondus en entrée et en sortie, lecture à l'envers.
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau
   joue, posé sur une nouvelle piste là où l'enregistrement a commencé.
 - ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
@@ -185,7 +187,7 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
     Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
 18. **Thème** : par défaut celui du système.
-20. **Arpégiateur** : il joue les notes écrites dans les patterns ; les touches jouées en
-    direct au clavier sonnent encore ensemble, sans arpège.
 19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.
+20. **Arpégiateur** : il joue les notes écrites dans les patterns ; les touches jouées en
+    direct au clavier sonnent encore ensemble, sans arpège.

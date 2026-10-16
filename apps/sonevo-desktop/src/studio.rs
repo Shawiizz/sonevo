@@ -468,14 +468,15 @@ impl Studio {
         let seconds = recording.left.len() as f64 / f64::from(rate);
         let length = (seconds * self.song.tempo * PPQ as f64 / 60.0).ceil() as Ticks;
         let taken = self.song.tracks.iter().filter(|t| t.name.starts_with("Recording")).count();
-        let track = Track { id: Id::new(), name: format!("Recording {}", taken + 1), mute: false };
+        let track =
+            Track { id: Id::new(), name: format!("Recording {}", taken + 1), mute: false, insert: None };
         let clip = Clip {
             id: Id::new(),
             track: track.id,
             start: recording.start.round() as Ticks,
             length: length.max(1),
             offset: 0,
-            content: ClipContent::Audio { sample, gain: 1.0 },
+            content: ClipContent::Audio { sample, gain: 1.0, fade_in: 0, fade_out: 0, reverse: false },
         };
         self.edit(Edit::Batch { edits: vec![Edit::PutTrack { track, index: None }, Edit::PutClip { clip }] })
     }

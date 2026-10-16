@@ -80,7 +80,7 @@ fn a_track_taken_out_takes_its_clips() {
     song.apply(Edit::RemoveTrack { id: track }).unwrap();
     assert!(song.clips.is_empty());
     song.apply(Edit::PutTrack {
-        track: Track { id: Id::new(), name: "New".into(), mute: false },
+        track: Track { id: Id::new(), name: "New".into(), mute: false, insert: None },
         index: Some(0),
     })
     .unwrap();
@@ -140,7 +140,7 @@ fn arrangements_are_kept_switched_and_taken_out() {
     assert_eq!(song.arrangements[0].name, "Longer");
     // a track taken out takes its clips out of every arrangement
     song.apply(Edit::PutTrack {
-        track: Track { id: Id::new(), name: "Spare".into(), mute: false },
+        track: Track { id: Id::new(), name: "Spare".into(), mute: false, insert: None },
         index: None,
     })
     .unwrap();
@@ -156,7 +156,7 @@ fn undo_and_redo_go_back_and_forth() {
     let mut song = Song::new("A");
     let mut history = History::default();
     let first = song.clone();
-    let track = Track { id: Id::new(), name: "Extra".into(), mute: false };
+    let track = Track { id: Id::new(), name: "Extra".into(), mute: false, insert: None };
     history.apply(&mut song, Edit::PutTrack { track, index: None }).unwrap();
     assert_eq!(song.tracks.len(), 9);
     assert!(history.undo(&mut song));
@@ -186,7 +186,7 @@ fn a_batch_is_undone_as_one_and_fails_as_one() {
     let mut song = Song::new("A");
     let mut history = History::default();
     let tracks = (0..3).map(|i| Edit::PutTrack {
-        track: Track { id: Id::new(), name: format!("{i}"), mute: false },
+        track: Track { id: Id::new(), name: format!("{i}"), mute: false, insert: None },
         index: None,
     });
     history.apply(&mut song, Edit::Batch { edits: tracks.collect() }).unwrap();

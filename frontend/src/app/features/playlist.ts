@@ -182,6 +182,11 @@ export class Playlist implements OnDestroy {
       this.working = null;
       this.surface?.redraw();
     });
+    // a sound's waveform comes after the clip is first drawn
+    effect(() => {
+      this.studio.samples();
+      this.surface?.redraw();
+    });
     effect(() => {
       this.studio.status();
       if (this.studio.view()?.patternMode) return;
@@ -326,6 +331,7 @@ export class Playlist implements OnDestroy {
     }
 
     g.rect(0, RULER, HEADERS, height - RULER).fill(palette().base);
+    const inserts = this.studio.song()?.inserts ?? [];
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
       if (y + this.laneHeight < RULER || y > height) return;
@@ -333,13 +339,15 @@ export class Playlist implements OnDestroy {
       g.circle(16, y + this.laneHeight / 2, 4.5).fill(
         track.mute ? palette().lineStrong : palette().play,
       );
+      const into = this.laneHeight >= 40 ? inserts.find((n) => n.id === track.insert) : undefined;
       s.text(
         track.name,
         30,
-        y + this.laneHeight / 2 - 8,
+        y + this.laneHeight / 2 - (into ? 15 : 8),
         track.mute ? palette().text3 : palette().text,
         12,
       );
+      if (into) s.text(`→ ${into.name}`, 30, y + this.laneHeight / 2 + 1, palette().text3, 10);
     });
     g.rect(HEADERS - 1, RULER, 1, height - RULER).fill(palette().line);
 
@@ -451,7 +459,8 @@ export class Playlist implements OnDestroy {
       const offset = clip.offset ?? 0;
       const visible = Math.min(clip.length, length - offset);
       for (let i = 0; i < visible * this.perTick; i += 2) {
-        const at = offset + i / this.perTick;
+        const along = offset + i / this.perTick;
+        const at = content.reverse ? length - along : along;
         const peak =
           info.peaks[
             Math.min(info.peaks.length - 1, Math.floor((at / length) * info.peaks.length))
@@ -459,6 +468,11 @@ export class Playlist implements OnDestroy {
         const v = Math.max(0.5, peak * h * 0.48);
         g.rect(x + i, y + h / 2 - v, 1.5, v * 2).fill({ color, alpha: 0.75 });
       }
+      const fadeIn = Math.min(w, (content.fadeIn ?? 0) * this.perTick);
+      const fadeOut = Math.min(w, (content.fadeOut ?? 0) * this.perTick);
+      if (fadeIn > 0) g.poly([x, y + h, x + fadeIn, y], false).stroke({ width: 1.5, color });
+      if (fadeOut > 0)
+        g.poly([x + w - fadeOut, y, x + w, y + h], false).stroke({ width: 1.5, color });
     }
   }
 
@@ -864,6 +878,22 @@ export class Playlist implements OnDestroy {
             index: null,
           }),
       },
+      {
+        label: t('Play its sounds into…'),
+        run: () => {
+          const song = this.studio.song();
+          if (!song) return;
+          const into = (insert: Id | undefined) => () =>
+            this.studio.edit({ type: 'putTrack', track: { ...track, insert }, index: null });
+          this.menus.show(event, [
+            { label: `${track.insert ? '' : '✓ '}${t('Master')}`, run: into(undefined) },
+            ...song.inserts.map((i) => ({
+              label: `${track.insert === i.id ? '✓ ' : ''}${i.name}`,
+              run: into(i.id),
+            })),
+          ]);
+        },
+      },
       { label: t('Add a track below'), run: () => this.addTrack(index + 1) },
       { separator: true, label: '' },
       {
@@ -962,6 +992,34 @@ export class Playlist implements OnDestroy {
                 });
             }),
         },
+        { separator: true, label: '' },
+      );
+    }
+    if (content.type === 'audio') {
+      const change = (made: Partial<typeof content>) => () =>
+        this.studio.edit({ type: 'putClip', clip: { ...clip, content: { ...content, ...made } } });
+      const bar = this.studio.bar();
+      const fades = (key: 'fadeIn' | 'fadeOut') => () =>
+        this.menus.show(
+          event,
+          [
+            [0, t('None')],
+            [PPQ / 2, t('Half a beat')],
+            [PPQ, t('A beat')],
+            [bar, t('A bar')],
+            [bar * 2, t('Two bars')],
+          ].map(([ticks, label]) => ({
+            label: `${(content[key] ?? 0) === ticks ? '✓ ' : ''}${label}`,
+            run: change({ [key]: ticks }),
+          })),
+        );
+      items.push(
+        {
+          label: content.reverse ? t('Play it forwards') : t('Play it backwards'),
+          run: change({ reverse: !content.reverse }),
+        },
+        { label: t('Fade in…'), run: fades('fadeIn') },
+        { label: t('Fade out…'), run: fades('fadeOut') },
         { separator: true, label: '' },
       );
     }

@@ -210,13 +210,59 @@ fn the_loop_region_goes_round() {
     assert!(at >= 2.0 * PPQ as f64 && at < 3.0 * PPQ as f64, "{at}");
 }
 
+/// The loudest the clip `content` on the third track is over its first and its last tenth of
+/// a beat, its sound louder and louder over its second.
+fn ends_of(song: &mut sonevo_project::Song, content: ClipContent) -> (f32, f32) {
+    let ramp: Vec<f32> = (0..24_000).map(|i| (i as f32 * 0.06).sin() * i as f32 / 24_000.0).collect();
+    let sample = Arc::new(Sample { sample_rate: 24_000.0, left: ramp.clone(), right: ramp });
+    let track = song.tracks[2].id;
+    song.clips = vec![Clip { id: Id::new(), track, start: 0, length: 2 * PPQ, offset: 0, content }];
+    let (mut engine, mut renderer) = Engine::new(RATE);
+    engine.samples().insert("ramp.wav", sample);
+    assert!(engine.load(song, Mode::Song, None).is_empty());
+    engine.play();
+    let (left, _) = play(&mut renderer, beat(2.0));
+    (loudest(&left[..beat(0.1)]), loudest(&left[beat(1.85)..beat(1.95)]))
+}
+
+#[test]
+fn audio_clips_fade_and_play_backwards() {
+    let (mut song, _, _) = song(&[]);
+    let audio = |fade_in, fade_out, reverse| ClipContent::Audio {
+        sample: "ramp.wav".into(),
+        gain: 1.0,
+        fade_in,
+        fade_out,
+        reverse,
+    };
+    let (start, end) = ends_of(&mut song, audio(0, 0, false));
+    assert!(start < 0.1 && end > 0.8, "{start} {end}");
+    let (start, end) = ends_of(&mut song, audio(0, 0, true));
+    assert!(start > 0.8 && end < 0.1, "backwards: {start} {end}");
+    let (start, end) = ends_of(&mut song, audio(PPQ, PPQ, true));
+    assert!(start < 0.15 && end < 0.1, "faded: {start} {end}");
+}
+
+#[test]
+fn audio_clips_play_into_their_track_s_mixer_track() {
+    let (mut song, _, _) = song(&[]);
+    let quiet = insert(&mut song, "Quiet");
+    song.inserts[0].volume = 0.0;
+    let audio =
+        ClipContent::Audio { sample: "ramp.wav".into(), gain: 1.0, fade_in: 0, fade_out: 0, reverse: false };
+    assert!(ends_of(&mut song, audio.clone()).1 > 0.8);
+    song.tracks[2].insert = Some(quiet);
+    assert_eq!(ends_of(&mut song, audio).1, 0.0);
+}
+
 #[test]
 fn audio_clips_play_their_sound() {
     let (mut song, _, _) = song(&[]);
     let tone: Vec<f32> = (0..24_000).map(|i| (i as f32 * 0.06).sin() * 0.5).collect();
     let sample = Arc::new(Sample { sample_rate: 24_000.0, left: tone.clone(), right: tone });
     let track = song.tracks[2].id;
-    let content = ClipContent::Audio { sample: "tone.wav".into(), gain: 1.0 };
+    let content =
+        ClipContent::Audio { sample: "tone.wav".into(), gain: 1.0, fade_in: 0, fade_out: 0, reverse: false };
     song.clips.push(Clip { id: Id::new(), track, start: PPQ, length: 2 * PPQ, offset: 0, content });
     let (mut engine, mut renderer) = Engine::new(RATE);
     engine.samples().insert("tone.wav", sample);

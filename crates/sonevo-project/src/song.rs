@@ -89,6 +89,9 @@ pub struct Track {
     pub name: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub mute: bool,
+    /// The mixer track its sound clips play into; none is the master.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insert: Option<Id>,
 }
 
 /// What an automation clip moves.
@@ -128,6 +131,14 @@ pub enum ClipContent {
     Audio {
         sample: String,
         gain: f32,
+        /// How long it takes to come up from silence, and to go back down to it.
+        #[serde(default, rename = "fadeIn", skip_serializing_if = "is_zero_ticks")]
+        fade_in: Ticks,
+        #[serde(default, rename = "fadeOut", skip_serializing_if = "is_zero_ticks")]
+        fade_out: Ticks,
+        /// Played from its end to its start.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        reverse: bool,
     },
     Automation {
         target: Target,
@@ -273,8 +284,9 @@ impl Song {
             swing: 0.0,
             notes: BTreeMap::new(),
         };
-        let tracks =
-            (1..=8).map(|i| Track { id: Id::new(), name: format!("Track {i}"), mute: false }).collect();
+        let tracks = (1..=8)
+            .map(|i| Track { id: Id::new(), name: format!("Track {i}"), mute: false, insert: None })
+            .collect();
         Song {
             name: name.to_owned(),
             tempo: 130.0,

@@ -423,6 +423,11 @@ pub fn compile(
         }
         Mode::Song | Mode::Stem(_) => {
             let muted: HashSet<Id> = song.tracks.iter().filter(|t| t.mute).map(|t| t.id).collect();
+            let track_inserts: HashMap<Id, usize> = song
+                .tracks
+                .iter()
+                .map(|t| (t.id, t.insert.and_then(|i| index.get(&i).copied()).unwrap_or(master)))
+                .collect();
             let mut automation: BTreeMap<&Target, Vec<AutomationClip>> = BTreeMap::new();
             for clip in song.clips.iter().filter(|c| !muted.contains(&c.track)) {
                 let end = clip.start + clip.length;
@@ -440,17 +445,26 @@ pub fn compile(
                             );
                         }
                     }
-                    ClipContent::Audio { .. } if !straight => {}
-                    ClipContent::Audio { sample, gain } => match samples.get(sample) {
-                        Some(sample) => audio.push(AudioClip {
-                            start: clip.start,
-                            end,
-                            offset: clip.offset,
-                            sample,
-                            gain: gain.max(0.0),
-                        }),
-                        None => slots.missing.push(format!("the sound {sample} could not be read")),
-                    },
+                    ClipContent::Audio { sample, gain, fade_in, fade_out, reverse } => {
+                        let insert = track_inserts.get(&clip.track).copied().unwrap_or(master);
+                        if insert == master && !straight {
+                            continue;
+                        }
+                        match samples.get(sample) {
+                            Some(sample) => audio.push(AudioClip {
+                                start: clip.start,
+                                end,
+                                offset: clip.offset,
+                                sample,
+                                gain: gain.max(0.0),
+                                insert,
+                                fade_in: (*fade_in).max(0),
+                                fade_out: (*fade_out).max(0),
+                                reverse: *reverse,
+                            }),
+                            None => slots.missing.push(format!("the sound {sample} could not be read")),
+                        }
+                    }
                     ClipContent::Automation { target, points } => {
                         let mut points = points.clone();
                         points.sort_by_key(|p| p.at);
