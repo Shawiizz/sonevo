@@ -517,6 +517,15 @@ export class Mixer {
             color: COLORS[(COLORS.indexOf(insert.color) + 1) % COLORS.length],
           }),
       },
+      {
+        label: t('Automate its volume'),
+        run: () =>
+          this.studio.automate(
+            { type: 'insertVolume', insert: insert.id },
+            insert.volume / 1.25,
+            `${insert.name} · ${t('Volume')}`,
+          ),
+      },
       { separator: true, label: '' },
       {
         label: t('Delete the mixer track'),

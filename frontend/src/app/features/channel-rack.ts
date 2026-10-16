@@ -439,6 +439,24 @@ export class ChannelRack {
         },
       },
       { label: t('Duplicate'), run: () => this.duplicate(channel, index) },
+      {
+        label: t('Automate its volume'),
+        run: () =>
+          this.studio.automate(
+            { type: 'channelVolume', channel: channel.id },
+            channel.volume,
+            `${channel.name} · ${t('Volume')}`,
+          ),
+      },
+      {
+        label: t('Automate its pan'),
+        run: () =>
+          this.studio.automate(
+            { type: 'channelPan', channel: channel.id },
+            (channel.pan + 1) / 2,
+            `${channel.name} · ${t('Pan')}`,
+          ),
+      },
       { separator: true, label: '' },
       {
         label: t('Move up'),

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Clip, Id, newId, PPQ, sampleLabel, STEP, Track } from '../core/models';
+import { Clip, Id, newId, Point, PPQ, sampleLabel, STEP, Track } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -28,7 +28,17 @@ type Drag =
   | { kind: 'select'; x0: number; y0: number; x1: number; y1: number }
   | { kind: 'ruler'; tick: number; moved: boolean; end: number }
   | { kind: 'erase'; erased: Set<Id> }
-  | { kind: 'scroll'; x: number; y: number; scrollX: number; scrollY: number };
+  | { kind: 'scroll'; x: number; y: number; scrollX: number; scrollY: number }
+  | { kind: 'point'; clip: Id; index: number };
+
+/** Where an automation clip's line is drawn, under its name. */
+interface Body {
+  clip: Clip;
+  points: Point[];
+  x: number;
+  top: number;
+  height: number;
+}
 
 /** The mime type a sound of the browser is dragged with. */
 export const SOUND_DRAG = 'application/x-sonevo-sound';
@@ -374,6 +384,10 @@ export class Playlist implements OnDestroy {
       }
       coords.push(x + w, y + h - points[points.length - 1].value * h);
       g.poly(coords, false).stroke({ width: 1.5, color });
+      for (const p of points) {
+        const px = x + (p.at - offset) * this.perTick;
+        if (px >= x - 1 && px <= x + w + 1) g.circle(px, y + h - p.value * h, 3.5).fill(color);
+      }
     } else {
       const info = this.studio.sample(content.sample);
       if (!info || !info.peaks.length) return;
@@ -442,6 +456,11 @@ export class Playlist implements OnDestroy {
       return;
     }
     host.setPointerCapture(event.pointerId);
+    const body = this.automationAt(x, y);
+    if (body) {
+      this.editPoint(event, body, x, y);
+      return;
+    }
     if (event.button === 2) {
       this.drag = { kind: 'erase', erased: new Set() };
       this.working = [...this.clips];
@@ -483,6 +502,66 @@ export class Playlist implements OnDestroy {
       this.drag = { kind: 'move', x, y, original, moved: event.altKey };
     }
     this.surface?.redraw();
+  }
+
+  /** The automation clip whose line is under (x, y), if any. */
+  private automationAt(x: number, y: number): Body | null {
+    const hit = this.hit(x, y);
+    if (!hit || hit.clip.content.type !== 'automation') return null;
+    const lane = this.tracks.findIndex((t) => t.id === hit.clip.track);
+    const top = this.laneY(lane) + 2 + 17;
+    const height = this.laneHeight - 4 - 19;
+    if (y < top || height < 6) return null;
+    return {
+      clip: hit.clip,
+      points: hit.clip.content.points,
+      x: this.x(hit.clip.start),
+      top,
+      height,
+    };
+  }
+
+  private pointX(body: Body, point: Point): number {
+    return body.x + (point.at - (body.clip.offset ?? 0)) * this.perTick;
+  }
+
+  private pointY(body: Body, point: Point): number {
+    return body.top + body.height - point.value * body.height;
+  }
+
+  /** A point of an automation clip taken, added or (right-click) taken out. */
+  private editPoint(event: PointerEvent, body: Body, x: number, y: number): void {
+    const near = body.points.findIndex(
+      (p) => Math.abs(this.pointX(body, p) - x) < 7 && Math.abs(this.pointY(body, p) - y) < 9,
+    );
+    const points = body.points.map((p) => ({ ...p }));
+    if (event.button === 2) {
+      if (near >= 0 && points.length > 1) {
+        points.splice(near, 1);
+        this.working = this.clips.map((c) =>
+          c.id === body.clip.id ? this.withPoints(c, points) : c,
+        );
+        this.commit();
+      }
+      return;
+    }
+    let index = near;
+    if (index < 0) {
+      const at = Math.round(this.tickAt(x) - body.clip.start + (body.clip.offset ?? 0));
+      const value = Math.min(1, Math.max(0, (body.top + body.height - y) / body.height));
+      index = points.findIndex((p) => p.at > at);
+      if (index < 0) index = points.length;
+      points.splice(index, 0, { at, value });
+    }
+    this.selected = new Set([body.clip.id]);
+    this.working = this.clips.map((c) => (c.id === body.clip.id ? this.withPoints(c, points) : c));
+    this.drag = { kind: 'point', clip: body.clip.id, index };
+    this.surface?.redraw();
+  }
+
+  private withPoints(clip: Clip, points: Point[]): Clip {
+    if (clip.content.type !== 'automation') return clip;
+    return { ...clip, content: { ...clip.content, points } };
   }
 
   /** The pattern edited placed where clicked, as long as it is. */
@@ -569,6 +648,25 @@ export class Playlist implements OnDestroy {
       case 'erase':
         this.eraseAt(x, y);
         break;
+      case 'point': {
+        const i = this.working!.findIndex((c) => c.id === drag.clip);
+        const clip = this.working![i];
+        if (!clip || clip.content.type !== 'automation') break;
+        const lane = this.tracks.findIndex((t) => t.id === clip.track);
+        const top = this.laneY(lane) + 2 + 17;
+        const height = this.laneHeight - 4 - 19;
+        const points = clip.content.points.map((p) => ({ ...p }));
+        const before = points[drag.index - 1]?.at ?? 0;
+        const after = points[drag.index + 1]?.at ?? clip.length + (clip.offset ?? 0);
+        const at = Math.round(this.tickAt(x) - clip.start + (clip.offset ?? 0));
+        points[drag.index] = {
+          ...points[drag.index],
+          at: Math.min(after, Math.max(before, at)),
+          value: Math.min(1, Math.max(0, (top + height - y) / height)),
+        };
+        this.working![i] = this.withPoints(clip, points);
+        break;
+      }
     }
     this.surface?.redraw();
   }
@@ -594,7 +692,14 @@ export class Playlist implements OnDestroy {
       this.surface?.redraw();
       return;
     }
-    if (drag.kind === 'move' || drag.kind === 'resize' || drag.kind === 'erase') this.commit();
+    if (
+      drag.kind === 'move' ||
+      drag.kind === 'resize' ||
+      drag.kind === 'erase' ||
+      drag.kind === 'point'
+    ) {
+      this.commit();
+    }
     this.surface?.redraw();
   }
 

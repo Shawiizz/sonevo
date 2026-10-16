@@ -5,7 +5,8 @@ import { Device, ParamInfo, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
-import { Knob } from '../shared/knob';
+import { Knob, toNormal } from '../shared/knob';
+import { Menus } from '../shared/menu';
 
 /** What each built-in device does, said plainly. */
 const ABOUT: Record<string, string> = {
@@ -82,6 +83,7 @@ const ABOUT: Record<string, string> = {
                 </div>
               } @else {
                 <s-knob
+                  (contextmenu)="knobMenu($event, shown.device, p)"
                   [value]="value(shown.device, p)"
                   [min]="p.min"
                   [max]="p.max"
@@ -202,6 +204,7 @@ export class DevicePanel {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
   private readonly files = inject(Files);
+  private readonly menus = inject(Menus);
 
   protected readonly shown = computed(() => this.studio.device());
   protected readonly info = computed(() => {
@@ -270,6 +273,25 @@ export class DevicePanel {
   protected set(device: Device, p: ParamInfo, value: number): void {
     void api.liveParam(device.id, p.id, value);
     void this.studio.edit({ type: 'setParam', device: device.id, param: p.id, value });
+  }
+
+  protected knobMenu(event: MouseEvent, device: Device, p: ParamInfo): void {
+    const t = this.t;
+    this.menus.show(event, [
+      {
+        label: t('Automate this setting'),
+        run: () => {
+          const normal = toNormal(this.value(device, p), p.min, p.max, p.scale === 'log');
+          const name = `${this.shown()?.owner ?? ''} · ${t(p.name)}`;
+          void this.studio.automate(
+            { type: 'param', device: device.id, param: p.id },
+            normal,
+            name,
+          );
+        },
+      },
+      { label: t('Back to its default'), run: () => this.set(device, p, p.default) },
+    ]);
   }
 
   protected toggle(device: Device): void {

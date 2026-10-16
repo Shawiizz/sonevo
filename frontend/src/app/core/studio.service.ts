@@ -16,6 +16,7 @@ import {
   PluginInfo,
   SampleInfo,
   Status,
+  Target,
   View,
 } from './models';
 
@@ -235,6 +236,42 @@ export class Studio {
       pan: 0,
     };
     return (await this.edit({ type: 'putInsert', insert, index: null })) ? insert : null;
+  }
+
+  /**
+   * A new track holding an automation of `target`, flat at `value` (0 to 1) over the song,
+   * named `name`: its line then drawn in the playlist.
+   */
+  async automate(target: Target, value: number, name: string): Promise<void> {
+    const song = this.song();
+    if (!song) return;
+    const bar = this.bar();
+    const length = Math.max(
+      bar * 4,
+      Math.ceil(Math.max(0, ...song.clips.map((c) => c.start + c.length)) / bar) * bar,
+    );
+    const track = { id: newId(), name, mute: false };
+    const clip = {
+      id: newId(),
+      track: track.id,
+      start: 0,
+      length,
+      content: {
+        type: 'automation' as const,
+        target,
+        points: [
+          { at: 0, value },
+          { at: length, value },
+        ],
+      },
+    };
+    await this.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putTrack', track, index: null },
+        { type: 'putClip', clip },
+      ],
+    });
   }
 
   selectPattern(id: Id): void {

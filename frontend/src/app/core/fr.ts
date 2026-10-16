@@ -255,6 +255,11 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Automate this setting': 'Automatiser ce réglage',
+  'Back to its default': 'Revenir à sa valeur par défaut',
+  'Automate its volume': 'Automatiser son volume',
+  'Automate its pan': 'Automatiser son panoramique',
+  Pan: 'Panoramique',
   '{count} plugins found. Sonevo looks where CLAP plugins are installed, and in the folders below.':
     '{count} plugins trouvés. Sonevo regarde là où s’installent les plugins CLAP, et dans les dossiers ci-dessous.',
   'Looking…': 'Recherche…',
