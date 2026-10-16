@@ -6,6 +6,7 @@ import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
 import { Meter } from '../shared/meter';
+import { Rename } from '../shared/rename';
 
 /**
  * The transport: play and stop, the pattern played alone or the whole song, the tempo, where
@@ -224,6 +225,7 @@ export class Transport {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
   private readonly menus = inject(Menus);
+  private readonly rename = inject(Rename);
 
   protected readonly editingTempo = signal(false);
   private readonly draggingTempo = signal<number | null>(null);
@@ -343,13 +345,15 @@ export class Transport {
         label: t('Rename…'),
         disabled: !current,
         run: () => {
-          const name = current && prompt(t('Name of the pattern'), current.name);
-          if (current && name)
-            void this.studio.edit({
-              type: 'putPattern',
-              pattern: { ...current, name },
-              index: null,
-            });
+          if (!current) return;
+          void this.rename.ask(t('Name of the pattern'), current.name).then((name) => {
+            if (name)
+              void this.studio.edit({
+                type: 'putPattern',
+                pattern: { ...current, name },
+                index: null,
+              });
+          });
         },
       },
       {

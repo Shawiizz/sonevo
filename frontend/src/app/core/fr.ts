@@ -255,6 +255,7 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Enter to keep, Esc to leave': 'Entrée pour garder, Échap pour laisser',
   LFO: 'LFO',
   'LFO moves': 'Le LFO fait bouger',
   'LFO speed': 'Vitesse du LFO',

@@ -8,6 +8,7 @@ import { Icon } from '../shared/icon';
 import { Knob } from '../shared/knob';
 import { MenuItem, Menus } from '../shared/menu';
 import { Meter } from '../shared/meter';
+import { Rename } from '../shared/rename';
 
 interface Row {
   channel: Channel;
@@ -277,6 +278,7 @@ export class ChannelRack {
   protected readonly t = inject(I18n).t;
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
+  private readonly rename = inject(Rename);
 
   protected readonly length = computed(() => this.studio.pattern()?.length ?? this.studio.bar());
   private readonly beat = computed(() => (960 * 4) / (this.studio.song()?.signature.unit ?? 4));
@@ -427,8 +429,9 @@ export class ChannelRack {
       {
         label: t('Rename…'),
         run: () => {
-          const name = prompt(t('Name of the channel'), channel.name);
-          if (name) void this.studio.putChannel({ ...channel, name });
+          void this.rename.ask(t('Name of the channel'), channel.name).then((name) => {
+            if (name) void this.studio.putChannel({ ...channel, name });
+          });
         },
       },
       {

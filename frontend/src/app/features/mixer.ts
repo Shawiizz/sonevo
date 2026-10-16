@@ -7,6 +7,7 @@ import { Icon } from '../shared/icon';
 import { Knob } from '../shared/knob';
 import { MenuItem, Menus } from '../shared/menu';
 import { gainToDb, Meter } from '../shared/meter';
+import { Rename } from '../shared/rename';
 
 /** The fader's travel: from silence to +2 dB, unity at 80%. */
 function faderToGain(position: number): number {
@@ -317,6 +318,7 @@ export class Mixer {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
   private readonly menus = inject(Menus);
+  private readonly rename = inject(Rename);
   protected readonly gainToFader = gainToFader;
   protected readonly maxFader = MAX_FADER;
 
@@ -505,8 +507,9 @@ export class Mixer {
       {
         label: t('Rename…'),
         run: () => {
-          const name = prompt(t('Name of the mixer track'), insert.name);
-          if (name) void this.studio.putInsert({ ...insert, name });
+          void this.rename.ask(t('Name of the mixer track'), insert.name).then((name) => {
+            if (name) void this.studio.putInsert({ ...insert, name });
+          });
         },
       },
       {

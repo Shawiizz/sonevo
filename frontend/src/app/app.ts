@@ -26,6 +26,7 @@ import { Titlebar } from './shell/titlebar';
 import { Transport } from './shell/transport';
 import { Icon } from './shared/icon';
 import { Menus } from './shared/menu';
+import { RenameField } from './shared/rename';
 
 /** The computer's keys as a piano, by where they are whatever the layout: two octaves. */
 const PIANO: Record<string, number> = {
@@ -74,6 +75,7 @@ const PIANO: Record<string, number> = {
     PianoRoll,
     Playlist,
     RecoveryDialog,
+    RenameField,
     SettingsDialog,
     Titlebar,
     Transport,
@@ -185,6 +187,7 @@ const PIANO: Record<string, number> = {
     @if (kept().length) {
       <app-recovery-dialog [kept]="kept()" (closed)="kept.set([])" (done)="forgot($event)" />
     }
+    <s-rename />
     @if (files.exporting()) {
       <app-export-dialog (closed)="files.exporting.set(false)" />
     }

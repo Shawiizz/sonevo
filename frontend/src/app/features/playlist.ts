@@ -16,6 +16,7 @@ import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
+import { Rename } from '../shared/rename';
 import { hex, Surface } from '../shared/surface';
 
 const HEADERS = 160;
@@ -130,6 +131,7 @@ export class Playlist implements OnDestroy {
   protected readonly t = inject(I18n).t;
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
+  private readonly rename = inject(Rename);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private surface: Surface | null = null;
 
@@ -811,9 +813,10 @@ export class Playlist implements OnDestroy {
       {
         label: t('Rename…'),
         run: () => {
-          const name = prompt(t('Name of the track'), track.name);
-          if (name)
-            void this.studio.edit({ type: 'putTrack', track: { ...track, name }, index: null });
+          void this.rename.ask(t('Name of the track'), track.name).then((name) => {
+            if (name)
+              void this.studio.edit({ type: 'putTrack', track: { ...track, name }, index: null });
+          });
         },
       },
       {
