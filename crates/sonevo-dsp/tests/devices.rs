@@ -339,6 +339,28 @@ fn pitch_of(device: &mut dyn Processor, events: &[Event], blocks: usize) -> f32 
 }
 
 #[test]
+fn a_string_plucked_rings_at_its_key_then_dies_away() {
+    let strings = builtin("sonevo.strings").unwrap();
+    let mut device = strings.make(RATE);
+    let mut heard = Vec::new();
+    let pluck = [note(0, 57, true)];
+    for block in 0..20 {
+        let (mut left, mut right) = (vec![0.0; BLOCK], vec![0.0; BLOCK]);
+        device.process(&CONTEXT, if block == 0 { &pluck } else { &[] }, &mut left, &mut right);
+        heard.extend(left);
+    }
+    // its period: the lag at which the sound is most like itself
+    let part = &heard[2400..7200];
+    let alike = |lag: usize| part.iter().zip(&part[lag..]).map(|(a, b)| a * b).sum::<f32>();
+    let lag = (100..400).max_by(|&a, &b| alike(a).total_cmp(&alike(b))).unwrap();
+    let pitch = RATE / lag as f32;
+    assert!((pitch - 220.0).abs() < 3.0, "{pitch}");
+    device.process(&CONTEXT, &[note(0, 57, false)], &mut [0.0; BLOCK], &mut [0.0; BLOCK]);
+    play(&mut *device, &[], 100);
+    assert_eq!(play(&mut *device, &[], 10), 0.0, "it rang on after the key was let go of");
+}
+
+#[test]
 fn the_fm_synth_unbent_is_a_sine_at_the_key() {
     let fm = builtin("sonevo.fm").unwrap();
     let mut device = fm.make(RATE);

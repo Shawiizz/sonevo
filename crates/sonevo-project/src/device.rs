@@ -22,10 +22,11 @@ pub mod builtin {
     pub const FM: &str = "sonevo.fm";
     pub const CRUSHER: &str = "sonevo.crusher";
     pub const AUTOPAN: &str = "sonevo.autopan";
+    pub const STRINGS: &str = "sonevo.strings";
 
-    pub const ALL: [&str; 15] = [
+    pub const ALL: [&str; 16] = [
         SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER, CHORUS, PHASER,
-        FM, CRUSHER, AUTOPAN,
+        FM, CRUSHER, AUTOPAN, STRINGS,
     ];
 }
 

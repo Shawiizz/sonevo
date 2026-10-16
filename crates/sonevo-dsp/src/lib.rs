@@ -9,6 +9,7 @@ mod param;
 mod presets;
 mod sampler;
 mod stretch;
+mod strings;
 mod synth;
 mod util;
 
@@ -108,6 +109,13 @@ pub const BUILTINS: &[Builtin] = &[
         instrument: true,
         params: fm::PARAMS,
         make: |rate| Box::new(fm::Fm::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.strings",
+        label: "Strings",
+        instrument: true,
+        params: strings::PARAMS,
+        make: |rate| Box::new(strings::Strings::new(rate)),
     },
     Builtin {
         name: "sonevo.eq",

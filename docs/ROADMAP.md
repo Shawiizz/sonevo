@@ -93,6 +93,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
+- ✅ **Cordes pincées** (Karplus-Strong) : guitare nylon, harpe, koto, corde acier.
 - ✅ **Synthé FM** à deux opérateurs (piano électrique, cloche, basse FM, verre, lead
   métallique), sa brillance qui retombe comme celle d'un vrai piano électrique.
 - ✅ Synthé à une voix (la note tenue avant revient au relâché) et glissando d'une note à

@@ -605,6 +605,7 @@ export class ChannelRack {
     this.menus.below(event, [
       { label: t('Synth'), run: () => this.studio.addChannel('sonevo.synth', t('Synth')) },
       { label: t('FM synth'), run: () => this.studio.addChannel('sonevo.fm', t('FM synth')) },
+      { label: t('Strings'), run: () => this.studio.addChannel('sonevo.strings', t('Strings')) },
       { label: t('Sampler, with a sound…'), run: () => this.addSampler() },
       { separator: true, label: '' },
       ...drums,

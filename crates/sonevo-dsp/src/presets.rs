@@ -14,6 +14,7 @@ const fn preset(device: &'static str, name: &'static str, values: &'static [(&'s
 const SYNTH: &str = "sonevo.synth";
 const DRUMS: &str = "sonevo.drums";
 const FM: &str = "sonevo.fm";
+const STRINGS: &str = "sonevo.strings";
 const EQ: &str = "sonevo.eq";
 const COMPRESSOR: &str = "sonevo.compressor";
 const DELAY: &str = "sonevo.delay";
@@ -99,6 +100,11 @@ pub const PRESETS: &[Preset] = &[
         ("ratio", 2.0), ("index", 3.0), ("bloom", 2.0), ("fade", 0.3), ("feedback", 0.6), ("sustain", 0.8),
         ("release", 0.2), ("volume", -12.0),
     ]),
+    preset(STRINGS, "Nylon guitar", &[("tone", 0.5), ("decay", 3.0), ("damping", 0.6)]),
+    preset(STRINGS, "Harp", &[("tone", 0.4), ("decay", 5.0), ("damping", 0.7)]),
+    preset(STRINGS, "Koto", &[("tone", 0.85), ("decay", 2.0), ("damping", 0.3)]),
+    preset(STRINGS, "Muted pluck", &[("tone", 0.5), ("decay", 0.4), ("damping", 0.8)]),
+    preset(STRINGS, "Steel string", &[("tone", 0.9), ("decay", 6.0), ("damping", 0.2)]),
     preset(DRUMS, "Punchy kick", &[("sound", 0.0), ("decay", 0.8), ("tone", 0.6)]),
     preset(DRUMS, "Long 808 kick", &[("sound", 0.0), ("tune", -5.0), ("decay", 3.0), ("tone", 0.3)]),
     preset(DRUMS, "Tight snare", &[("sound", 1.0), ("decay", 0.6), ("tone", 0.7)]),

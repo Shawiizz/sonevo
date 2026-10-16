@@ -256,6 +256,17 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Strings: 'Cordes',
+  'Plucked strings: a burst of noise rings round a loop as long as the note, as a string does. A guitar, a harp, a koto.':
+    'Des cordes pincées : un bref bruit résonne dans une boucle aussi longue que la note, comme une corde. Une guitare, une harpe, un koto.',
+  'Pluck brightness': 'Clarté du pincement',
+  Ring: 'Résonance de la corde',
+  Softening: 'Adoucissement',
+  'Nylon guitar': 'Guitare nylon',
+  Harp: 'Harpe',
+  Koto: 'Koto',
+  'Muted pluck': 'Pincement étouffé',
+  'Steel string': 'Corde acier',
   'Auto-pan': 'Auto-pan',
   Bits: 'Bits',
   'A lo-fi crusher: fewer bits and a lower sample rate, for the grit of an old sampler.':

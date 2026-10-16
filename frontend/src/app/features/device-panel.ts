@@ -30,6 +30,8 @@ const ABOUT: Record<string, string> = {
   'sonevo.drums':
     'Drum sounds made from scratch: choose a sound, then tune it and make it shorter or longer.',
   'sonevo.sampler': 'Plays a sound file, higher or lower with the key pressed.',
+  'sonevo.strings':
+    'Plucked strings: a burst of noise rings round a loop as long as the note, as a string does. A guitar, a harp, a koto.',
   'sonevo.fm':
     'An FM synth: one wave bends another, for electric pianos, bells and metallic basses. Brightness is how much; it falls as the note goes on.',
   'sonevo.eq': 'An equalizer: turns the lows, the middle or the highs up or down.',
