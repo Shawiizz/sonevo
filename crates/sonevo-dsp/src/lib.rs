@@ -172,6 +172,20 @@ pub const BUILTINS: &[Builtin] = &[
         params: effects::phaser::PARAMS,
         make: |rate| Box::new(effects::phaser::Phaser::new(rate)),
     },
+    Builtin {
+        name: "sonevo.crusher",
+        label: "Lo-fi",
+        instrument: false,
+        params: effects::crusher::PARAMS,
+        make: |rate| Box::new(effects::crusher::Crusher::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.autopan",
+        label: "Auto-pan",
+        instrument: false,
+        params: effects::autopan::PARAMS,
+        make: |rate| Box::new(effects::autopan::AutoPan::new(rate)),
+    },
 ];
 
 pub fn builtin(name: &str) -> Option<&'static Builtin> {

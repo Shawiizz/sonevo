@@ -23,6 +23,8 @@ const FILTER: &str = "sonevo.filter";
 const LIMITER: &str = "sonevo.limiter";
 const CHORUS: &str = "sonevo.chorus";
 const PHASER: &str = "sonevo.phaser";
+const CRUSHER: &str = "sonevo.crusher";
+const AUTOPAN: &str = "sonevo.autopan";
 
 #[rustfmt::skip]
 pub const PRESETS: &[Preset] = &[
@@ -155,6 +157,11 @@ pub const PRESETS: &[Preset] = &[
     preset(PHASER, "Deep", &[
         ("rate", 0.4), ("depth", 1.0), ("center", 600.0), ("feedback", 0.8), ("stages", 2.0),
     ]),
+    preset(CRUSHER, "Dusty", &[("bits", 10.0), ("rate", 18000.0), ("mix", 0.6)]),
+    preset(CRUSHER, "Old console", &[("bits", 8.0), ("rate", 11025.0), ("mix", 1.0)]),
+    preset(CRUSHER, "Broken toy", &[("bits", 4.0), ("rate", 4000.0), ("mix", 1.0)]),
+    preset(AUTOPAN, "Gentle sway", &[("time", 1.0), ("depth", 0.4)]),
+    preset(AUTOPAN, "Quick bounce", &[("time", 3.0), ("depth", 0.9)]),
 ];
 
 /// The presets made for the device `name`.

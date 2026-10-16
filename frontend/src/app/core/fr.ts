@@ -256,6 +256,17 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Auto-pan': 'Auto-pan',
+  Bits: 'Bits',
+  'A lo-fi crusher: fewer bits and a lower sample rate, for the grit of an old sampler.':
+    "Un écraseur lo-fi : moins de bits et une fréquence d'échantillonnage plus basse, pour le grain d'un vieux sampler.",
+  'An auto-pan: the sound moves from one side to the other, in time with the song.':
+    "Un auto-pan : le son va d'un côté à l'autre, au tempo du morceau.",
+  Dusty: 'Poussiéreux',
+  'Old console': 'Vieille console',
+  'Broken toy': 'Jouet cassé',
+  'Gentle sway': 'Balancement doux',
+  'Quick bounce': 'Rebond rapide',
   'FM synth': 'Synthé FM',
   'An FM synth: one wave bends another, for electric pianos, bells and metallic basses. Brightness is how much; it falls as the note goes on.':
     'Un synthé FM : une onde en déforme une autre, pour les pianos électriques, les cloches et les basses métalliques. La brillance dit de combien ; elle retombe à mesure que la note dure.',

@@ -125,6 +125,7 @@ fn lofi() -> Song {
     song.tempo = 82.0;
     let mut drums = Insert::new("Drums", COLORS[0]);
     drums.effects.push(preset(builtin::FILTER, "Dark").with("cutoff", 5000.0));
+    drums.effects.push(preset(builtin::CRUSHER, "Dusty"));
     drums.effects.push(preset(builtin::COMPRESSOR, "Gentle glue"));
     let mut keys = Insert::new("Keys", COLORS[2]);
     keys.effects.push(preset(builtin::EQ, "Warmer"));

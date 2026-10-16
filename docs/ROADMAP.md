@@ -74,7 +74,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Sampler**, **Drums** (8 sons synthétisés), **Synthé** (2 oscillateurs, filtre résonant
   avec enveloppe, unisson jusqu'à 4).
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
-  filtre, limiteur avec anticipation, chorus (et flanger), phaser.
+  filtre, limiteur avec anticipation, chorus (et flanger), phaser, lo-fi (bits et fréquence),
+  auto-pan au tempo.
 - ✅ Tous leurs réglages sont automatisables.
 - ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons
   tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).

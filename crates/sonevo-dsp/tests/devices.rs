@@ -212,6 +212,31 @@ fn the_chorus_plays_its_copy_late() {
 }
 
 #[test]
+fn the_crusher_rounds_and_holds_the_sound() {
+    let crusher = builtin("sonevo.crusher").unwrap();
+    let mut device = crusher.make(RATE);
+    device.set(crusher.param("bits").unwrap(), 2.0);
+    device.set(crusher.param("rate").unwrap(), 1000.0);
+    let mut left: Vec<f32> = (0..BLOCK).map(|i| (i as f32 * 0.01).sin() * 0.9).collect();
+    let mut right = left.clone();
+    device.process(&CONTEXT, &[], &mut left, &mut right);
+    // two bits: halves only; at a thousand samples a second, each held 48 frames
+    assert!(left.iter().all(|s| (s * 2.0).fract() == 0.0), "{left:?}");
+    assert!(left[50..90].iter().all(|s| *s == left[50]));
+}
+
+#[test]
+fn the_auto_pan_moves_the_sound_from_side_to_side() {
+    let pan = builtin("sonevo.autopan").unwrap();
+    let mut device = pan.make(RATE);
+    device.set(pan.param("depth").unwrap(), 1.0);
+    // a quarter at 128 beats a minute: a quarter of a sway is about 5625 frames
+    let (mut left, mut right) = (vec![0.5; 5625], vec![0.5; 5625]);
+    device.process(&CONTEXT, &[], &mut left, &mut right);
+    assert!(right[5600] > 0.65 && left[5600] < 0.05, "{} {}", left[5600], right[5600]);
+}
+
+#[test]
 fn the_phaser_cuts_a_notch() {
     let phaser = builtin("sonevo.phaser").unwrap();
     let level = |hz: f32| {

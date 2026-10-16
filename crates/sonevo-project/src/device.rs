@@ -20,9 +20,12 @@ pub mod builtin {
     pub const CHORUS: &str = "sonevo.chorus";
     pub const PHASER: &str = "sonevo.phaser";
     pub const FM: &str = "sonevo.fm";
+    pub const CRUSHER: &str = "sonevo.crusher";
+    pub const AUTOPAN: &str = "sonevo.autopan";
 
-    pub const ALL: [&str; 13] = [
-        SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER, CHORUS, PHASER, FM,
+    pub const ALL: [&str; 15] = [
+        SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER, CHORUS, PHASER,
+        FM, CRUSHER, AUTOPAN,
     ];
 }
 

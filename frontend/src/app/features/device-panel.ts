@@ -43,6 +43,10 @@ const ABOUT: Record<string, string> = {
   'sonevo.chorus':
     'A chorus: copies of the sound a little late, so it sounds wider and thicker. Short and with feedback, a flanger.',
   'sonevo.phaser': 'A phaser: notches sweeping up and down the sound, for a swirling, moving tone.',
+  'sonevo.crusher':
+    'A lo-fi crusher: fewer bits and a lower sample rate, for the grit of an old sampler.',
+  'sonevo.autopan':
+    'An auto-pan: the sound moves from one side to the other, in time with the song.',
 };
 
 /**
