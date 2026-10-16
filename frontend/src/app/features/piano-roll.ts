@@ -13,6 +13,7 @@ import {
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import {
+  builtinName,
   chordKeys,
   degreeChord,
   inScale,
@@ -710,6 +711,7 @@ export class PianoRoll implements OnDestroy {
           ),
       },
       { label: t('Write a melody in the scale'), run: () => this.melody() },
+      { label: t('Write a bass under the other channels'), run: () => this.bassLine() },
     );
     this.menus.below(event, items);
   }
@@ -742,6 +744,39 @@ export class PianoRoll implements OnDestroy {
         { type: 'setNotes', pattern: pattern.id, channel: channel.id, notes },
       ],
     });
+  }
+
+  /** A bass for this channel: on each beat, the root of what the pattern's other channels play
+   * there, in the octave of a bass. */
+  private bassLine(): void {
+    const pattern = this.studio.pattern();
+    const channel = this.studio.channel();
+    const song = this.studio.song();
+    if (!pattern || !channel || !song) return;
+    const others = song.channels
+      .filter((c) => c.id !== channel.id && builtinName(c.instrument) !== 'sonevo.drums')
+      .flatMap((c) => this.studio.notes(pattern.id, c.id));
+    if (!others.length) {
+      this.studio.fail(this.t('Write chords on another channel of the pattern first.'));
+      return;
+    }
+    const notes: Note[] = [];
+    let last: number | null = null;
+    for (let at = 0; at < pattern.length; at += PPQ) {
+      const sounding = others
+        .filter((n) => n.start <= at && at < n.start + n.length)
+        .map((n) => n.key);
+      const root: number | null = sounding.length ? chordRoot(sounding) : last;
+      if (root === null) continue;
+      last = root;
+      notes.push({
+        start: at,
+        length: Math.round(PPQ * 0.9),
+        key: 36 + (root % 12),
+        velocity: 0.85,
+      });
+    }
+    void this.studio.setNotes(pattern.id, channel.id, notes);
   }
 
   /** A melody of the scale chosen, or the major one: a walk up and down it, on eighths and quarters. */
@@ -982,4 +1017,13 @@ function stretch(notes: Note[], by: number): Note[] {
     start: Math.round(from + (n.start - from) * by),
     length: Math.max(1, Math.round(n.length * by)),
   }));
+}
+
+/** The root of the chord `keys` make: the one whose fifth and third are in it, else the lowest. */
+function chordRoot(keys: number[]): number {
+  const classes = new Set(keys.map((k) => k % 12));
+  const root = [...classes].find(
+    (r) => classes.has((r + 7) % 12) && (classes.has((r + 3) % 12) || classes.has((r + 4) % 12)),
+  );
+  return root ?? Math.min(...keys);
 }

@@ -140,7 +140,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   long ou plus court, sur les notes choisies ou toutes.
 - ✅ **Dans la gamme seulement** : les notes dessinées ou déplacées se rangent sur la gamme choisie.
 - ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
-  épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
+  épique, sombre, flamenco) dans la tonalité choisie, une mélodie tirée de la gamme, ou une
+  basse sur les fondamentales des accords des autres voies.
 - ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas ; **écrire un rythme**
   house, hip-hop, trap ou breakbeat sur les voies de batterie.
 - ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
