@@ -139,6 +139,19 @@ fn a_song_changed_while_playing_goes_on() {
 }
 
 #[test]
+fn a_sound_listened_to_plays_through_once() {
+    let (song, _, _) = song(&[]);
+    let (mut engine, mut renderer) = started(&song, Mode::Song);
+    let tone: Vec<f32> = (0..24_000).map(|i| (i as f32 * 0.05).sin() * 0.5).collect();
+    engine.listen(Some(Arc::new(Sample { sample_rate: 48_000.0, left: tone.clone(), right: tone })));
+    assert!(loudest(&play(&mut renderer, 4800).0) > 0.3);
+    play(&mut renderer, 24_000);
+    assert_eq!(loudest(&play(&mut renderer, 4800).0), 0.0, "it went on past its end");
+    engine.listen(None);
+    play(&mut renderer, 480);
+}
+
+#[test]
 fn a_key_pressed_plays_while_stopped() {
     let (song, channel, _) = song(&[]);
     let (mut engine, mut renderer) = started(&song, Mode::Song);

@@ -96,18 +96,31 @@ import { SOUND_DRAG } from './playlist';
       </div>
       <div class="list">
         @for (e of entries(); track e.path) {
-          <button
-            class="item"
-            [draggable]="!e.folder"
-            (dragstart)="dragStart($event, e)"
-            (click)="pick(e)"
-            [title]="
-              e.folder ? e.path : t('Drag into the playlist, or click to make a sampler of it')
-            "
-          >
-            <s-icon [name]="e.folder ? 'folder' : 'sound'" />
-            <span>{{ e.folder ? e.name : label(e) }}</span>
-          </button>
+          <div class="row">
+            <button
+              class="item"
+              [class.listening]="listening() === e.path"
+              [draggable]="!e.folder"
+              (dragstart)="dragStart($event, e)"
+              (click)="pick(e)"
+              [title]="e.folder ? e.path : t('Click to listen; drag into the playlist')"
+            >
+              <s-icon
+                [name]="e.folder ? 'folder' : listening() === e.path ? 'play' : 'sound'"
+                [filled]="listening() === e.path"
+              />
+              <span>{{ e.folder ? e.name : label(e) }}</span>
+            </button>
+            @if (!e.folder) {
+              <button
+                class="s-bar-btn add"
+                (click)="sampler(e)"
+                [title]="t('Make a sampler of it')"
+              >
+                <s-icon name="plus" [size]="12" />
+              </button>
+            }
+          </div>
         } @empty {
           <p class="s-empty">{{ t('No sound here.') }}</p>
         }
@@ -177,6 +190,28 @@ import { SOUND_DRAG } from './playlist';
         color: var(--s-text-2);
       }
     }
+    .row {
+      display: flex;
+      align-items: center;
+      .item {
+        flex: 1;
+        min-width: 0;
+      }
+      .add {
+        opacity: 0;
+        height: 26px;
+        min-width: 26px;
+      }
+      &:hover .add {
+        opacity: 1;
+      }
+    }
+    .item.listening {
+      color: var(--s-accent);
+      s-icon {
+        color: var(--s-accent);
+      }
+    }
     .path {
       flex: none;
       display: flex;
@@ -212,6 +247,8 @@ export class Browser {
   /** The folders gone into, from a place; none at the places themselves. */
   protected readonly trail = signal<Entry[]>([]);
   protected readonly here = computed(() => this.trail().at(-1) ?? null);
+  /** The sound being listened to. */
+  protected readonly listening = signal<string | null>(null);
 
   protected add(name: string, label: string): void {
     void this.studio.addChannel(name, this.t(label));
@@ -242,6 +279,18 @@ export class Browser {
       }
       return;
     }
+    // a sound clicked is heard; clicked again, it stops
+    const again = this.listening() === e.path;
+    this.listening.set(again ? null : e.path);
+    try {
+      await api.listen(again ? null : e.path);
+    } catch (error) {
+      this.listening.set(null);
+      this.studio.fail(error);
+    }
+  }
+
+  protected async sampler(e: Entry): Promise<void> {
     const [sound] = await this.files.import([e.path]);
     if (sound) await this.studio.addChannel('sonevo.sampler', soundName(e.path), sound.sample);
   }

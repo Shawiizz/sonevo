@@ -4,7 +4,7 @@
 use crate::graph::{Gains, Graph, Lever, CHUNK, EVENTS};
 use crate::meters::{self, Meters};
 use rtrb::{Consumer, Producer};
-use sonevo_dsp::{Context, Event};
+use sonevo_dsp::{Context, Event, Sample};
 use sonevo_project::PPQ;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -40,6 +40,8 @@ pub enum Command {
         pan: f32,
     },
     Metronome(bool),
+    /// A sound listened to as it is, over the song; none stops it.
+    Listen(Option<Arc<Sample>>),
     /// Every voice and every tail cut.
     Panic,
 }
@@ -78,6 +80,8 @@ struct Click {
 }
 
 const CLICK_SECONDS: f32 = 0.03;
+/// A sound listened to a little under its level, beside the song.
+const LISTEN_GAIN: f32 = 0.8;
 
 pub struct Renderer {
     commands: Consumer<Command>,
@@ -93,6 +97,8 @@ pub struct Renderer {
     previews: [Option<(usize, Event)>; 64],
     metronome: bool,
     click: Click,
+    /// The sound listened to, and where in it playing is, in its own frames.
+    listening: Option<(Arc<Sample>, f64)>,
 }
 
 impl Renderer {
@@ -115,6 +121,7 @@ impl Renderer {
             previews: [None; 64],
             metronome: false,
             click: Click { left: 0, phase: 0.0, step: 0.0 },
+            listening: None,
         }
     }
 
@@ -232,6 +239,8 @@ impl Renderer {
                 }
             }
             Command::Metronome(on) => self.metronome = on,
+            // the engine keeps the sound too: never freed here
+            Command::Listen(sample) => self.listening = sample.map(|s| (s, 0.0)),
             Command::Panic => {
                 if let Some(g) = &mut self.graph {
                     for p in g.slots.iter_mut().flatten() {
@@ -367,6 +376,7 @@ impl Renderer {
         if self.metronome && self.playing {
             self.metronome(&graph, out_left, out_right);
         }
+        self.listen(out_left, out_right);
         self.position = next;
         if ended {
             self.playing = false;
@@ -459,6 +469,25 @@ impl Renderer {
                 insert.left[i] += lerp(&sample.left) * clip.gain;
                 insert.right[i] += lerp(&sample.right) * clip.gain;
             }
+        }
+    }
+
+    /// The sound listened to, added as it is, at its own rate.
+    fn listen(&mut self, left: &mut [f32], right: &mut [f32]) {
+        let Some((sample, at)) = &mut self.listening else { return };
+        let step = f64::from(sample.sample_rate / self.sample_rate);
+        let frames = sample.frames();
+        for (l, r) in left.iter_mut().zip(right.iter_mut()) {
+            let index = *at as usize;
+            if index + 1 >= frames {
+                self.listening = None;
+                return;
+            }
+            let fraction = (*at - index as f64) as f32;
+            let lerp = |s: &[f32]| s[index] + (s[index + 1] - s[index]) * fraction;
+            *l += lerp(&sample.left) * LISTEN_GAIN;
+            *r += lerp(&sample.right) * LISTEN_GAIN;
+            *at += step;
         }
     }
 

@@ -23,6 +23,7 @@ use compile::{compile, Mirror};
 use graph::Graph;
 use renderer::{Command, Shared};
 use rtrb::{Consumer, Producer, RingBuffer};
+use sonevo_dsp::Sample;
 use sonevo_project::{Id, Region, Song, Ticks};
 use std::path::Path;
 use std::sync::Arc;
@@ -43,6 +44,9 @@ pub struct Engine {
     mirror: Mirror,
     samples: Samples,
     plugins: Option<Arc<dyn Plugins>>,
+    /// The sounds listened to last: kept here so that the audio thread, letting go of
+    /// them, never frees them.
+    listened: [Option<Arc<Sample>>; 2],
 }
 
 impl Engine {
@@ -59,6 +63,7 @@ impl Engine {
             mirror: Mirror::default(),
             samples: Samples::default(),
             plugins: None,
+            listened: [None, None],
         };
         (engine, renderer)
     }
@@ -125,6 +130,13 @@ impl Engine {
 
     pub fn seek(&mut self, tick: Ticks) {
         self.send(Command::Seek(tick as f64));
+    }
+
+    /// Plays `sample` as it is over the song, or stops the one playing.
+    pub fn listen(&mut self, sample: Option<Arc<Sample>>) {
+        self.listened.rotate_left(1);
+        self.listened[1] = sample.clone();
+        self.send(Command::Listen(sample));
     }
 
     pub fn set_metronome(&mut self, on: bool) {

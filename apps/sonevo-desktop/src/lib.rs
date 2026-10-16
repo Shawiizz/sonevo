@@ -338,6 +338,19 @@ struct PluginView {
     instrument: bool,
 }
 
+/// Plays the sound at `path` as it is, to hear it before using it; none stops it.
+#[tauri::command(async)]
+fn listen(app: State<App>, path: Option<PathBuf>) -> Answer<()> {
+    let sample = match path {
+        Some(path) => Some(std::sync::Arc::new(sonevo_engine::decode(&path).map_err(|e| e.to_string())?)),
+        None => None,
+    };
+    if let Some(engine) = app.studio().engine() {
+        engine.listen(sample);
+    }
+    Ok(())
+}
+
 /// The plugins found on this computer.
 #[tauri::command]
 fn plugins(app: State<App>) -> Vec<PluginView> {
@@ -693,6 +706,7 @@ pub fn run() {
             compare_version,
             plugins,
             scan_plugins,
+            listen,
             plugin_params,
             open_plugin_window,
             sample_info,
