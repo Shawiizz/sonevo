@@ -26,6 +26,7 @@ import {
 import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Icon } from '../shared/icon';
+import { MenuItem, Menus } from '../shared/menu';
 import { hex, palette, Surface } from '../shared/surface';
 
 const KEYS = 64;
@@ -61,6 +62,13 @@ type Drag =
         [title]="t('Write the keys played into the pattern, as it goes round')"
       >
         <s-icon name="record" [filled]="true" [size]="10" /> {{ t('Write') }}
+      </button>
+      <button
+        class="s-bar-btn"
+        (click)="toolsMenu($event)"
+        [title]="t('Change the notes chosen, or all of them')"
+      >
+        {{ t('Tools') }} <s-icon name="down" [size]="12" />
       </button>
       <span class="s-grow"></span>
       <select
@@ -128,6 +136,17 @@ type Drag =
       height: 10px;
       border-radius: 3px;
     }
+    .s-panel-head {
+      overflow-x: auto;
+      scrollbar-width: none;
+      > *,
+      .s-seg button {
+        white-space: nowrap;
+      }
+      > :not(.s-grow) {
+        flex: none;
+      }
+    }
     .in {
       color: var(--s-text-3);
       font-weight: 400;
@@ -159,6 +178,7 @@ type Drag =
 export class PianoRoll implements OnDestroy {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  private readonly menus = inject(Menus);
   private readonly themes = inject(Themes);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private surface: Surface | null = null;
@@ -637,6 +657,36 @@ export class PianoRoll implements OnDestroy {
     for (const i of targets) this.working[i] = { ...this.working[i], velocity };
   }
 
+  protected toolsMenu(event: MouseEvent): void {
+    const t = this.t;
+    const tools: [string, (notes: Note[]) => Note[]][] = [
+      ['Humanize: a little off the grid and in strength', humanize],
+      ['Legato: each note held to the next', (n) => legato(n, this.studio.pattern()?.length ?? 0)],
+      ['Strum the chords', strum],
+      ['Play them backwards', backwards],
+      ['Twice as long', (n) => stretch(n, 2)],
+      ['Half as long', (n) => stretch(n, 0.5)],
+    ];
+    const items: MenuItem[] = tools.map(([label, tool]) => ({
+      label: t(label),
+      run: () => this.change(tool),
+    }));
+    this.menus.below(event, items);
+  }
+
+  /** The notes chosen, or every one when none is, changed by `tool`. */
+  private change(tool: (notes: Note[]) => Note[]): void {
+    const notes = this.current;
+    const all = this.selected.size === 0;
+    const picked = notes.filter((_, i) => all || this.selected.has(i));
+    if (!picked.length) return;
+    const changed = tool(picked);
+    const kept = notes.filter((_, i) => !(all || this.selected.has(i)));
+    this.working = [...kept, ...changed];
+    this.selected = all ? new Set() : new Set(changed.map((_, i) => kept.length + i));
+    this.commit();
+  }
+
   private commit(): void {
     const pattern = this.studio.pattern();
     const channel = this.studio.channel();
@@ -782,4 +832,49 @@ export class PianoRoll implements OnDestroy {
     event.preventDefault();
     event.stopPropagation();
   }
+}
+
+/** Each note up to a sixty-fourth early or late, and a little softer or harder. */
+function humanize(notes: Note[]): Note[] {
+  const off = () => Math.random() * 2 - 1;
+  return notes.map((n) => ({
+    ...n,
+    start: Math.max(0, Math.round(n.start + off() * (PPQ / 16))),
+    velocity: Math.min(1, Math.max(0.05, n.velocity + off() * 0.1)),
+  }));
+}
+
+/** Each note held until the next one starts, the last to the end of the pattern. */
+function legato(notes: Note[], end: number): Note[] {
+  const starts = [...new Set(notes.map((n) => n.start))].sort((a, b) => a - b);
+  return notes.map((n) => {
+    const next = starts.find((s) => s > n.start) ?? Math.max(end, n.start + n.length);
+    return { ...n, length: Math.max(1, next - n.start) };
+  });
+}
+
+/** The notes of each chord a little after one another, the lowest first, as a hand strums. */
+function strum(notes: Note[]): Note[] {
+  const apart = PPQ / 24;
+  return notes.map((n) => {
+    const below = notes.filter((o) => o.start === n.start && o.key < n.key).length;
+    return { ...n, start: n.start + below * apart, length: Math.max(1, n.length - below * apart) };
+  });
+}
+
+/** The notes in the opposite order in time, over the time they took. */
+function backwards(notes: Note[]): Note[] {
+  const from = notes.reduce((a, n) => Math.min(a, n.start), Infinity);
+  const to = notes.reduce((a, n) => Math.max(a, n.start + n.length), 0);
+  return notes.map((n) => ({ ...n, start: from + to - (n.start + n.length) }));
+}
+
+/** The notes played `by` times slower, from where the first starts. */
+function stretch(notes: Note[], by: number): Note[] {
+  const from = notes.reduce((a, n) => Math.min(a, n.start), Infinity);
+  return notes.map((n) => ({
+    ...n,
+    start: Math.round(from + (n.start - from) * by),
+    length: Math.max(1, Math.round(n.length * by)),
+  }));
 }

@@ -78,6 +78,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   base, sa forme d'onde montre les coupes, et un clic en fait un pattern à remanier.
 - ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
   nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
+- ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus
+  long ou plus court, sur les notes choisies ou toutes.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
 - ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.
