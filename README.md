@@ -9,14 +9,18 @@ and a mixer, Sonevo's own instruments and effects, and the plugins already on yo
 
 - **Make a beat in seconds**: the channel rack's steps, a click each; drums synthesized from
   scratch, a synth, a sampler; your computer keyboard as a piano.
-- **Write melodies**: a piano roll that lights the scale you choose, with velocity, copy and
-  paste, and the other channels' notes faintly behind.
+- **Write melodies**: a piano roll that lights the scale you choose and draws its chords in a
+  click, with velocity, copy and paste, quantize, and the other channels' notes faintly
+  behind.
 - **Arrange**: patterns, sounds and automation placed, stretched and cut in the playlist; a
   loop set on the ruler; a pattern played alone, or the whole song.
 - **Mix**: mixer tracks with effects (EQ, compressor, delay, reverb, distortion, filter,
   limiter), sends, mute and solo, and any setting automated with a right-click.
 - **Your plugins**: the CLAP plugins installed, each played in a process of its own: one that
-  crashes is started again, its notes held pressed again, and the song plays on.
+  crashes is started again, its notes held pressed again, and the song plays on. Their
+  settings as knobs, automated; their own windows; their state saved with the song.
+- **Record**: the microphone recorded into the song as it plays; MIDI keyboards play the
+  channel chosen.
 - **An open format**: a song is a folder of plain files, a pattern's notes one a line,
   its sounds beside them named by what is in them; a change shows as a small diff.
 - **Versions of a song**: every save kept, the ones that matter named, any of them listened
@@ -24,8 +28,8 @@ and a mixer, Sonevo's own instruments and effects, and the plugins already on yo
 - **Nothing lost**: the song kept as it changes, offered back after a crash.
 - **Export**: the song, its loop, or each mixer track alone, to WAV.
 
-Every device explains itself in a sentence: Sonevo is meant for those who have never made
-music too. English and French.
+Every device explains itself in a sentence, and a guide walks through a first song: Sonevo
+is meant for those who have never made music too. English and French, dark and light.
 
 Windows first (WASAPI and ASIO), macOS and Linux after.
 

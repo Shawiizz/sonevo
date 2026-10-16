@@ -35,7 +35,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   objet tel qu'il est, en retirer un, changer un réglage, un lot tout-ou-rien). Annuler et
   rétablir sur 200 pas ; un bouton tourné se défait d'un coup.
 - ✅ Tests : aller-retour lecture/écriture, éditions, annulation.
-- ⬜ L'état des plugins dans le projet (`plugins/<id>.state`).
+- ✅ L'état des plugins dans le projet (`plugins/<id>.state`), demandé à chaque plugin quand
+  on enregistre, rendu au plugin quand il redémarre.
 
 ## 2. Le moteur
 
@@ -50,6 +51,11 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Événements à l'échantillon près ; automation interpolée (volume, pan, réglages, tempo).
 - ✅ Rendu hors temps réel avec le même code, testé.
 - ✅ Vumètres et position envoyés à l'interface 30 fois par seconde.
+- ✅ Un gros morceau (49 000 notes, 400 clips) se recompile en 40 ms ; l'exemple
+  `cargo run --release -p sonevo-engine --example big` le mesure.
+- ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau
+  joue, posé sur une nouvelle piste là où l'enregistrement a commencé.
+- ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
 - ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).
 
 ## 3. Instruments et effets intégrés
@@ -59,7 +65,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation.
 - ✅ Tous leurs réglages sont automatisables.
-- ⬜ LFO du synthé.
+- ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
 
 ## 4. Les plugins (CLAP, puis VST3)
 
@@ -68,7 +74,12 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Un processus par plugin, relancé s'il plante, avec **renvoi des notes tenues** (aussi
   après un bloc manqué).
 - ✅ Instruments au rack, effets au mixer.
-- ⬜ Paramètres (extension *params*), état (*state*), fenêtre du plugin (*gui*).
+- ✅ Paramètres (extension *params*) : des boutons dans le panneau, automatisables, changés
+  à l'échantillon près.
+- ✅ État (extension *state*) enregistré avec le morceau.
+- ✅ Fenêtre du plugin (extension *gui*), ouverte dans une fenêtre de son propre processus.
+- ⬜ Mettre le plugin au premier plan est permis par Sonevo, non vérifié pendant la nuit
+  (l'application testée n'était pas au premier plan).
 - ⬜ VST3.
 
 ## 5. L'application
@@ -80,20 +91,24 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   de mixage, prévisualisation, mini piano roll quand les notes ne sont pas des pas.
 - ✅ **Piano roll** (PixiJS) : dessiner, déplacer, étirer, effacer, sélection multiple,
   copier-couper-coller, dupliquer, aimantation, zoom, vélocité, gamme éclairée, écoute des
-  notes, notes des autres canaux en fond.
+  notes, notes des autres canaux en fond ; **accords d'un clic** (dans la gamme choisie) ;
+  quantification (Q).
 - ✅ **Playlist** (PixiJS) : pistes ; clips de pattern, d'audio (avec leur forme d'onde) et
   d'automation à placer, déplacer, étirer, couper ; points d'automation dessinés ; boucle sur
   la règle ; tête de lecture.
-- ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois.
+- ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois dosés.
 - ✅ Fichier : nouveau, démo, ouvrir, enregistrer, enregistrer sous, récents (le dernier
   rouvert au lancement), **enregistrement automatique et reprise après plantage**.
-- ✅ Réglages : pilote, sortie, taille de bloc, langue, dossiers de plugins.
+- ✅ Réglages : pilote, sortie, entrée, taille de bloc, thème, langue, dossiers de plugins,
+  claviers MIDI branchés.
 - ✅ Annuler et rétablir (Ctrl+Z, Ctrl+Y), **palette de commandes (Ctrl+K)**, raccourcis,
   le clavier de l'ordinateur comme piano.
 - ✅ Interface en français et en anglais (un test vérifie qu'aucun texte ne manque).
-- ✅ Chaque appareil s'explique en une phrase simple, pour les débutants.
-- ⬜ Renommer sur place (pour l'instant une petite fenêtre du système).
-- ⬜ Thème clair.
+- ✅ Chaque appareil s'explique en une phrase simple, pour les débutants ; un guide
+  « Premiers pas » en six étapes au premier lancement.
+- ✅ Renommer sur place.
+- ✅ Thème clair, sombre ou celui du système.
+- ✅ Les canevas ne se redessinent que quand quelque chose change ; la tête de lecture seule.
 
 ## 6. Les versions d'un morceau
 
@@ -115,9 +130,10 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 ## Plus tard
 
-- Enregistrement audio et entrée MIDI (clavier maître).
+- Enregistrer les notes jouées au clavier MIDI dans le piano roll.
 - Grille de clips à lancer, modulateurs branchables partout.
-- Accords assistés, séparation de pistes et audio vers MIDI en local.
+- Séparation de pistes et audio vers MIDI en local.
+- Envoyer à l'interface seulement ce qui a changé (aujourd'hui le morceau entier).
 - Collaboration en temps réel (le modèle d'éditions y prépare).
 - macOS et Linux.
 
@@ -152,3 +168,11 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     structure que Ramure). L'icône : des barres de vumètre qui ondulent du bleu au vert.
 14. **Le clavier-piano** suit la position des touches (Z à M et Q à P), quelle que soit la
     disposition du clavier ; + et − du pavé numérique changent l'octave.
+15. **Accords** : avec une gamme choisie, l'accord prend les notes de la gamme (une note sur
+    deux) ; une touche hors de la gamme reste seule ; sans gamme, accord majeur.
+16. **Enregistrement** : sans compensation de latence pour l'instant ; le son va dans le
+    dossier du morceau comme un son importé.
+17. **Plugins** : leur état et leurs réglages sont demandés à leur processus ; les réglages
+    d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
+    Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
+18. **Thème** : par défaut celui du système.
