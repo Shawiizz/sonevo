@@ -281,7 +281,22 @@ export function formatPosition(ticks: Ticks, signature: Signature): string {
   return `${bars}.${beats}.${steps}`;
 }
 
-const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+/** The scales the piano roll lights, by the steps of their notes above their root. */
+export const SCALES: { name: string; steps: number[] }[] = [
+  { name: 'Major', steps: [0, 2, 4, 5, 7, 9, 11] },
+  { name: 'Minor', steps: [0, 2, 3, 5, 7, 8, 10] },
+  { name: 'Minor pentatonic', steps: [0, 3, 5, 7, 10] },
+  { name: 'Major pentatonic', steps: [0, 2, 4, 7, 9] },
+  { name: 'Blues', steps: [0, 3, 5, 6, 7, 10] },
+  { name: 'Dorian', steps: [0, 2, 3, 5, 7, 9, 10] },
+];
+
+/** Whether `key` is a note of the scale `scale` from `root` (0 is C). */
+export function inScale(key: number, root: number, scale: number[]): boolean {
+  return scale.includes((((key - root) % 12) + 12) % 12);
+}
 
 /** A key's name, middle C (60) being C4. */
 export function keyName(key: number): string {

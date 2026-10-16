@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { formatPosition } from '../core/models';
+import { formatPosition, newId, Pattern } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
@@ -309,6 +309,27 @@ export class Transport {
     target.addEventListener('pointerup', up);
   }
 
+  /** A copy of `pattern` and its notes, to change one while keeping the other. */
+  private async duplicate(pattern: Pattern): Promise<void> {
+    const copy: Pattern = { ...pattern, id: newId(), name: `${pattern.name} (2)` };
+    const notes = this.studio.view()?.notes[pattern.id] ?? {};
+    const song = this.studio.song();
+    const index = song ? song.patterns.findIndex((p) => p.id === pattern.id) + 1 : null;
+    const done = await this.studio.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putPattern', pattern: copy, index },
+        ...Object.entries(notes).map(([channel, list]) => ({
+          type: 'setNotes' as const,
+          pattern: copy.id,
+          channel,
+          notes: list,
+        })),
+      ],
+    });
+    if (done) this.studio.selectPattern(copy.id);
+  }
+
   protected patternMenu(event: MouseEvent): void {
     const song = this.studio.song();
     if (!song) return;
@@ -330,6 +351,11 @@ export class Transport {
               index: null,
             });
         },
+      },
+      {
+        label: t('Duplicate, as a variant'),
+        disabled: !current,
+        run: () => current && this.duplicate(current),
       },
       {
         label: t('Delete the pattern'),

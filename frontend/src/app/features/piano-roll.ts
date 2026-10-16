@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { isBlack, keyName, Note, PPQ, STEP } from '../core/models';
+import { inScale, isBlack, keyName, NAMES, Note, PPQ, SCALES, STEP } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { hex, Surface } from '../shared/surface';
@@ -44,6 +44,22 @@ type Drag =
       <span>{{ studio.channel()?.name }}</span>
       <span class="in">{{ t('in') }} {{ studio.pattern()?.name }}</span>
       <span class="s-grow"></span>
+      <select
+        class="scale"
+        [value]="root()"
+        (change)="root.set(+$any($event.target).value)"
+        [title]="t('The scale lit: its notes stand out')"
+      >
+        @for (n of names; track $index) {
+          <option [value]="$index" [selected]="$index === root()">{{ n }}</option>
+        }
+      </select>
+      <select class="scale" [value]="scale()" (change)="scale.set(+$any($event.target).value)">
+        <option [value]="-1" [selected]="scale() < 0">{{ t('No scale') }}</option>
+        @for (s of scales; track s.name) {
+          <option [value]="$index" [selected]="$index === scale()">{{ t(s.name) }}</option>
+        }
+      </select>
       <div class="s-seg" role="radiogroup" [title]="t('Notes snap to')">
         @for (s of snaps; track s.ticks) {
           <button role="radio" [attr.aria-checked]="snap() === s.ticks" (click)="snap.set(s.ticks)">
@@ -86,6 +102,16 @@ type Drag =
       color: var(--s-text-3);
       font-weight: 400;
     }
+    .scale {
+      height: 26px;
+      padding: 0 6px;
+      border: 1px solid var(--s-line);
+      border-radius: var(--s-radius);
+      background: var(--s-void);
+      color: var(--s-text-2);
+      font: inherit;
+      font-size: 12px;
+    }
     .canvas {
       flex: 1;
       min-height: 0;
@@ -101,6 +127,12 @@ export class PianoRoll implements OnDestroy {
   protected readonly t = inject(I18n).t;
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private surface: Surface | null = null;
+
+  protected readonly names = NAMES;
+  protected readonly scales = SCALES;
+  /** The scale lit, by its index in SCALES (-1 for none), and its root. */
+  protected readonly scale = signal(-1);
+  protected readonly root = signal(9);
 
   protected readonly snaps = [
     { label: '1/32', ticks: STEP / 2 },
@@ -139,6 +171,8 @@ export class PianoRoll implements OnDestroy {
       this.notes();
       this.studio.pattern();
       this.snap();
+      this.scale();
+      this.root();
       this.working = null;
       this.selected = new Set([...this.selected].filter((i) => i < this.notes().length));
       this.surface?.redraw();
@@ -198,11 +232,21 @@ export class PianoRoll implements OnDestroy {
     const bar = this.studio.bar();
     const beat = PPQ;
 
-    // rows: the black keys' darker
+    // rows: the black keys' darker; with a scale, its notes' lighter and the others' darker
+    const scale = SCALES[this.scale()]?.steps;
     for (let key = this.top; key >= 0; key--) {
       const y = this.y(key);
       if (y > bottom) break;
-      g.rect(KEYS, y, width - KEYS, this.rowHeight).fill(isBlack(key) ? 0x111318 : 0x15181e);
+      const shade = scale
+        ? inScale(key, this.root(), scale)
+          ? key % 12 === this.root()
+            ? 0x24213f
+            : 0x1b1e27
+          : 0x0e1014
+        : isBlack(key)
+          ? 0x111318
+          : 0x15181e;
+      g.rect(KEYS, y, width - KEYS, this.rowHeight).fill(shade);
       if (key % 12 === 0) g.rect(KEYS, y + this.rowHeight - 1, width - KEYS, 1).fill(0x2c323d);
     }
     // past the pattern's end, dimmed
