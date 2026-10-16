@@ -119,6 +119,10 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 ## 5. L'application
 
 - ✅ Fenêtre, barre de titre, transport, panneaux, séparateur redimensionnable.
+- ✅ **Onglets**, comme dans un éditeur de code : Morceau (la playlist sur toute la hauteur),
+  Mixeur, et un onglet par pattern ouvert (double-clic sur un bloc) : ses pas en haut, le piano
+  roll de la voie choisie en bas, le pattern joué en boucle tant que son onglet est affiché.
+  F5, F6, F9, Ctrl+W, Ctrl+Tab, Échap.
 - ✅ **Navigateur** : instruments, effets, plugins ; sons du disque à glisser dans la
   playlist ou le rack, dont faire un sampler, et une recherche par mots du nom.
 - ✅ **Rack et step sequencer** : un canal par ligne, pas au clic, mute, volume, pan, piste
