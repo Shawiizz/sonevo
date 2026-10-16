@@ -20,6 +20,7 @@ export const appConfig: ApplicationConfig = {
       const settings = api.settings().then((s) => {
         i18n.set(s.language);
         themes.set(s.theme);
+        themes.setAccent(s.accent);
       });
       return Promise.all([studio.start(), settings]);
     }),

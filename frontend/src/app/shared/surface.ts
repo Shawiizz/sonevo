@@ -70,8 +70,16 @@ const LIGHT: typeof DARK = {
   laneLine: 0xe2e5eb,
 };
 
+/** The palettes in use: the accent chosen in them. */
+const shown = { dark: DARK, light: LIGHT };
+
+export function setAccent(dark: number | null, light: number | null): void {
+  shown.dark = dark === null ? DARK : { ...DARK, accent: dark };
+  shown.light = light === null ? LIGHT : { ...LIGHT, accent: light };
+}
+
 export function palette(): typeof DARK {
-  return document.documentElement.dataset['theme'] === 'light' ? LIGHT : DARK;
+  return document.documentElement.dataset['theme'] === 'light' ? shown.light : shown.dark;
 }
 
 const STYLE = new TextStyle({

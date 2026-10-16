@@ -18,6 +18,8 @@ pub struct Settings {
     pub language: Option<String>,
     /// `dark`, `light`, or none for the system's.
     pub theme: Option<String>,
+    /// The colour things chosen and played stand out in: `blue`, `green`…, none for violet.
+    pub accent: Option<String>,
     pub recent: Vec<PathBuf>,
     /// The folders the browser shows sounds from.
     pub folders: Vec<PathBuf>,
@@ -36,6 +38,7 @@ impl Default for Settings {
             input: None,
             language: None,
             theme: None,
+            accent: None,
             recent: Vec::new(),
             folders: Vec::new(),
             plugin_folders: Vec::new(),

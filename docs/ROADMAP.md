@@ -220,7 +220,7 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 17. **Plugins** : leur état et leurs réglages sont demandés à leur processus ; les réglages
     d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
     Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
-18. **Thème** : par défaut celui du système.
+18. **Thème** : par défaut celui du système ; l'accent violet, ou bleu, vert, orange, rose.
 19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.
 20. **Arpégiateur** : il joue les notes écrites et celles jouées en direct au clavier ; en direct

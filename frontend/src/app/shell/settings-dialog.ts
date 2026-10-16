@@ -5,7 +5,7 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { OutputInfo, Settings } from '../core/models';
 import { Studio } from '../core/studio.service';
-import { Themes } from '../core/theme';
+import { ACCENTS, Themes } from '../core/theme';
 
 const BUFFERS = [64, 128, 256, 512, 1024, 2048];
 
@@ -117,6 +117,18 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
               {{ t('Light') }}
             </button>
           </div>
+          <div class="accents" role="radiogroup" [attr.aria-label]="t('Accent')">
+            @for (a of accents; track a.name) {
+              <button
+                role="radio"
+                class="swatch"
+                [style.background]="a.colour"
+                [attr.aria-checked]="(s.accent ?? 'violet') === a.name"
+                [title]="t(a.label)"
+                (click)="setAccent(a.name)"
+              ></button>
+            }
+          </div>
         </section>
         <section>
           <h3>{{ t('Language') }}</h3>
@@ -178,6 +190,21 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
       margin: 0 0 10px;
       color: var(--s-text-2);
       font-size: 13px;
+    }
+    .accents {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .swatch {
+      width: 22px;
+      height: 22px;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      &[aria-checked='true'] {
+        border-color: var(--s-text);
+      }
     }
     section {
       display: flex;
@@ -284,6 +311,20 @@ export class SettingsDialog {
     } finally {
       this.scanning.set(false);
     }
+  }
+
+  protected readonly accents = [
+    { name: 'violet', label: 'Violet' },
+    { name: 'blue', label: 'Blue' },
+    { name: 'green', label: 'Green' },
+    { name: 'orange', label: 'Orange' },
+    { name: 'pink', label: 'Pink' },
+  ].map((a) => ({ ...a, colour: ACCENTS[a.name][0] }));
+
+  protected async setAccent(accent: string): Promise<void> {
+    const chosen = accent === 'violet' ? null : accent;
+    this.themes.setAccent(chosen);
+    await this.set({ accent: chosen });
   }
 
   protected async setTheme(theme: string | null): Promise<void> {

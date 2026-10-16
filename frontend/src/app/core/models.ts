@@ -260,6 +260,7 @@ export interface Settings {
   input: string | null;
   language: string | null;
   theme: string | null;
+  accent: string | null;
   recent: string[];
   folders: string[];
   pluginFolders: string[];
