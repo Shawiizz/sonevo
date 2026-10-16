@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'A melody, note by note',
-    text: 'Double-click an instrument’s name to open its piano roll: time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale at the top, and the notes that go well together light up.',
+    text: 'Double-click an instrument’s name to open its piano roll: time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale at the top, and the notes that go well together light up. Tools writes chord progressions and melodies for you.',
     show: { label: 'Show the piano roll', dock: 'roll' },
   },
   {
@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'The mix',
-    text: 'Each instrument goes to a mixer track: its level, its place from left to right, its effects. A reverb makes a room around the sound, a delay echoes it. Right-click any knob to make it move by itself over the song.',
+    text: 'Each instrument goes to a mixer track: its level, its place from left to right, its effects. A reverb makes a room around the sound, a delay echoes it. Right-click any knob to make it move by itself over the song. Check the mix, under the spectrum, says what to fix.',
     show: { label: 'Show the mixer', dock: 'mixer' },
   },
   {
