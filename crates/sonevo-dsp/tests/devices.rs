@@ -84,6 +84,21 @@ fn a_sampler_in_slices_plays_one_a_key() {
 }
 
 #[test]
+fn a_sampler_filtered_is_darker() {
+    let sampler = builtin("sonevo.sampler").unwrap();
+    let level = |cutoff: f64| {
+        let mut device = sampler.make(RATE);
+        let hiss: Vec<f32> = (0..48_000).map(|i| if i % 2 == 0 { 0.5 } else { -0.5 }).collect();
+        device.set_sample(Some(Arc::new(Sample { sample_rate: RATE, left: hiss.clone(), right: hiss })));
+        device.set(sampler.param("cutoff").unwrap(), cutoff);
+        play(&mut *device, &[note(0, 60, true)], 20)
+    };
+    // a tone at half the rate, as high as can be: all but gone under a low cutoff
+    assert!(level(20_000.0) > 0.3);
+    assert!(level(500.0) < 0.05, "{}", level(500.0));
+}
+
+#[test]
 fn a_sampler_looping_plays_on_while_held() {
     let sampler = builtin("sonevo.sampler").unwrap();
     let mut device = sampler.make(RATE);

@@ -3,7 +3,7 @@
 //! to its end whatever the note's length. Cut in slices, each key from the root up plays one.
 
 use crate::param::Param;
-use crate::util::{db_to_gain, Adsr};
+use crate::util::{db_to_gain, Adsr, Svf};
 use crate::{Context, Event, Processor};
 use std::sync::Arc;
 
@@ -41,6 +41,8 @@ pub const PARAMS: &[Param] = &[
     Param::choice("loop", "Loop", LOOPING, 0),
     Param::linear("loopStart", "Loop start", 0.0, 1.0, 0.25, ""),
     Param::linear("loopEnd", "Loop end", 0.0, 1.0, 1.0, ""),
+    Param::log("cutoff", "Cutoff", 20.0, 20000.0, 20000.0, "Hz"),
+    Param::linear("resonance", "Resonance", 0.0, 1.0, 0.1, ""),
 ];
 
 const VOICES: usize = 16;
@@ -82,18 +84,27 @@ impl Voice {
 pub struct Sampler {
     sample_rate: f32,
     sample: Option<Arc<Sample>>,
-    values: [f64; 13],
+    values: [f64; 15],
+    /// A low-pass on everything it plays, a side each; left out when wide open.
+    filters: [Svf; 2],
     voices: [Voice; VOICES],
     gain: f32,
 }
 
 impl Sampler {
     pub fn new(sample_rate: f32) -> Sampler {
-        let mut values = [0.0; 13];
+        let mut values = [0.0; 15];
         for (v, p) in values.iter_mut().zip(PARAMS) {
             *v = p.default;
         }
-        Sampler { sample_rate, sample: None, values, voices: [Voice::idle(); VOICES], gain: 1.0 }
+        Sampler {
+            sample_rate,
+            sample: None,
+            values,
+            filters: [Svf::default(); 2],
+            voices: [Voice::idle(); VOICES],
+            gain: 1.0,
+        }
     }
 
     fn held(&self) -> bool {
@@ -215,6 +226,9 @@ impl Processor for Sampler {
         if let Some(p) = PARAMS.get(index) {
             self.values[index] = p.clamp(value);
             self.gain = db_to_gain(self.values[8] as f32);
+            for filter in &mut self.filters {
+                filter.set(self.values[13] as f32, self.values[14] as f32, self.sample_rate);
+            }
         }
     }
 
@@ -236,10 +250,20 @@ impl Processor for Sampler {
             }
         }
         self.render(&mut left[done..], &mut right[done..]);
+        if self.values[13] < 19_000.0 {
+            for (side, filter) in [left, right].into_iter().zip(self.filters.iter_mut()) {
+                for s in side.iter_mut() {
+                    *s = filter.process(*s).low;
+                }
+            }
+        }
     }
 
     fn reset(&mut self) {
         self.voices = [Voice::idle(); VOICES];
+        for filter in &mut self.filters {
+            filter.clear();
+        }
     }
 
     fn set_sample(&mut self, sample: Option<Arc<Sample>>) -> Option<Arc<Sample>> {

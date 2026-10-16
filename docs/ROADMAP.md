@@ -74,6 +74,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   auto-pan au tempo.
 - ✅ Tous leurs réglages sont automatisables.
 - ✅ **Boucle du sampler** : une partie du son jouée en boucle tant que la touche est tenue.
+- ✅ **Filtre du sampler** : coupure et résonance, pour assombrir une boucle ou la faire monter.
 - ✅ **Tranches** : le sampler coupe son son en 4 à 32 parts, une par touche depuis la note de
   base, sa forme d'onde montre les coupes, et un clic en fait un pattern à remanier.
 - ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
