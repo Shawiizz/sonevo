@@ -74,4 +74,8 @@ impl Processor for Limiter {
         self.peaks.fill(0.0);
         self.gain = 1.0;
     }
+
+    fn reduction(&self) -> f32 {
+        -20.0 * self.gain.max(1e-6).log10()
+    }
 }

@@ -84,4 +84,8 @@ impl Processor for Compressor {
     fn reset(&mut self) {
         self.reduction = 0.0;
     }
+
+    fn reduction(&self) -> f32 {
+        -self.reduction
+    }
 }

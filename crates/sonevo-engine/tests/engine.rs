@@ -434,6 +434,21 @@ fn an_arpeggiator_turned_on_or_off_under_a_key_leaves_nothing_sounding() {
 }
 
 #[test]
+fn a_compressor_says_how_far_it_brings_the_sound_down() {
+    let (mut song, _, _) = song(&[note(0, 4, 48)]);
+    let pad = insert(&mut song, "Pad");
+    song.channels[0].insert = Some(pad);
+    let compressor = Device::builtin(builtin::COMPRESSOR).with("threshold", -40.0).with("ratio", 10.0);
+    let id = compressor.id;
+    song.inserts[0].effects.push(compressor);
+    let (mut engine, mut renderer) = started(&song, Mode::Song);
+    engine.play();
+    play(&mut renderer, beat(1.0));
+    assert!(engine.reduction(id) > 10.0, "{}", engine.reduction(id));
+    assert_eq!(engine.reduction(id), 0.0, "taken, it is told again only of what comes next");
+}
+
+#[test]
 fn a_track_listening_to_one_after_it_is_left_alone() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let a = insert(&mut song, "A");

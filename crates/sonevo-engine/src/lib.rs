@@ -157,6 +157,11 @@ impl Engine {
     }
 
     /// Sets a device's setting at once, as a knob turns; the song is to be changed as well.
+    /// How far the effect `device` brought the sound down since the last look, in dB.
+    pub fn reduction(&self, device: Id) -> f32 {
+        self.mirror.devices.get(&device).map_or(0.0, |held| self.shared.reductions.take(held.slot))
+    }
+
     pub fn set_param(&mut self, device: Id, param: &str, value: f64) -> bool {
         let Some(held) = self.mirror.devices.get_mut(&device) else { return false };
         let Some(index) = held.params.iter().position(|p| p.id == param) else { return false };

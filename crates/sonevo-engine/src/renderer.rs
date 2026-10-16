@@ -55,6 +55,8 @@ pub struct Shared {
     /// float.
     load: AtomicU32,
     pub meters: Meters,
+    /// How far each effect slot brought the sound down, in dB, the most since the last look.
+    pub reductions: Meters,
     pub scope: Scope,
 }
 
@@ -65,6 +67,7 @@ impl Shared {
             playing: AtomicBool::new(false),
             load: AtomicU32::new(0),
             meters: Meters::new(),
+            reductions: Meters::with(1024),
             scope: Scope::new(),
         }
     }
@@ -388,6 +391,7 @@ impl Renderer {
                     &mut insert.left[..frames],
                     &mut insert.right[..frames],
                 );
+                self.shared.reductions.hear(slot, p.reduction());
             }
             let insert = &mut inserts[i];
             let gains = insert.gains();

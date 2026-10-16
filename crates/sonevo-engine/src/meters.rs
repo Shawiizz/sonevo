@@ -22,20 +22,26 @@ pub struct Meters {
 
 impl Meters {
     pub fn new() -> Meters {
-        Meters { peaks: (0..SLOTS).map(|_| AtomicU32::new(0)).collect() }
+        Meters::with(SLOTS)
     }
 
-    /// Lets `slot` know of a sample as loud as `peak`, 0 or more.
+    /// Meters for `slots` things, each of the most heard of it since the last look.
+    pub fn with(slots: usize) -> Meters {
+        Meters { peaks: (0..slots).map(|_| AtomicU32::new(0)).collect() }
+    }
+
+    /// Lets `slot` know of a sample as loud as `peak`, 0 or more; a slot past the last is
+    /// not heard.
     pub fn hear(&self, slot: usize, peak: f32) {
         // bits of floats 0 or more are in the order of the floats
-        if peak > 0.0 {
-            self.peaks[slot].fetch_max(peak.to_bits(), Ordering::Relaxed);
+        if let (true, Some(at)) = (peak > 0.0, self.peaks.get(slot)) {
+            at.fetch_max(peak.to_bits(), Ordering::Relaxed);
         }
     }
 
     /// The loudest sample since the last look.
     pub fn take(&self, slot: usize) -> f32 {
-        f32::from_bits(self.peaks[slot].swap(0, Ordering::Relaxed))
+        self.peaks.get(slot).map_or(0.0, |at| f32::from_bits(at.swap(0, Ordering::Relaxed)))
     }
 }
 

@@ -47,6 +47,8 @@ pub struct Status {
     pub load: f32,
     /// How loud the master played across the spectrum, from the lows to the highs.
     pub spectrum: Vec<f32>,
+    /// How far each compressor and limiter brought the sound down, in dB.
+    pub reductions: BTreeMap<Id, f32>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -486,6 +488,7 @@ impl Studio {
                 recording,
                 load: 0.0,
                 spectrum: Vec::new(),
+                reductions: BTreeMap::new(),
             };
         };
         engine.collect();
@@ -502,6 +505,20 @@ impl Studio {
             recording,
             load: engine.busy(),
             spectrum: engine.spectrum().to_vec(),
+            reductions: self
+                .song
+                .inserts
+                .iter()
+                .chain([&self.song.master])
+                .flat_map(|i| i.effects.iter())
+                .filter(|d| {
+                    matches!(
+                        d.builtin_name(),
+                        Some(sonevo_project::builtin::COMPRESSOR | sonevo_project::builtin::LIMITER)
+                    )
+                })
+                .map(|d| (d.id, engine.reduction(d.id)))
+                .collect(),
         }
     }
 }

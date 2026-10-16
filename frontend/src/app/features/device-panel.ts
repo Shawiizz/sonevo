@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Arp, Channel, Device, ParamInfo, PPQ, PresetInfo, sampleLabel } from '../core/models';
@@ -97,6 +104,13 @@ const ABOUT: Record<string, string> = {
         }
         @if (info()?.name === 'sonevo.eq') {
           <s-eq-curve class="curve" [values]="settings(shown.device)" />
+        }
+        @if (info()?.name === 'sonevo.compressor' || info()?.name === 'sonevo.limiter') {
+          <div class="reduction" [title]="t('How far it brings the sound down now')">
+            <span>{{ t('Brought down') }}</span>
+            <div class="bar"><div [style.width.%]="(reduction() * 100) / 24"></div></div>
+            <span class="s-mono">-{{ reduction().toFixed(1) }} dB</span>
+          </div>
         }
         @if (info()?.name === 'sonevo.compressor') {
           <label class="s-field listens">
@@ -323,6 +337,31 @@ const ABOUT: Record<string, string> = {
     .window {
       margin-bottom: 12px;
     }
+    .reduction {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--s-text-2);
+      font-size: 12px;
+      .bar {
+        flex: 1;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: var(--s-void);
+        div {
+          height: 100%;
+          max-width: 100%;
+          background: var(--s-warn);
+          transition: width 60ms linear;
+        }
+      }
+      .s-mono {
+        min-width: 64px;
+        text-align: right;
+      }
+    }
     .curve {
       margin-bottom: 12px;
     }
@@ -447,6 +486,11 @@ export class DevicePanel {
     return Object.fromEntries(params.map((p) => [p.id, turning[p.id] ?? this.value(device, p)]));
   }
 
+  /** How far the compressor or limiter shown brings the sound down: the most of the last half
+   * second, falling back slowly. */
+  protected readonly reduction = signal(0);
+  private reductions: number[] = [];
+
   /** The settings being turned, before they are let go of. */
   private readonly turning = signal<Record<string, number>>({});
 
@@ -518,6 +562,15 @@ export class DevicePanel {
       velocity: 0.8,
     })).filter((n) => n.key <= 127);
     void this.studio.addPatternOf(`${channel.name} ${this.t('slices')}`, channel.id, notes);
+  }
+
+  constructor() {
+    effect(() => {
+      const id = this.shown()?.device.id;
+      const now = id ? (this.studio.status().reductions[id] ?? 0) : 0;
+      this.reductions = [...this.reductions, now].slice(-15);
+      this.reduction.set(Math.max(...this.reductions));
+    });
   }
 
   protected readonly arpOrders = ARP_ORDERS;

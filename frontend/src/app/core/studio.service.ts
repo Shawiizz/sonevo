@@ -38,6 +38,7 @@ const SILENT: Status = {
   recording: null,
   load: 0,
   spectrum: [],
+  reductions: {},
 };
 
 /**

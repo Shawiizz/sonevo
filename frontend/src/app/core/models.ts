@@ -227,6 +227,8 @@ export interface Status {
   load: number;
   /** How loud the master played across the spectrum, from the lows to the highs, 0 to 1. */
   spectrum: number[];
+  /** How far each compressor and limiter brought the sound down, in dB. */
+  reductions: Record<Id, number>;
 }
 
 export interface ParamInfo {

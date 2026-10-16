@@ -50,6 +50,11 @@ pub trait Processor: Send {
     /// Silence: every voice ended, every tail cut.
     fn reset(&mut self);
 
+    /// How far it brings the sound down now, in dB, 0 or more: a compressor's or a limiter's.
+    fn reduction(&self) -> f32 {
+        0.0
+    }
+
     /// Gives the sampler its sound: the one it had back, to be dropped off the audio thread.
     fn set_sample(&mut self, sample: Option<Arc<Sample>>) -> Option<Arc<Sample>> {
         sample
