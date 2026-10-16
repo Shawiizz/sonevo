@@ -123,11 +123,11 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   playlist ou le rack, dont faire un sampler, et une recherche par mots du nom.
 - ✅ **Rack et step sequencer** : un canal par ligne, pas au clic, mute, volume, pan, piste
   de mixage, prévisualisation, mini piano roll quand les notes ne sont pas des pas.
-- ✅ **Piano roll** (PixiJS) : dessiner, déplacer, étirer, effacer, sélection multiple,
+- ✅ **Piano roll** (canvas 2D) : dessiner, déplacer, étirer, effacer, sélection multiple,
   copier-couper-coller, dupliquer, aimantation, zoom, vélocité, gamme éclairée, écoute des
   notes, notes des autres canaux en fond ; **accords d'un clic** (dans la gamme choisie) ;
   quantification (Q).
-- ✅ **Playlist** (PixiJS) : pistes ; clips de pattern, d'audio (avec leur forme d'onde) et
+- ✅ **Playlist** (canvas 2D) : pistes ; clips de pattern, d'audio (avec leur forme d'onde) et
   d'automation à placer, déplacer, étirer, couper ; points d'automation dessinés ; boucle sur
   la règle ; tête de lecture.
 - ✅ **Repères** sur la règle de la playlist (Intro, Drop…) : un clic y va, un clic droit en

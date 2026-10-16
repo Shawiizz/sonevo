@@ -76,7 +76,7 @@ It signs the update packages, so it needs `TAURI_SIGNING_PRIVATE_KEY` and
 | `crates/sonevo-clap`, `crates/sonevo-plugin-ipc`, `apps/plugin-host` | CLAP hosting, and the link between the engine and a plugin's process |
 | `crates/sonevo-versions` | A song's versions, in a git repository of its own written by gitoxide |
 | `apps/sonevo-desktop` | The application (Tauri v2) |
-| `frontend` | Its interface (Angular; the piano roll and the playlist drawn with PixiJS) |
+| `frontend` | Its interface (Angular; the piano roll and the playlist drawn on 2D canvases) |
 
 The road ahead is in [docs/ROADMAP.md](docs/ROADMAP.md); the engine's first measures in
 [docs/spikes/engine.md](docs/spikes/engine.md).
