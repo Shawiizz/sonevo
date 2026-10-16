@@ -14,6 +14,7 @@ import { Browser } from './features/browser';
 import { ChannelRack } from './features/channel-rack';
 import { DevicePanel } from './features/device-panel';
 import { Mixer } from './features/mixer';
+import { PatternEditor } from './features/pattern-editor';
 import { PianoRoll } from './features/piano-roll';
 import { Playlist } from './features/playlist';
 import { VersionsPanel } from './features/versions-panel';
@@ -85,6 +86,7 @@ const PIANO: Record<string, number> = {
     Guide,
     Icon,
     Mixer,
+    PatternEditor,
     Palette,
     PianoRoll,
     Playlist,
@@ -107,43 +109,47 @@ const PIANO: Record<string, number> = {
     <div class="body">
       <aside class="side left"><app-browser /></aside>
       <main class="center">
-        <section class="playlist" [style.flex-basis.%]="100 - dockShare()">
-          <app-playlist />
-        </section>
-        <div class="splitter" (pointerdown)="split($event)"></div>
-        <section class="dock" [style.flex-basis.%]="dockShare()">
-          <div class="tabs">
-            @for (tab of tabs; track tab.id) {
-              <button
-                class="tab"
-                [class.on]="studio.dock() === tab.id"
-                (click)="studio.dock.set(tab.id)"
-              >
-                <s-icon [name]="tab.icon" />
-                {{ t(tab.label) }}
-                <span class="s-key">{{ tab.key }}</span>
-              </button>
-            }
-            <span class="grow"></span>
-            <span class="piano-hint">
-              <s-icon name="keyboard" /> {{ t('Your keyboard plays the channel chosen') }} ·
-              {{ t('octave') }} {{ octave() }}
-            </span>
-          </div>
-          <div class="dock-body">
-            @switch (studio.dock()) {
-              @case ('rack') {
-                <app-channel-rack />
+        @if (studio.editing()) {
+          <app-pattern-editor />
+        } @else {
+          <section class="playlist" [style.flex-basis.%]="100 - dockShare()">
+            <app-playlist />
+          </section>
+          <div class="splitter" (pointerdown)="split($event)"></div>
+          <section class="dock" [style.flex-basis.%]="dockShare()">
+            <div class="tabs">
+              @for (tab of tabs; track tab.id) {
+                <button
+                  class="tab"
+                  [class.on]="studio.dock() === tab.id"
+                  (click)="studio.dock.set(tab.id)"
+                >
+                  <s-icon [name]="tab.icon" />
+                  {{ t(tab.label) }}
+                  <span class="s-key">{{ tab.key }}</span>
+                </button>
               }
-              @case ('roll') {
-                <app-piano-roll />
+              <span class="grow"></span>
+              <span class="piano-hint">
+                <s-icon name="keyboard" /> {{ t('Your keyboard plays the channel chosen') }} ·
+                {{ t('octave') }} {{ octave() }}
+              </span>
+            </div>
+            <div class="dock-body">
+              @switch (studio.dock()) {
+                @case ('rack') {
+                  <app-channel-rack />
+                }
+                @case ('roll') {
+                  <app-piano-roll />
+                }
+                @case ('mixer') {
+                  <app-mixer />
+                }
               }
-              @case ('mixer') {
-                <app-mixer />
-              }
-            }
-          </div>
-        </section>
+            </div>
+          </section>
+        }
       </main>
       <aside class="side right">
         <div class="side-tabs">
@@ -529,6 +535,11 @@ export class App {
       this.studio.togglePlay();
       return;
     }
+    if (event.key === 'Escape' && this.studio.editing() && !this.menus.open()) {
+      event.preventDefault();
+      void this.studio.closePattern();
+      return;
+    }
     if (event.key === 'F1') {
       event.preventDefault();
       this.shortcutsOpen.set(true);
@@ -537,6 +548,7 @@ export class App {
     const docks: Record<string, Dock> = { F6: 'rack', F7: 'roll', F9: 'mixer' };
     if (docks[event.key]) {
       event.preventDefault();
+      if (this.studio.editing()) void this.studio.closePattern();
       this.studio.dock.set(docks[event.key]);
       return;
     }

@@ -1,12 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { builtinName, Channel, COLORS, Edit, Insert, newId, Note, STEP } from '../core/models';
@@ -59,8 +51,8 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
   selector: 'app-channel-rack',
   imports: [Icon, Knob, Meter],
   template: `
-    @if (studio.pattern(); as pattern) {
-      <div class="head" [class.flash]="flash()">
+    @if (head() && studio.pattern(); as pattern) {
+      <div class="head">
         <span class="dot" [style.background]="pattern.color"></span>
         <span class="title">{{ pattern.name }}</span>
         <span class="what">{{ t('The pattern edited: its steps below.') }}</span>
@@ -211,11 +203,6 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       height: 36px;
       padding: 0 12px;
       border-bottom: 1px solid var(--s-line);
-      transition: background 600ms ease-out;
-      &.flash {
-        background: color-mix(in srgb, var(--s-accent) 22%, transparent);
-        transition: none;
-      }
       .dot {
         width: 10px;
         height: 10px;
@@ -397,15 +384,8 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
 export class ChannelRack {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
-  /** The pattern just opened from the playlist, lit up for a moment. */
-  protected readonly flash = signal(false);
-  private readonly lit = effect((onCleanup) => {
-    const at = this.studio.opened();
-    if (!at || performance.now() - at > 500) return;
-    untracked(() => this.flash.set(true));
-    const timer = setTimeout(() => this.flash.set(false), 350);
-    onCleanup(() => clearTimeout(timer));
-  });
+  /** Whether the pattern edited is named above the steps: not where it already is. */
+  readonly head = input(true);
 
   protected hearAlone(): void {
     const view = this.studio.view();

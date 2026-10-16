@@ -257,6 +257,11 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Back to the song': 'Retour au morceau',
+  '{count} bars': '{count} mesures',
+  'Space plays it over and over · Esc goes back to the song':
+    'Espace le joue en boucle · Échap revient au morceau',
+  'Play it over and over': 'Le jouer en boucle',
   'The pattern edited: its steps below.': 'Le pattern ouvert : ses pas ci-dessous.',
   'Hear it alone': "L'écouter seul",
   'Back to the whole song': 'Revenir au morceau entier',

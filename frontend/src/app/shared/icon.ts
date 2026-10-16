@@ -29,6 +29,7 @@ const PATHS: Record<string, string> = {
   pencil: 'M10.5 2.5l3 3-8 8h-3v-3z',
   select: 'M3 2.5v11l3-3 2.5 4.5 1.5-1-2.5-4.5h4z',
   chevron: 'M6 4l4 4-4 4',
+  back: 'M10 4L6 8l4 4',
   down: 'M4 6l4 4 4-4',
   power: 'M8 2v5M4.5 4a5 5 0 1 0 7 0',
   piano: 'M2.5 3h11v10h-11zM6 3v6M10 3v6M6 9v4M10 9v4',

@@ -145,6 +145,9 @@ export class Studio {
     if (!song.patterns.some((p) => p.id === this.patternId())) {
       this.patternId.set(song.patterns[0]?.id ?? null);
     }
+    if (this.editing() && !song.patterns.some((p) => p.id === this.editing())) {
+      this.editing.set(null);
+    }
     if (!song.channels.some((c) => c.id === this.channelId())) {
       this.channelId.set(song.channels[0]?.id ?? null);
     }
@@ -558,14 +561,23 @@ export class Studio {
     return done ? copy : null;
   }
 
-  /** When a pattern was last opened from the playlist, for the rack to show it. */
-  readonly opened = signal(0);
+  /** The pattern opened to be composed in the place of the playlist, played over and over
+   * while it is. */
+  readonly editing = signal<Id | null>(null);
 
-  /** The pattern `id` edited in the rack, shown there. */
-  openPattern(id: Id): void {
-    this.selectPattern(id);
-    this.dock.set('rack');
-    this.opened.set(performance.now());
+  /** The pattern `id` opened to be composed, a channel it plays in the piano roll. */
+  async openPattern(id: Id): Promise<void> {
+    this.patternId.set(id);
+    const playing = this.song()?.channels.find((c) => this.notes(id, c.id).length > 0);
+    if (playing) this.channelId.set(playing.id);
+    this.editing.set(id);
+    await this.setMode(id);
+  }
+
+  /** Back to the playlist, the whole song played again. */
+  async closePattern(): Promise<void> {
+    this.editing.set(null);
+    if (this.view()?.patternMode) await this.setMode(null);
   }
 
   selectPattern(id: Id): void {
