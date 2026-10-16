@@ -240,6 +240,53 @@ fn every_builtin_the_song_names_exists() {
     }
 }
 
+/// The synth as a plain sine, one voice, gliding for `glide` seconds.
+fn sine_synth(glide: f64) -> Box<dyn Processor> {
+    let synth = builtin("sonevo.synth").unwrap();
+    let mut device = synth.make(RATE);
+    for (id, value) in
+        [("wave1", 3.0), ("mix", 0.0), ("cutoff", 20000.0), ("envAmount", 0.0), ("voices", 1.0)]
+    {
+        device.set(synth.param(id).unwrap(), value);
+    }
+    device.set(synth.param("glide").unwrap(), glide);
+    device
+}
+
+/// How often the sound crosses zero going up over `blocks` blocks, in hertz.
+fn pitch_of(device: &mut dyn Processor, events: &[Event], blocks: usize) -> f32 {
+    let mut heard = Vec::new();
+    for block in 0..blocks {
+        let (mut left, mut right) = (vec![0.0; BLOCK], vec![0.0; BLOCK]);
+        device.process(&CONTEXT, if block == 0 { events } else { &[] }, &mut left, &mut right);
+        heard.extend(left);
+    }
+    let ups = heard.windows(2).filter(|w| w[0] < 0.0 && w[1] >= 0.0).count();
+    ups as f32 / (heard.len() as f32 / RATE)
+}
+
+#[test]
+fn one_voice_plays_the_last_key_and_goes_back_to_the_one_held() {
+    let mut synth = sine_synth(0.0);
+    pitch_of(&mut *synth, &[note(0, 48, true)], 5);
+    let high = pitch_of(&mut *synth, &[note(0, 60, true)], 20);
+    assert!((high - 261.6).abs() < 6.0, "{high}");
+    let back = pitch_of(&mut *synth, &[note(0, 60, false)], 20);
+    assert!((back - 130.8).abs() < 6.0, "{back}");
+}
+
+#[test]
+fn glide_slides_from_one_key_to_the_next() {
+    let mut synth = sine_synth(0.3);
+    pitch_of(&mut *synth, &[note(0, 48, true)], 10);
+    pitch_of(&mut *synth, &[note(0, 60, true)], 10);
+    let sliding = pitch_of(&mut *synth, &[], 10);
+    assert!(sliding > 160.0 && sliding < 245.0, "{sliding}");
+    pitch_of(&mut *synth, &[], 30);
+    let there = pitch_of(&mut *synth, &[], 20);
+    assert!((there - 261.6).abs() < 6.0, "{there}");
+}
+
 #[test]
 fn the_synth_lfo_makes_a_tremolo() {
     let synth = builtin("sonevo.synth").unwrap();

@@ -77,6 +77,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
+- ✅ Synthé à une voix (la note tenue avant revient au relâché) et glissando d'une note à
+  l'autre, pour les basses 808 et les leads.
 
 ## 4. Les plugins (CLAP, puis VST3)
 

@@ -366,6 +366,7 @@ export class DevicePanel {
       },
       { name: 'Volume', params: pick(['attack', 'decay', 'sustain', 'release', 'volume']) },
       { name: 'LFO', params: pick(['lfoTarget', 'lfoRate', 'lfoAmount']) },
+      { name: 'Voices', params: pick(['voices', 'glide']) },
     ];
   });
 

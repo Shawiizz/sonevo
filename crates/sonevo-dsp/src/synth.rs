@@ -1,5 +1,6 @@
 //! A subtractive synth: two oscillators, up to four copies of each spread around the note
-//! and across the stereo field, a resonant low-pass with its own envelope, sixteen voices.
+//! and across the stereo field, a resonant low-pass with its own envelope, sixteen voices or
+//! one, gliding from note to note if asked.
 
 use crate::param::Param;
 use crate::util::{db_to_gain, key_frequency, Adsr, Svf, Wave};
@@ -7,6 +8,7 @@ use crate::{Context, Event, Processor};
 
 const WAVES: &[&str] = &["Saw", "Square", "Triangle", "Sine"];
 const UNISON: &[&str] = &["1", "2", "3", "4"];
+const VOICE_CHOICES: &[&str] = &["Many", "One"];
 
 pub const PARAMS: &[Param] = &[
     Param::choice("wave1", "Oscillator 1", WAVES, 0),
@@ -31,6 +33,8 @@ pub const PARAMS: &[Param] = &[
     Param::choice("lfoTarget", "LFO moves", LFO_TARGETS, 0),
     Param::log("lfoRate", "LFO speed", 0.05, 20.0, 4.0, "Hz"),
     Param::linear("lfoAmount", "LFO depth", 0.0, 1.0, 0.0, ""),
+    Param::choice("voices", "Voices", VOICE_CHOICES, 0),
+    Param::linear("glide", "Glide", 0.0, 1.0, 0.0, "s"),
 ];
 
 /// What the LFO moves: the filter (a wah), the pitch (a vibrato), the level (a tremolo).
@@ -45,12 +49,16 @@ const MAX_UNISON: usize = 4;
 const FILTER_EVERY: u32 = 16;
 /// How far the filter envelope moves the cutoff at its full amount.
 const ENV_OCTAVES: f32 = 4.0;
+/// The most keys a single voice remembers held, to go back to as they are let go of.
+const HELD: usize = 16;
 
 #[derive(Clone, Copy)]
 struct Voice {
     key: u8,
     velocity: f32,
-    frequency: f32,
+    /// The key it sounds, between keys while gliding, and the one it glides to.
+    pitch: f32,
+    target: f32,
     phase1: [f32; MAX_UNISON],
     phase2: [f32; MAX_UNISON],
     amp: Adsr,
@@ -67,7 +75,8 @@ impl Voice {
         Voice {
             key: 0,
             velocity: 0.0,
-            frequency: 0.0,
+            pitch: 0.0,
+            target: 0.0,
             phase1: [0.0; MAX_UNISON],
             phase2: [0.0; MAX_UNISON],
             amp: Adsr::new(),
@@ -82,7 +91,12 @@ impl Voice {
 
 pub struct Synth {
     sample_rate: f32,
-    values: [f64; 22],
+    values: [f64; 24],
+    /// The key last pressed, glided from.
+    last: Option<f32>,
+    /// With a single voice, the keys held in the order pressed.
+    held: [u8; HELD],
+    holding: usize,
     /// Where the LFO is in its cycle, from 0 to 1: the same for every voice.
     lfo: f32,
     voices: [Voice; VOICES],
@@ -96,7 +110,10 @@ impl Synth {
     pub fn new(sample_rate: f32) -> Synth {
         let mut synth = Synth {
             sample_rate,
-            values: [0.0; 22],
+            values: [0.0; 24],
+            last: None,
+            held: [0; HELD],
+            holding: 0,
             lfo: 0.0,
             voices: [Voice::idle(); VOICES],
             layout: [(0.0, 1.0, 1.0); MAX_UNISON],
@@ -131,7 +148,43 @@ impl Synth {
         }
     }
 
+    fn mono(&self) -> bool {
+        self.values[22].round() as i32 == 1
+    }
+
     fn press(&mut self, key: u8, velocity: f32) {
+        let pitch = f32::from(key);
+        let glide = self.values[23] > 0.0;
+        let from = self.last.filter(|_| glide).unwrap_or(pitch);
+        self.last = Some(pitch);
+        if self.mono() {
+            if self.holding == HELD {
+                self.held.copy_within(1.., 0);
+                self.holding -= 1;
+            }
+            self.held[self.holding] = key;
+            self.holding += 1;
+            let voice = &mut self.voices[0];
+            let legato = self.holding > 1 && !voice.amp.idle();
+            voice.key = key;
+            voice.target = pitch;
+            if !glide {
+                voice.pitch = pitch;
+            }
+            if legato {
+                return;
+            }
+            if voice.amp.idle() {
+                voice.pitch = pitch;
+                voice.left.clear();
+                voice.right.clear();
+            }
+            voice.velocity = velocity.clamp(0.0, 1.0);
+            voice.filter_in = 0;
+            voice.amp.start();
+            voice.env.start();
+            return;
+        }
         for voice in &mut self.voices {
             voice.age = voice.age.saturating_add(1);
         }
@@ -153,7 +206,8 @@ impl Synth {
         }
         voice.key = key;
         voice.velocity = velocity.clamp(0.0, 1.0);
-        voice.frequency = key_frequency(f32::from(key));
+        voice.pitch = from;
+        voice.target = pitch;
         voice.age = 0;
         voice.filter_in = 0;
         voice.amp.start();
@@ -161,6 +215,29 @@ impl Synth {
     }
 
     fn release(&mut self, key: u8) {
+        if self.mono() {
+            let held = &mut self.held[..self.holding];
+            let Some(at) = held.iter().position(|&k| k == key) else { return };
+            held.copy_within(at + 1.., at);
+            self.holding -= 1;
+            let voice = &mut self.voices[0];
+            match self.holding {
+                0 => {
+                    voice.amp.release();
+                    voice.env.release();
+                }
+                // back to the key pressed before, still held
+                n if voice.key == key => {
+                    voice.key = self.held[n - 1];
+                    voice.target = f32::from(voice.key);
+                    if self.values[23] <= 0.0 {
+                        voice.pitch = voice.target;
+                    }
+                }
+                _ => {}
+            }
+            return;
+        }
         for voice in self.voices.iter_mut().filter(|v| v.key == key) {
             voice.amp.release();
             voice.env.release();
@@ -178,19 +255,31 @@ impl Synth {
         let gain = self.gain;
         let (lfo_target, lfo_step, depth) = (self.values[19].round() as i32, self.v(20) / rate, self.v(21));
         let lfo_start = self.lfo;
+        // the glide nears its key by this much each time the filter is set: within 5% in its time
+        let glide = self.values[23] as f32;
+        let nearing = if glide > 0.0 { (-3.0 * FILTER_EVERY as f32 / (glide * rate)).exp() } else { 0.0 };
         let lfo_at =
             |frame: usize| (std::f32::consts::TAU * (lfo_start + frame as f32 * lfo_step)).sin() * depth;
-        for voice in self.voices.iter_mut().filter(|v| !v.amp.idle()) {
+        let steps_of = |pitch: f32| {
             let mut steps = [(0.0f32, 0.0f32); MAX_UNISON];
+            let base = key_frequency(pitch) / rate;
             for (u, step) in steps.iter_mut().enumerate().take(unison) {
-                let detune = 2f32.powf(layout[u].0 * spread / 1200.0);
-                let f = voice.frequency * detune / rate;
+                let f = base * 2f32.powf(layout[u].0 * spread / 1200.0);
                 *step = (f, f * ratio2);
             }
+            steps
+        };
+        for voice in self.voices.iter_mut().filter(|v| !v.amp.idle()) {
+            let mut steps = steps_of(voice.pitch);
             for (frame, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
                 let env = voice.env.next();
                 let lfo = if depth > 0.0 { lfo_at(frame) } else { 0.0 };
                 if voice.filter_in == 0 {
+                    if voice.pitch != voice.target {
+                        let off = (voice.pitch - voice.target) * nearing;
+                        voice.pitch = if off.abs() < 0.001 { voice.target } else { voice.target + off };
+                        steps = steps_of(voice.pitch);
+                    }
                     let wah = if lfo_target == 0 { LFO_OCTAVES * lfo } else { 0.0 };
                     let moved = (cutoff * 2f32.powf(amount * ENV_OCTAVES * env + wah)).min(rate * 0.45);
                     voice.left.set(moved, resonance, rate);
@@ -224,6 +313,14 @@ impl Processor for Synth {
     fn set(&mut self, index: usize, value: f64) {
         if let Some(p) = PARAMS.get(index) {
             self.values[index] = p.clamp(value);
+            if index == 22 {
+                // the voices sounding in one way let go of before playing the other
+                for voice in &mut self.voices {
+                    voice.amp.release();
+                    voice.env.release();
+                }
+                self.holding = 0;
+            }
             self.apply();
         }
     }
@@ -251,6 +348,8 @@ impl Processor for Synth {
 
     fn reset(&mut self) {
         self.voices = [Voice::idle(); VOICES];
+        self.holding = 0;
+        self.last = None;
         self.apply();
     }
 }
