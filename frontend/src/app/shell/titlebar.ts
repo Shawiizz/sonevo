@@ -174,6 +174,24 @@ export class Titlebar {
             }),
       },
       { label: t('Open…'), key: 'Ctrl+O', run: () => this.files.open() },
+      {
+        label: t('Open a recent song…'),
+        run: () =>
+          void api.settings().then((settings) =>
+            this.menus.show(
+              event,
+              settings.recent.length
+                ? settings.recent.map((path) => ({
+                    label: path
+                      .split(/[\\/]/)
+                      .pop()!
+                      .replace(/\.sonevo$/, ''),
+                    run: () => this.files.open(path),
+                  }))
+                : [{ label: t('No song opened yet'), disabled: true }],
+            ),
+          ),
+      },
       { separator: true, label: '' },
       { label: t('Save'), key: 'Ctrl+S', run: () => this.files.save() },
       { label: t('Save as…'), key: 'Ctrl+Shift+S', run: () => this.files.saveAs() },
