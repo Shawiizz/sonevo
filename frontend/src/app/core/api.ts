@@ -11,6 +11,7 @@ import type {
   OutputInfo,
   ParamInfo,
   PluginInfo,
+  PresetInfo,
   SampleInfo,
   Settings,
   VersionInfo,
@@ -53,6 +54,10 @@ export const api = {
     invoke<string[]>('export_wav', { path, part, depth, sampleRate }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
+  presets: (device: string) => invoke<PresetInfo[]>('presets', { device }),
+  savePreset: (device: string, name: string, values: Record<string, number>) =>
+    invoke<void>('save_preset', { device, name, values }),
+  deletePreset: (device: string, name: string) => invoke<void>('delete_preset', { device, name }),
   exportMidi: (pattern: Id, path: string) => invoke<void>('export_midi', { pattern, path }),
   places: () => invoke<Entry[]>('places'),
   versions: () => invoke<VersionInfo[]>('versions'),

@@ -5,11 +5,13 @@
 mod drums;
 pub mod effects;
 mod param;
+mod presets;
 mod sampler;
 mod synth;
 mod util;
 
 pub use param::{Param, Scale};
+pub use presets::{presets, Preset, PRESETS};
 pub use sampler::Sample;
 
 use std::sync::Arc;

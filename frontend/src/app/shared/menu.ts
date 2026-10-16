@@ -22,7 +22,12 @@ export class Menus {
 
   below(event: MouseEvent, items: MenuItem[]): void {
     event.stopPropagation();
-    const box = (event.currentTarget as Element).getBoundingClientRect();
+    this.under(event.currentTarget as Element, items);
+  }
+
+  /** Under `element`, as `below`: for a menu whose items are known only after a wait. */
+  under(element: Element, items: MenuItem[]): void {
+    const box = element.getBoundingClientRect();
     this.open.set({ x: box.left, y: box.bottom + 4, items });
   }
 

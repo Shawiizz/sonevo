@@ -71,6 +71,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation, chorus (et flanger), phaser.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
+  nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.

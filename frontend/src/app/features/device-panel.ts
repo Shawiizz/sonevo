@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Arp, Channel, Device, ParamInfo, PPQ, sampleLabel } from '../core/models';
+import { Arp, Channel, Device, ParamInfo, PPQ, PresetInfo, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
 import { Knob, toNormal } from '../shared/knob';
-import { Menus } from '../shared/menu';
+import { MenuItem, Menus } from '../shared/menu';
+import { Rename } from '../shared/rename';
 
 const ARP_ORDERS: { id: Arp['order']; label: string }[] = [
   { id: 'up', label: 'Up' },
@@ -55,6 +56,15 @@ const ABOUT: Record<string, string> = {
         <s-icon [name]="info()?.instrument ? 'synth' : 'effect'" />
         <span>{{ title() }}</span>
         <span class="s-grow"></span>
+        @if (info() && shown.device.kind.type === 'builtin') {
+          <button
+            class="s-bar-btn presets"
+            (click)="presetMenu($event, shown.device)"
+            [title]="t('Presets')"
+          >
+            {{ t('Presets') }} <s-icon name="down" [size]="12" />
+          </button>
+        }
         @if (effect()) {
           <button
             class="s-bar-btn"
@@ -312,6 +322,7 @@ export class DevicePanel {
   protected readonly t = inject(I18n).t;
   private readonly files = inject(Files);
   private readonly menus = inject(Menus);
+  private readonly rename = inject(Rename);
 
   protected readonly shown = computed(() => this.studio.device());
   protected readonly info = computed(() => {
@@ -416,6 +427,76 @@ export class DevicePanel {
       ? { order: 'up', step: PPQ / 4, octaves: 1, gate: 0.5, ...channel.arp, ...change }
       : undefined;
     void this.studio.putChannel({ ...channel, arp });
+  }
+
+  protected async presetMenu(event: MouseEvent, device: Device): Promise<void> {
+    const info = this.info();
+    if (!info || device.kind.type !== 'builtin') return;
+    const kind = device.kind.name;
+    const t = this.t;
+    const button = event.currentTarget as Element;
+    event.stopPropagation();
+    let presets: PresetInfo[] = [];
+    try {
+      presets = await api.presets(kind);
+    } catch (e) {
+      this.studio.fail(e);
+      return;
+    }
+    const apply = (p: PresetInfo) => () => {
+      const edits = info.params.map((param) => ({
+        type: 'setParam' as const,
+        device: device.id,
+        param: param.id,
+        value: p.values[param.id] ?? param.default,
+      }));
+      for (const edit of edits) void api.liveParam(device.id, edit.param, edit.value);
+      void this.studio.edit({ type: 'batch', edits });
+    };
+    const saved = presets.filter((p) => !p.factory);
+    const items: MenuItem[] = presets
+      .filter((p) => p.factory)
+      .map((p) => ({ label: t(p.name), run: apply(p) }));
+    if (saved.length) {
+      items.push(
+        { separator: true, label: '' },
+        ...saved.map((p) => ({ label: p.name, run: apply(p) })),
+      );
+    }
+    items.push(
+      { separator: true, label: '' },
+      {
+        label: t('Save these settings as a preset…'),
+        run: () => void this.savePreset(device, kind),
+      },
+    );
+    if (saved.length) {
+      items.push({
+        label: t('Delete a saved preset…'),
+        run: () =>
+          this.menus.show(
+            event,
+            saved.map((p) => ({
+              label: p.name,
+              danger: true,
+              run: () => void api.deletePreset(kind, p.name).catch((e) => this.studio.fail(e)),
+            })),
+          ),
+      });
+    }
+    this.menus.under(button, items);
+  }
+
+  private async savePreset(device: Device, kind: string): Promise<void> {
+    const info = this.info();
+    const name = await this.rename.ask(this.t('Name of the preset'), '');
+    if (!info || !name) return;
+    const values = Object.fromEntries(info.params.map((p) => [p.id, this.value(device, p)]));
+    try {
+      await api.savePreset(kind, name, values);
+    } catch (e) {
+      this.studio.fail(e);
+    }
   }
 
   protected toggle(device: Device): void {

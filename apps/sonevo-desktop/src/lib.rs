@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use settings::Settings;
 use sonevo_engine::{write_wav, Depth, Mode};
 use sonevo_project::{write_midi, Edit, Id, Midi, Note, Song, Ticks};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -503,6 +504,76 @@ fn browse(folder: PathBuf) -> Answer<Vec<Entry>> {
     Ok(entries)
 }
 
+#[derive(Serialize)]
+struct PresetInfo {
+    name: String,
+    factory: bool,
+    values: BTreeMap<String, f64>,
+}
+
+/// Where the presets saved for the built-in device `device` are, if it is one.
+fn preset_folder(app: &App, device: &str, name: Option<&str>) -> Answer<PathBuf> {
+    if sonevo_dsp::builtin(device).is_none() {
+        return Err(format!("{device} is not a device of Sonevo's"));
+    }
+    let folder = app.settings_path.with_file_name("presets").join(device);
+    match name.map(str::trim) {
+        None => Ok(folder),
+        Some(name) if name.is_empty() || name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) => {
+            Err("A preset's name cannot hold / \\ : * ? \" < > |".into())
+        }
+        Some(name) => Ok(folder.join(format!("{name}.json"))),
+    }
+}
+
+/// The presets of the built-in device `device`: those made for it, then those saved.
+#[tauri::command]
+fn presets(app: State<App>, device: String) -> Answer<Vec<PresetInfo>> {
+    let folder = preset_folder(&app, &device, None)?;
+    let mut presets: Vec<PresetInfo> = sonevo_dsp::presets(&device)
+        .map(|p| PresetInfo {
+            name: p.name.into(),
+            factory: true,
+            values: p.values.iter().map(|&(id, v)| (id.to_owned(), v)).collect(),
+        })
+        .collect();
+    let mut saved: Vec<PresetInfo> = std::fs::read_dir(folder)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension()? != "json" {
+                return None;
+            }
+            let values = serde_json::from_slice(&std::fs::read(&path).ok()?).ok()?;
+            Some(PresetInfo {
+                name: path.file_stem()?.to_string_lossy().into_owned(),
+                factory: false,
+                values,
+            })
+        })
+        .collect();
+    saved.sort_by_key(|p| p.name.to_lowercase());
+    presets.extend(saved);
+    Ok(presets)
+}
+
+#[tauri::command]
+fn save_preset(app: State<App>, device: String, name: String, values: BTreeMap<String, f64>) -> Answer<()> {
+    let path = preset_folder(&app, &device, Some(&name))?;
+    if let Some(folder) = path.parent() {
+        std::fs::create_dir_all(folder).map_err(|e| e.to_string())?;
+    }
+    let text = serde_json::to_string_pretty(&values).map_err(|e| e.to_string())?;
+    std::fs::write(path, text + "\n").map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_preset(app: State<App>, device: String, name: String) -> Answer<()> {
+    std::fs::remove_file(preset_folder(&app, &device, Some(&name))?).map_err(|e| e.to_string())
+}
+
 /// The MIDI file at `path`, its tracks that play notes.
 #[tauri::command]
 fn midi_file(path: PathBuf) -> Answer<Midi> {
@@ -722,6 +793,9 @@ pub fn run() {
             export_wav,
             midi_file,
             export_midi,
+            presets,
+            save_preset,
+            delete_preset,
             browse,
             places,
             versions,

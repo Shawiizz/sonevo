@@ -54,6 +54,13 @@ export interface Note {
   velocity: number;
 }
 
+/** Settings ready made, or saved, for a built-in device. */
+export interface PresetInfo {
+  name: string;
+  factory: boolean;
+  values: Record<string, number>;
+}
+
 /** What a MIDI file holds: its first tempo, and its tracks that play notes. */
 export interface Midi {
   tempo: number | null;

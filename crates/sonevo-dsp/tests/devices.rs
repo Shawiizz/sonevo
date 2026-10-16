@@ -36,6 +36,31 @@ fn instrument(name: &str) -> Box<dyn Processor> {
 }
 
 #[test]
+fn every_preset_sets_what_its_device_has_within_its_range() {
+    for preset in sonevo_dsp::PRESETS {
+        let device = builtin(preset.device).unwrap_or_else(|| panic!("{}", preset.device));
+        for &(id, value) in preset.values {
+            let param = device.params.iter().find(|p| p.id == id);
+            let param = param.unwrap_or_else(|| panic!("{} has no {id}", preset.device));
+            assert_eq!(param.clamp(value), value, "{}: {id}", preset.name);
+        }
+    }
+}
+
+#[test]
+fn every_instrument_preset_sounds() {
+    for preset in sonevo_dsp::PRESETS.iter().filter(|p| builtin(p.device).is_some_and(|b| b.instrument)) {
+        let device = builtin(preset.device).unwrap();
+        let mut made = instrument(preset.device);
+        for &(id, value) in preset.values {
+            made.set(device.param(id).unwrap(), value);
+        }
+        let loudest = play(&mut *made, &[note(0, 48, true)], 40);
+        assert!(loudest > 0.02 && loudest < 4.0, "{}: {loudest}", preset.name);
+    }
+}
+
+#[test]
 fn every_instrument_sounds_then_ends() {
     for b in BUILTINS.iter().filter(|b| b.instrument) {
         let mut device = instrument(b.name);
