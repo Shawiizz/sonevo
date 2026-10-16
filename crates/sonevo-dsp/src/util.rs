@@ -144,6 +144,8 @@ pub enum Wave {
     Square,
     Triangle,
     Sine,
+    /// Noise, the same at the same phase: a riser or a hiss once filtered.
+    Noise,
 }
 
 impl Wave {
@@ -152,6 +154,7 @@ impl Wave {
             1 => Wave::Square,
             2 => Wave::Triangle,
             3 => Wave::Sine,
+            4 => Wave::Noise,
             _ => Wave::Saw,
         }
     }
@@ -166,6 +169,13 @@ impl Wave {
             }
             Wave::Triangle => 1.0 - 4.0 * (phase - 0.5).abs(),
             Wave::Sine => (phase * TAU).sin(),
+            Wave::Noise => {
+                let mut x = phase.to_bits().wrapping_mul(0x9E37_79B9);
+                x ^= x >> 15;
+                x = x.wrapping_mul(0x85EB_CA6B);
+                x ^= x >> 13;
+                x as f32 / u32::MAX as f32 * 2.0 - 1.0
+            }
         }
     }
 }

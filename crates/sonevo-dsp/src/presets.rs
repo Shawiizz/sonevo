@@ -75,6 +75,15 @@ pub const PRESETS: &[Preset] = &[
         ("filterAttack", 0.08), ("filterDecay", 0.5), ("filterSustain", 0.5), ("attack", 0.04),
         ("sustain", 0.8), ("release", 0.2), ("volume", -9.0),
     ]),
+    preset(SYNTH, "Noise riser", &[
+        ("wave1", 4.0), ("mix", 0.0), ("cutoff", 400.0), ("resonance", 0.3), ("envAmount", 1.0),
+        ("filterAttack", 3.0), ("filterSustain", 1.0), ("attack", 0.5), ("sustain", 1.0), ("release", 0.5),
+        ("volume", -8.0),
+    ]),
+    preset(SYNTH, "Noise hit", &[
+        ("wave1", 4.0), ("mix", 0.0), ("cutoff", 8000.0), ("envAmount", -0.6), ("filterDecay", 1.0),
+        ("decay", 1.2), ("sustain", 0.0), ("release", 0.8), ("volume", -10.0),
+    ]),
     preset(SYNTH, "Vibrato lead", &[
         ("wave1", 1.0), ("wave2", 0.0), ("cutoff", 4000.0), ("envAmount", 0.2), ("sustain", 0.8),
         ("release", 0.2), ("lfoTarget", 1.0), ("lfoRate", 5.5), ("lfoAmount", 0.15), ("voices", 1.0),

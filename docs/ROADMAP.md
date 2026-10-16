@@ -103,6 +103,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Cordes pincées** (Karplus-Strong) : guitare nylon, harpe, koto, corde acier.
 - ✅ **Synthé FM** à deux opérateurs (piano électrique, cloche, basse FM, verre, lead
   métallique), sa brillance qui retombe comme celle d'un vrai piano électrique.
+- ✅ Une onde **bruit** dans le synthé, pour les montées et les impacts avant un drop.
 - ✅ Synthé à une voix (la note tenue avant revient au relâché) et glissando d'une note à
   l'autre, pour les basses 808 et les leads.
 

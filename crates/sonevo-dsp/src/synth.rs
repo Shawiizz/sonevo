@@ -6,7 +6,7 @@ use crate::param::Param;
 use crate::util::{db_to_gain, key_frequency, Adsr, Svf, Wave};
 use crate::{Context, Event, Processor};
 
-const WAVES: &[&str] = &["Saw", "Square", "Triangle", "Sine"];
+const WAVES: &[&str] = &["Saw", "Square", "Triangle", "Sine", "Noise"];
 const UNISON: &[&str] = &["1", "2", "3", "4"];
 const VOICE_CHOICES: &[&str] = &["Many", "One"];
 const LFO_SYNC: &[&str] = &["Free", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/4 T", "1/8 T"];
