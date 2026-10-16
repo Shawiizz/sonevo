@@ -267,6 +267,8 @@ export interface Settings {
   folders: string[];
   pluginFolders: string[];
   welcomed: boolean;
+  /** Whether recording starts a bar early, the bar left out of what is kept. */
+  countIn: boolean;
 }
 
 /** A sound of the song by its own name: the file's name without its hash or extension. */

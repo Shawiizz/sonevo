@@ -256,6 +256,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Count a bar in before recording, to get ready':
+    "Compter une mesure avant d'enregistrer, pour se préparer",
   'In the scale only': 'Dans la gamme seulement',
   'Notes drawn or moved stay in the scale chosen':
     'Les notes dessinées ou déplacées restent dans la gamme choisie',

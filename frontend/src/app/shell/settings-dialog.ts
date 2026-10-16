@@ -46,6 +46,14 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
               }
             </select>
           </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="s.countIn"
+              (change)="set({ countIn: $any($event.target).checked })"
+            />
+            <span>{{ t('Count a bar in before recording, to get ready') }}</span>
+          </label>
           <label class="s-field">
             <span>{{ t('Buffer (frames): smaller is less latency, larger is safer') }}</span>
             <select [ngModel]="s.buffer ?? 0" (ngModelChange)="set({ buffer: +$event || null })">
@@ -190,6 +198,13 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
       margin: 0 0 10px;
       color: var(--s-text-2);
       font-size: 13px;
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--s-text-2);
+      font-size: 12px;
     }
     .accents {
       display: flex;

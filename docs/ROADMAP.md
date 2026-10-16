@@ -56,7 +56,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Clips audio** : chaque piste de la playlist joue ses sons dans la piste de mixage
   choisie (pour leur mettre des effets) ; fondus en entrée et en sortie, lecture à l'envers.
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau
-  joue, posé sur une nouvelle piste là où l'enregistrement a commencé.
+  joue, posé sur une nouvelle piste là où l'enregistrement a commencé ; une mesure comptée
+  avant pour se préparer (réglable), laissée hors de la prise.
 - ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
 - ✅ **Fichiers MIDI** : un .mid ouvert (menu des patterns, palette, ou clic dans le navigateur)
   devient un pattern, chaque piste jouée par un synthé ; un pattern, ou tout le morceau tel
@@ -259,3 +260,5 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     bien aux boucles et aux voix, moins aux sons très polyphoniques.
 26. **Plugins d'effet** : un bloc rendu en retard par le plugin laisse passer le son tel quel
     plutôt qu'un silence.
+27. **Décompte** : activé par défaut ; il remonte d'une mesure si le morceau le permet (pas
+    depuis le tout début du morceau).

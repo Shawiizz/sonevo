@@ -105,6 +105,8 @@ fn fingerprint(notes: &BTreeMap<Id, Vec<Note>>) -> u64 {
 struct Recording {
     input: sonevo_audio::Input,
     start: f64,
+    /// How long it played before `start`, to be left out of what is kept.
+    lead: f64,
     left: Vec<f32>,
     right: Vec<f32>,
 }
@@ -529,15 +531,27 @@ impl Studio {
 }
 
 impl Studio {
-    pub fn record(&mut self, driver: sonevo_audio::Driver, input: Option<&str>) -> Result<(), String> {
+    /// Records from `input`, the song playing; with `count_in`, from a bar before where it
+    /// is, as far as the song goes back.
+    pub fn record(
+        &mut self,
+        driver: sonevo_audio::Driver,
+        input: Option<&str>,
+        count_in: bool,
+    ) -> Result<(), String> {
         if self.recording.is_some() {
             return Ok(());
         }
         let Some(engine) = &mut self.engine else { return Err("No sound card is open".into()) };
         let input = sonevo_audio::Input::start(driver, input).map_err(|e| e.to_string())?;
         let start = engine.position();
+        let back = if count_in { (self.song.signature.bar() as f64).min(start) } else { 0.0 };
+        if back > 0.0 {
+            engine.seek((start - back).round() as Ticks);
+        }
         engine.play();
-        self.recording = Some(Recording { input, start, left: Vec::new(), right: Vec::new() });
+        let lead = back * 60.0 / (self.song.tempo * PPQ as f64);
+        self.recording = Some(Recording { input, start, lead, left: Vec::new(), right: Vec::new() });
         Ok(())
     }
 
@@ -550,6 +564,10 @@ impl Studio {
         recording.input.take(&mut recording.left, &mut recording.right);
         let rate = recording.input.sample_rate;
         drop(recording.input);
+        // the bar counted in left out
+        let lead = ((recording.lead * f64::from(rate)) as usize).min(recording.left.len());
+        recording.left.drain(..lead);
+        recording.right.drain(..lead.min(recording.right.len()));
         if recording.left.is_empty() {
             return Ok(());
         }

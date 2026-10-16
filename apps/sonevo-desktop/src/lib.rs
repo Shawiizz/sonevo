@@ -857,11 +857,11 @@ fn keep(app: AppHandle) {
 /// Records the input chosen in the settings, the song playing from where it is.
 #[tauri::command(async)]
 fn record(app: State<App>) -> Answer<()> {
-    let (driver, input) = {
+    let (driver, input, count_in) = {
         let settings = app.settings();
-        (settings.driver(), settings.input.clone())
+        (settings.driver(), settings.input.clone(), settings.count_in)
     };
-    app.studio().record(driver, input.as_deref())
+    app.studio().record(driver, input.as_deref(), count_in)
 }
 
 /// Stops recording: what was heard on a new track.

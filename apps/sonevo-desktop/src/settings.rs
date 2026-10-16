@@ -27,6 +27,8 @@ pub struct Settings {
     pub plugin_folders: Vec<PathBuf>,
     /// Whether the demo was opened already.
     pub welcomed: bool,
+    /// Whether recording starts a bar early, the bar left out of what is kept.
+    pub count_in: bool,
 }
 
 impl Default for Settings {
@@ -43,6 +45,7 @@ impl Default for Settings {
             folders: Vec::new(),
             plugin_folders: Vec::new(),
             welcomed: false,
+            count_in: true,
         }
     }
 }
