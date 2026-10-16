@@ -1,12 +1,27 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Device, ParamInfo, sampleLabel } from '../core/models';
+import { Arp, Channel, Device, ParamInfo, PPQ, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
 import { Knob, toNormal } from '../shared/knob';
 import { Menus } from '../shared/menu';
+
+const ARP_ORDERS: { id: Arp['order']; label: string }[] = [
+  { id: 'up', label: 'Up' },
+  { id: 'down', label: 'Down' },
+  { id: 'upDown', label: 'Up and down' },
+  { id: 'random', label: 'Random' },
+];
+const ARP_STEPS = [
+  { ticks: PPQ, label: '1/4' },
+  { ticks: PPQ / 2, label: '1/8' },
+  { ticks: PPQ / 4, label: '1/16' },
+  { ticks: PPQ / 8, label: '1/32' },
+  { ticks: PPQ / 3, label: '1/8 T' },
+  { ticks: PPQ / 6, label: '1/16 T' },
+];
 
 const ABOUT: Record<string, string> = {
   'sonevo.synth':
@@ -127,6 +142,63 @@ const ABOUT: Record<string, string> = {
               }
             }
           </div>
+        }
+        @if (channel(); as channel) {
+          <h4>{{ t('Arpeggiator') }}</h4>
+          <p class="about">
+            {{ t('The keys held played one after the other instead of together.') }}
+          </p>
+          <div class="choice">
+            <div class="options">
+              <button [class.on]="!channel.arp" (click)="setArp(channel, null)">
+                {{ t('Off') }}
+              </button>
+              @for (o of arpOrders; track o.id) {
+                <button
+                  [class.on]="channel.arp?.order === o.id"
+                  (click)="setArp(channel, { order: o.id })"
+                >
+                  {{ t(o.label) }}
+                </button>
+              }
+            </div>
+          </div>
+          @if (channel.arp; as arp) {
+            <div class="choice">
+              <span class="label">{{ t('Step') }}</span>
+              <div class="options">
+                @for (s of arpSteps; track s.ticks) {
+                  <button
+                    [class.on]="arp.step === s.ticks"
+                    (click)="setArp(channel, { step: s.ticks })"
+                  >
+                    {{ s.label }}
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="choice">
+              <span class="label">{{ t('Octaves') }}</span>
+              <div class="options">
+                @for (o of [1, 2, 3, 4]; track o) {
+                  <button [class.on]="arp.octaves === o" (click)="setArp(channel, { octaves: o })">
+                    {{ o }}
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="params">
+              <s-knob
+                [value]="arp.gate"
+                [min]="0.1"
+                [max]="1"
+                [default]="0.5"
+                [label]="t('Gate')"
+                [size]="38"
+                (changed)="setArp(channel, { gate: $event })"
+              />
+            </div>
+          }
         }
         @if (!info() && !studio.plugin(shown.device)) {
           <p class="s-empty">{{ t('This plugin is not available on this computer.') }}</p>
@@ -327,6 +399,22 @@ export class DevicePanel {
       },
       { label: t('Back to its default'), run: () => this.set(device, p, p.default) },
     ]);
+  }
+
+  protected readonly arpOrders = ARP_ORDERS;
+  protected readonly arpSteps = ARP_STEPS;
+
+  /** The channel whose instrument is shown, if it is one. */
+  protected readonly channel = computed(() => {
+    const id = this.shown()?.device.id;
+    return this.studio.song()?.channels.find((c) => c.instrument.id === id) ?? null;
+  });
+
+  protected setArp(channel: Channel, change: Partial<Arp> | null): void {
+    const arp: Arp | undefined = change
+      ? { order: 'up', step: PPQ / 4, octaves: 1, gate: 0.5, ...channel.arp, ...change }
+      : undefined;
+    void this.studio.putChannel({ ...channel, arp });
   }
 
   protected toggle(device: Device): void {

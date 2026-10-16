@@ -1,5 +1,6 @@
 //! The song's parts.
 
+use crate::arp::Arp;
 use crate::device::{builtin, Device};
 use crate::id::Id;
 use crate::time::{Ticks, PPQ};
@@ -41,6 +42,9 @@ pub struct Channel {
     /// The mixer track it plays into; none is the master.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub insert: Option<Id>,
+    /// Its notes played one after the other instead of together, when on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arp: Option<Arp>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -256,6 +260,7 @@ impl Song {
             pan: 0.0,
             mute: false,
             insert: None,
+            arp: None,
         };
         let channels =
             vec![drum("Kick", 0.0, 0), drum("Clap", 3.0, 1), drum("Hat", 2.0, 2), drum("Snare", 1.0, 3)];

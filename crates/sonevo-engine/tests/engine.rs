@@ -328,6 +328,23 @@ fn swing_plays_every_second_sixteenth_late() {
 }
 
 #[test]
+fn an_arpeggiated_chord_plays_its_keys_one_by_one() {
+    let (mut song, _, _) = song(&[note(0, 1, 60), note(0, 1, 64), note(0, 1, 67)]);
+    let together = render(&song, None, 48_000);
+    song.channels[0].arp = Some(sonevo_project::Arp {
+        order: sonevo_project::ArpOrder::Up,
+        step: PPQ / 4,
+        octaves: 1,
+        gate: 0.5,
+    });
+    let apart = render(&song, None, 48_000);
+    // three keys at once are louder than one at a time
+    let first = beat(0.25);
+    assert!(loudest(&apart.left[..first]) < loudest(&together.left[..first]) * 0.7);
+    assert!(loudest(&apart.left[first..beat(0.5)]) > 0.05, "the second key did not play");
+}
+
+#[test]
 fn a_track_listening_to_one_after_it_is_left_alone() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let a = insert(&mut song, "A");

@@ -34,6 +34,17 @@ export interface Channel {
   pan: number;
   mute?: boolean;
   insert?: Id;
+  /** Its notes played one after the other instead of together, when on. */
+  arp?: Arp;
+}
+
+export interface Arp {
+  order: 'up' | 'down' | 'upDown' | 'random';
+  /** How far apart its notes are, in ticks. */
+  step: Ticks;
+  octaves: number;
+  /** How much of its step each note lasts, from 0.1 to 1. */
+  gate: number;
 }
 
 export interface Note {

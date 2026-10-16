@@ -1,6 +1,7 @@
 //! A song as Sonevo holds it, and the folder it is saved as: plain files written the same way
 //! every time, so that a change shows as a small diff.
 
+mod arp;
 mod device;
 mod edit;
 mod format;
@@ -9,6 +10,7 @@ mod midi;
 mod song;
 mod time;
 
+pub use arp::{Arp, ArpOrder};
 pub use device::{builtin, Device, DeviceKind};
 pub use edit::{Edit, EditError, History};
 pub use format::{import_sample, load, save, FormatError, FORMAT, SONG_FILE};

@@ -6,7 +6,7 @@ use crate::graph::{
 use crate::meters;
 use crate::samples::Samples;
 use sonevo_dsp::{builtin, Param, Processor, Sample};
-use sonevo_project::{ClipContent, Device, DeviceKind, Id, Insert, Pattern, Song, Target, Ticks, PPQ};
+use sonevo_project::{Arp, ClipContent, Device, DeviceKind, Id, Insert, Pattern, Song, Target, Ticks, PPQ};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -240,6 +240,7 @@ fn swung(tick: Ticks, late: Ticks) -> Ticks {
 fn pattern_events(
     pattern: &Pattern,
     channels: &HashMap<Id, usize>,
+    arps: &HashMap<Id, Arp>,
     start: Ticks,
     end: Ticks,
     offset: Ticks,
@@ -252,6 +253,14 @@ fn pattern_events(
     let last = (offset + (end - start)).div_euclid(length);
     for (id, notes) in &pattern.notes {
         let Some(&channel) = channels.get(id) else { continue };
+        let arpeggiated;
+        let notes = match arps.get(id) {
+            Some(arp) => {
+                arpeggiated = arp.play(notes, length);
+                &arpeggiated
+            }
+            None => notes,
+        };
         for repeat in first..=last {
             let from = base + repeat * length;
             for note in notes {
@@ -377,6 +386,7 @@ pub fn compile(
 
     let channel_index: HashMap<Id, usize> =
         song.channels.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+    let arps: HashMap<Id, Arp> = song.channels.iter().filter_map(|c| Some((c.id, c.arp?))).collect();
     let channels: Vec<ChannelNode> = song
         .channels
         .iter()
@@ -407,7 +417,7 @@ pub fn compile(
         Mode::Pattern(id) => {
             let length = song.pattern(id).map_or(bar, |p| p.length.max(PPQ));
             if let Some(pattern) = song.pattern(id) {
-                pattern_events(pattern, &channel_index, 0, length, 0, &mut events);
+                pattern_events(pattern, &channel_index, &arps, 0, length, 0, &mut events);
             }
             (0, length)
         }
@@ -422,6 +432,7 @@ pub fn compile(
                             pattern_events(
                                 pattern,
                                 &channel_index,
+                                &arps,
                                 clip.start,
                                 end,
                                 clip.offset,

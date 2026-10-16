@@ -20,6 +20,7 @@ fn channel(name: &str, color: usize, instrument: Device, insert: Id) -> Channel 
         pan: 0.0,
         mute: false,
         insert: Some(insert),
+        arp: None,
     }
 }
 

@@ -69,6 +69,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation, chorus (et flanger), phaser.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
+  (et en triolets), sur 1 à 4 octaves.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
@@ -183,5 +185,7 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
     Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
 18. **Thème** : par défaut celui du système.
+20. **Arpégiateur** : il joue les notes écrites dans les patterns ; les touches jouées en
+    direct au clavier sonnent encore ensemble, sans arpège.
 19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.

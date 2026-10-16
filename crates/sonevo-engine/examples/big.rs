@@ -18,6 +18,7 @@ fn main() {
             pan: 0.0,
             mute: false,
             insert: None,
+            arp: None,
         });
     }
     for p in 0..64 {
