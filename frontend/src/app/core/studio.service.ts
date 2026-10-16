@@ -110,6 +110,8 @@ export class Studio {
   }
 
   async start(): Promise<void> {
+    // listened to first: found after, they come by it; found before, they come with the rest
+    await api.onPlugins((plugins) => this.plugins.set(plugins));
     const [view, devices, plugins] = await Promise.all([api.song(), api.devices(), api.plugins()]);
     this.devices.set(devices);
     this.plugins.set(plugins);

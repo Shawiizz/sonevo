@@ -389,7 +389,7 @@ fn plugin_params(bundle: String, id: String) -> Vec<ParamInfo> {
     sonevo_plugins::params(&bundle, &id).iter().map(param_info).collect()
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PluginView {
     bundle: PathBuf,
@@ -869,6 +869,16 @@ fn watch(app: AppHandle) {
     });
 }
 
+/// The plugins in `folders` looked for while Sonevo opens, the interface told once they are found.
+fn find_plugins(app: AppHandle, folders: Vec<PathBuf>) {
+    std::thread::spawn(move || {
+        let found = sonevo_plugins::scan(&folders);
+        let state = app.state::<App>();
+        *state.plugins.lock().unwrap_or_else(|e| e.into_inner()) = found;
+        let _ = app.emit("plugins-found", plugins(state));
+    });
+}
+
 fn data(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("sonevo"))
 }
@@ -992,7 +1002,7 @@ pub fn run() {
             folders.extend(settings.plugin_folders.iter().cloned());
             let state = App {
                 studio: Mutex::new(studio),
-                plugins: Mutex::new(sonevo_plugins::scan(&folders)),
+                plugins: Mutex::new(Vec::new()),
                 sample_infos: Mutex::new(std::collections::HashMap::new()),
                 kept: Mutex::new(kept),
                 played: Mutex::new(None),
@@ -1014,6 +1024,7 @@ pub fn run() {
             };
             state.save_settings();
             app.manage(state);
+            find_plugins(handle.clone(), folders);
             keep(handle.clone());
             watch(handle);
             Ok(())

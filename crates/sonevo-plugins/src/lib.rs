@@ -64,13 +64,26 @@ fn bundles(folder: &Path, found: &mut Vec<PathBuf>) {
     }
 }
 
+/// The plugin host started without a console window of its own: Sonevo has none to lend it, and
+/// Windows would open one, in front, for every process.
+pub(crate) fn host_command(host: &Path) -> Command {
+    let mut command = Command::new(host);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
+
 /// How long a bundle is given to say what it holds.
 const SCAN_TIME: Duration = Duration::from_secs(10);
 
 /// What the plugin host writes when asked `args`, given the time a scan is: nothing if it
 /// fails, crashes or takes too long.
 fn ask_host(host: &Path, args: &[&std::ffi::OsStr]) -> Option<String> {
-    let mut child = Command::new(host)
+    let mut child = host_command(host)
         .args(args)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
@@ -357,7 +370,11 @@ pub fn scan(folders: &[PathBuf]) -> Vec<Found> {
     }
     paths.sort();
     paths.dedup();
-    let mut found: Vec<Found> = paths.iter().flat_map(|bundle| scan_bundle(&host, bundle)).collect();
+    // each bundle asked in a process of its own, all at once
+    let mut found: Vec<Found> = std::thread::scope(|scope| {
+        let asked: Vec<_> = paths.iter().map(|bundle| scope.spawn(|| scan_bundle(&host, bundle))).collect();
+        asked.into_iter().flat_map(|a| a.join().unwrap_or_default()).collect()
+    });
     found.sort_by_key(|f| f.name.to_lowercase());
     found
 }

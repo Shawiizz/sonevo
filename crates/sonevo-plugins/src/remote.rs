@@ -1,10 +1,10 @@
 //! A plugin played in a process of its own, as one of the engine's processors.
 
-use crate::host_program;
+use crate::{host_command, host_program};
 use sonevo_dsp::{Context, Event, Param, Processor};
 use sonevo_plugin_ipc::{EngineEnd, Note, ParamChange, MAX_NOTES, MAX_PARAMS};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::Child;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -105,8 +105,8 @@ impl Remote {
     }
 }
 
-fn spawn(host: &PathBuf, args: &[String]) -> std::io::Result<Child> {
-    Command::new(host).args(args).stdout(std::process::Stdio::null()).spawn()
+fn spawn(host: &Path, args: &[String]) -> std::io::Result<Child> {
+    host_command(host).args(args).stdout(std::process::Stdio::null()).spawn()
 }
 
 /// Starts the process again whenever it ends, until `stop`.

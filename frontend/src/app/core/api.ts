@@ -114,6 +114,9 @@ export const api = {
   listen: (path: string | null) => invoke<void>('listen', { path }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
+  /** The plugins installed, found as Sonevo opens. */
+  onPlugins: (handler: (plugins: PluginInfo[]) => void): Promise<UnlistenFn> =>
+    listen<PluginInfo[]>('plugins-found', (e) => handler(e.payload)),
   /** A key of a MIDI keyboard pressed or let go of. */
   onKey: (handler: (key: number, velocity: number, on: boolean) => void): Promise<UnlistenFn> =>
     listen<[number, number, boolean]>('key', (e) => handler(...e.payload)),
