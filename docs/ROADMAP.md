@@ -61,7 +61,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   joue, posé sur une nouvelle piste là où l'enregistrement a commencé.
 - ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
 - ✅ **Fichiers MIDI** : un .mid ouvert (menu des patterns, palette, ou clic dans le navigateur)
-  devient un pattern, chaque piste jouée par un synthé ; un pattern s'exporte en .mid.
+  devient un pattern, chaque piste jouée par un synthé ; un pattern, ou tout le morceau tel
+  qu'il joue (répétitions, swing, arpèges), s'exporte en .mid.
 - ✅ **Écrire** au clavier MIDI (ou d'ordinateur) pendant que le pattern tourne, avec la force
   de frappe de chaque note.
 - ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).

@@ -10,7 +10,7 @@ mod samples;
 mod scope;
 mod wav;
 
-pub use compile::{Mode, Plugins};
+pub use compile::{played_notes, Mode, Plugins};
 pub use renderer::Renderer;
 pub use samples::{decode, DecodeError, Samples};
 pub use scope::BANDS;

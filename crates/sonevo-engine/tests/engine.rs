@@ -391,6 +391,27 @@ fn an_arpeggiated_chord_plays_its_keys_one_by_one() {
 }
 
 #[test]
+fn the_notes_played_follow_the_playlist() {
+    let (mut song, _, pattern) = song(&[note(0, 1, 60), note(2, 1, 64)]);
+    let track = song.tracks[1].id;
+    let bar = 4 * PPQ;
+    song.clips.push(Clip {
+        id: Id::new(),
+        track,
+        start: 2 * bar,
+        length: bar / 2,
+        offset: 0,
+        content: ClipContent::Pattern { pattern },
+    });
+    let played = sonevo_engine::played_notes(&song);
+    let starts: Vec<i64> = played[0].iter().map(|n| n.start / PPQ).collect();
+    // the whole bar from 0, then half of it from bar three
+    assert_eq!(starts, [0, 2, 8]);
+    song.tracks[1].mute = true;
+    assert_eq!(sonevo_engine::played_notes(&song)[0].len(), 2);
+}
+
+#[test]
 fn a_track_listening_to_one_after_it_is_left_alone() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let a = insert(&mut song, "A");

@@ -58,7 +58,7 @@ export const api = {
   savePreset: (device: string, name: string, values: Record<string, number>) =>
     invoke<void>('save_preset', { device, name, values }),
   deletePreset: (device: string, name: string) => invoke<void>('delete_preset', { device, name }),
-  exportMidi: (pattern: Id, path: string) => invoke<void>('export_midi', { pattern, path }),
+  exportMidi: (pattern: Id | null, path: string) => invoke<void>('export_midi', { pattern, path }),
   places: () => invoke<Entry[]>('places'),
   versions: () => invoke<VersionInfo[]>('versions'),
   makeVersion: (name: string) => invoke<View>('make_version', { name }),

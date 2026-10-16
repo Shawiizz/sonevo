@@ -99,17 +99,19 @@ export class Files {
     if (chosen) await this.studio.importMidi(chosen);
   }
 
-  async exportMidi(): Promise<void> {
+  /** The pattern chosen, or the whole song when `song`, as a MIDI file. */
+  async exportMidi(song = false): Promise<void> {
     const pattern = this.studio.pattern();
-    if (!pattern) return;
+    const name = song ? this.studio.song()?.name : pattern?.name;
+    if (!name) return;
     const chosen = await save({
-      title: this.i18n.t('Export the pattern as MIDI'),
-      defaultPath: `${pattern.name}.mid`,
+      title: this.i18n.t(song ? 'Export the song as MIDI' : 'Export the pattern as MIDI'),
+      defaultPath: `${name}.mid`,
       filters: [{ name: 'MIDI', extensions: ['mid'] }],
     });
     if (!chosen) return;
     try {
-      await api.exportMidi(pattern.id, chosen);
+      await api.exportMidi(song ? null : (pattern?.id ?? null), chosen);
       this.say(this.i18n.t('Exported'));
     } catch (e) {
       this.studio.fail(e);

@@ -592,21 +592,34 @@ fn midi_file(path: PathBuf) -> Answer<Midi> {
     Ok(midi)
 }
 
-/// The pattern `pattern` written as a MIDI file at `path`: a track for each channel it plays.
+/// The pattern `pattern`, or the whole song as it plays, written as a MIDI file at `path`: a
+/// track for each channel that plays.
 #[tauri::command]
-fn export_midi(app: State<App>, pattern: Id, path: PathBuf) -> Answer<()> {
+fn export_midi(app: State<App>, pattern: Option<Id>, path: PathBuf) -> Answer<()> {
     let bytes = {
         let studio = app.studio();
         let song = &studio.song;
-        let pattern = song.patterns.iter().find(|p| p.id == pattern).ok_or("No such pattern")?;
+        let notes: Vec<Vec<Note>> = match pattern {
+            Some(id) => {
+                let pattern = song.patterns.iter().find(|p| p.id == id).ok_or("No such pattern")?;
+                song.channels.iter().map(|c| pattern.notes_of(c.id).to_vec()).collect()
+            }
+            None => sonevo_engine::played_notes(song),
+        };
         let tracks: Vec<(&str, &[Note])> = song
             .channels
             .iter()
-            .map(|c| (c.name.as_str(), pattern.notes_of(c.id)))
+            .zip(&notes)
+            .map(|(c, notes)| (c.name.as_str(), notes.as_slice()))
             .filter(|(_, notes)| !notes.is_empty())
             .collect();
         if tracks.is_empty() {
-            return Err("This pattern plays no notes".into());
+            return Err(if pattern.is_some() {
+                "This pattern plays no notes"
+            } else {
+                "This song plays no notes"
+            }
+            .into());
         }
         write_midi(song.tempo, &tracks)
     };

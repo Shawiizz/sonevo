@@ -6,7 +6,9 @@ use crate::graph::{
 use crate::meters;
 use crate::samples::Samples;
 use sonevo_dsp::{builtin, Param, Processor, Sample};
-use sonevo_project::{Arp, ClipContent, Device, DeviceKind, Id, Insert, Pattern, Song, Target, Ticks, PPQ};
+use sonevo_project::{
+    Arp, ClipContent, Device, DeviceKind, Id, Insert, Note, Pattern, Song, Target, Ticks, PPQ,
+};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -275,6 +277,39 @@ fn pattern_events(
             }
         }
     }
+}
+
+/// The notes the song plays, a list for each of its channels in time order: its patterns as
+/// the playlist places them, swung and arpeggiated as they are heard.
+pub fn played_notes(song: &Song) -> Vec<Vec<Note>> {
+    let channels: HashMap<Id, usize> = song.channels.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+    let arps: HashMap<Id, Arp> = song.channels.iter().filter_map(|c| Some((c.id, c.arp?))).collect();
+    let muted: HashSet<Id> = song.tracks.iter().filter(|t| t.mute).map(|t| t.id).collect();
+    let mut events = Vec::new();
+    for clip in song.clips.iter().filter(|c| !muted.contains(&c.track)) {
+        if let ClipContent::Pattern { pattern } = &clip.content {
+            if let Some(pattern) = song.pattern(*pattern) {
+                let end = clip.start + clip.length;
+                pattern_events(pattern, &channels, &arps, clip.start, end, clip.offset, &mut events);
+            }
+        }
+    }
+    events.sort_by_key(|e| (e.tick, e.on, e.channel, e.key));
+    let mut notes = vec![Vec::new(); song.channels.len()];
+    let mut down: HashMap<(usize, u8), Vec<(Ticks, f32)>> = HashMap::new();
+    for e in events {
+        let held = down.entry((e.channel, e.key)).or_default();
+        if e.on {
+            held.push((e.tick, e.velocity));
+        } else if !held.is_empty() {
+            let (start, velocity) = held.remove(0);
+            notes[e.channel].push(Note { start, length: (e.tick - start).max(1), key: e.key, velocity });
+        }
+    }
+    for list in &mut notes {
+        list.sort_by_key(|n| (n.start, n.key));
+    }
+    notes
 }
 
 pub fn compile(

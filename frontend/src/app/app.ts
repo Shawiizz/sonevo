@@ -431,6 +431,7 @@ export class App {
       { label: t('Export as WAV…'), key: 'Ctrl+E', run: () => this.files.exportWav() },
       { label: t('Import a MIDI file…'), run: () => this.files.importMidi() },
       { label: t('Export the pattern as MIDI…'), run: () => this.files.exportMidi() },
+      { label: t('Export the song as MIDI…'), run: () => this.files.exportMidi(true) },
       { label: t('Undo'), key: 'Ctrl+Z', run: () => this.studio.undo() },
       { label: t('Redo'), key: 'Ctrl+Y', run: () => this.studio.redo() },
       { label: t('Show the channel rack'), key: 'F6', run: () => this.studio.dock.set('rack') },
