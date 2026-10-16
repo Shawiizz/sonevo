@@ -53,13 +53,6 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Vumètres et position envoyés à l'interface 30 fois par seconde.
 - ✅ Un gros morceau (49 000 notes, 400 clips) se recompile en 40 ms ; l'exemple
   `cargo run --release -p sonevo-engine --example big` le mesure.
-- ✅ **Repères** sur la règle de la playlist (Intro, Drop…) : un clic y va, un clic droit en
-  ajoute, renomme ou enlève.
-- ✅ La partie de la boucle **jouée deux fois** (la suite décalée) ou **retirée** (la suite
-  rapprochée), d'un clic droit sur la règle.
-- ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
-  boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
-- ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.
 - ✅ **Clips audio** : chaque piste de la playlist joue ses sons dans la piste de mixage
   choisie (pour leur mettre des effets) ; fondus en entrée et en sortie, lecture à l'envers.
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau
@@ -80,23 +73,14 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   filtre, limiteur avec anticipation, chorus (et flanger), phaser, lo-fi (bits et fréquence),
   auto-pan au tempo.
 - ✅ Tous leurs réglages sont automatisables.
-- ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons
-  tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).
+- ✅ **Boucle du sampler** : une partie du son jouée en boucle tant que la touche est tenue.
 - ✅ **Tranches** : le sampler coupe son son en 4 à 32 parts, une par touche depuis la note de
   base, sa forme d'onde montre les coupes, et un clic en fait un pattern à remanier.
 - ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
   nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
-- ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus
-  long ou plus court, sur les notes choisies ou toutes.
-- ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
-  épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
-- ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
-- ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
-- ✅ La **réduction de gain** du compresseur et du limiteur, en direct dans leur panneau.
-- ✅ La **courbe de l'égaliseur** dans son panneau, qui suit les boutons pendant qu'on les tourne.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
@@ -129,7 +113,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 - ✅ Fenêtre, barre de titre, transport, panneaux, séparateur redimensionnable.
 - ✅ **Navigateur** : instruments, effets, plugins ; sons du disque à glisser dans la
-  playlist ou dont faire un sampler.
+  playlist ou le rack, dont faire un sampler, et une recherche par mots du nom.
 - ✅ **Rack et step sequencer** : un canal par ligne, pas au clic, mute, volume, pan, piste
   de mixage, prévisualisation, mini piano roll quand les notes ne sont pas des pas.
 - ✅ **Piano roll** (PixiJS) : dessiner, déplacer, étirer, effacer, sélection multiple,
@@ -139,7 +123,24 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Playlist** (PixiJS) : pistes ; clips de pattern, d'audio (avec leur forme d'onde) et
   d'automation à placer, déplacer, étirer, couper ; points d'automation dessinés ; boucle sur
   la règle ; tête de lecture.
+- ✅ **Repères** sur la règle de la playlist (Intro, Drop…) : un clic y va, un clic droit en
+  ajoute, renomme ou enlève.
+- ✅ La partie de la boucle **jouée deux fois** (la suite décalée) ou **retirée** (la suite
+  rapprochée), d'un clic droit sur la règle.
+- ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
+  boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
+- ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.
 - ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois dosés.
+- ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons
+  tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).
+- ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus
+  long ou plus court, sur les notes choisies ou toutes.
+- ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
+  épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
+- ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.
+- ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
+- ✅ La **réduction de gain** du compresseur et du limiteur, en direct dans leur panneau.
+- ✅ La **courbe de l'égaliseur** dans son panneau, qui suit les boutons pendant qu'on les tourne.
 - ✅ Fichier : nouveau, démo, ouvrir, enregistrer, enregistrer sous, récents (le dernier
   rouvert au lancement), **enregistrement automatique et reprise après plantage**.
 - ✅ Réglages : pilote, sortie, entrée, taille de bloc, thème, langue, dossiers de plugins,
@@ -148,7 +149,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   le clavier de l'ordinateur comme piano.
 - ✅ Interface en français et en anglais (un test vérifie qu'aucun texte ne manque).
 - ✅ Chaque appareil s'explique en une phrase simple, pour les débutants ; un guide
-  « Premiers pas » en six étapes au premier lancement.
+  « Premiers pas » en sept étapes au premier lancement.
 - ✅ Renommer sur place.
 - ✅ Thème clair, sombre ou celui du système.
 - ✅ Les canevas ne se redessinent que quand quelque chose change ; la tête de lecture seule.
@@ -185,6 +186,10 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 ## Plus tard
 
 - Grille de clips à lancer, modulateurs branchables partout.
+- Les boutons d'un contrôleur MIDI liés aux réglages (« MIDI learn ») : rien pour l'essayer
+  cette nuit.
+- S'entendre pendant l'enregistrement (retour de l'entrée) et un décompte d'une mesure avant.
+- L'encodeur FLAC avec prédiction linéaire (LPC), pour des fichiers plus petits.
 - Séparation de pistes et audio vers MIDI en local.
 - Envoyer à l'interface seulement ce qui a changé : fait pour les notes (seuls les patterns
   changés repartent), le reste du morceau part encore en entier.
@@ -197,12 +202,14 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 
-1. **Le morceau vit côté Rust.** L'interface envoie des éditions et reçoit le morceau entier
-   en retour. Simple et sûr ; pendant un glisser, l'interface dessine elle-même et n'envoie
-   qu'à la fin. Si un jour les gros morceaux rament, on enverra des différences.
+1. **Le morceau vit côté Rust.** L'interface envoie des éditions et reçoit le morceau en
+   retour, les notes des seuls patterns changés (une empreinte par pattern, un numéro de
+   révision : une réponse doublée par une plus récente fait tout redemander). Pendant un
+   glisser, l'interface dessine elle-même et n'envoie qu'à la fin.
 2. **Annuler garde des copies du morceau** (200 pas), pas un journal d'opérations. Le journal
    viendra avec la collaboration.
-3. **Les clips audio vont directement au master** (pas encore de piste de mixage par clip).
+3. **Les sons de la playlist** vont dans la piste de mixage choisie pour leur piste de playlist
+   (pas clip par clip) ; par défaut au master.
 4. **L'automation du tempo** va de 60 à 240 BPM.
 5. **Le volume d'un canal** : 80 % est le gain unité, 100 % fait +3,9 dB ; une piste de mixage
    va jusqu'à 125 % (+2 dB).
@@ -237,3 +244,15 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 21. **Automation enregistrée** : seuls les boutons des appareils s'enregistrent (pas encore les
     volumes et panoramiques du rack et du mixeur) ; pendant l'enregistrement, une automation
     déjà là sur ce réglage continue de s'entendre.
+22. **Presets et modèles** : tes presets sont dans `%APPDATA%\com.shawiizz.sonevo\presets\<appareil>`,
+    tes modèles dans `…\templates` ; un morceau parti d'un modèle commence « pas encore
+    enregistré », avec sa propre copie des sons.
+23. **FLAC** : l'encodeur n'utilise que les prédicteurs fixes de FLAC (pas encore de LPC) : un
+    fichier fait 60 à 70 % d'un WAV ; l'empreinte MD5, facultative, n'est pas écrite.
+24. **Contrôle du mix** : les seuils sont des points de départ à régler à l'oreille (faible sous
+    -18 LUFS, très fort au-dessus de -8, grondement au-delà de 30 % sous 40 Hz, terne sous 0,5 %
+    au-dessus de 8 kHz, criard au-delà de 25 %, mono douteux sous une corrélation de 0,2).
+25. **Étirer et transposer** créent un nouveau son (l'original reste) ; la méthode (WSOLA) va
+    bien aux boucles et aux voix, moins aux sons très polyphoniques.
+26. **Plugins d'effet** : un bloc rendu en retard par le plugin laisse passer le son tel quel
+    plutôt qu'un silence.
