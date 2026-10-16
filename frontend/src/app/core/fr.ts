@@ -257,6 +257,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Click a step to place a note; click a name to see its notes below.':
+    'Clique un pas pour placer une note ; clique un nom pour voir ses notes en bas.',
   'Back to the song': 'Retour au morceau',
   '{count} bars': '{count} mesures',
   'Space plays it over and over · Esc goes back to the song':

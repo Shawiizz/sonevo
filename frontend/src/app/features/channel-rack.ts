@@ -169,7 +169,9 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
         <s-icon name="dice" /> {{ t('Write a beat for me') }}
       </button>
       <span class="hint">{{
-        t('Click a step to place a note; double-click a name for the piano roll.')
+        head()
+          ? t('Click a step to place a note; double-click a name for the piano roll.')
+          : t('Click a step to place a note; click a name to see its notes below.')
       }}</span>
       @if (studio.pattern(); as pattern) {
         <div
