@@ -108,7 +108,7 @@ import { SOUND_DRAG } from './playlist';
                   ? e.path
                   : isMidi(e)
                     ? t('Click to make a pattern of it')
-                    : t('Click to listen; drag into the playlist')
+                    : t('Click to listen; drag into the playlist or the rack')
               "
             >
               <s-icon

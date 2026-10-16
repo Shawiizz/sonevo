@@ -210,7 +210,8 @@ export const FR: Record<string, string> = {
   Back: 'Retour',
   Places: 'Emplacements',
   'Add a folder': 'Ajouter un dossier',
-  'Click to listen; drag into the playlist': 'Clique pour écouter ; glisse dans la playlist',
+  'Click to listen; drag into the playlist or the rack':
+    'Clique pour écouter ; glisse dans la playlist ou le rack',
   'Make a sampler of it': 'En faire un sampler',
   'No sound here.': 'Aucun son ici.',
   'A folder of sounds': 'Un dossier de sons',

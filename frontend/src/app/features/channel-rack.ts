@@ -9,6 +9,7 @@ import { Knob } from '../shared/knob';
 import { MenuItem, Menus } from '../shared/menu';
 import { Meter } from '../shared/meter';
 import { Rename } from '../shared/rename';
+import { SOUND_DRAG } from './playlist';
 
 interface Row {
   channel: Channel;
@@ -29,9 +30,10 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
   selector: 'app-channel-rack',
   imports: [Icon, Knob, Meter],
   template: `
-    <div class="rows">
+    <div class="rows" (dragover)="dragOver($event)" (drop)="drop($event)">
       @for (row of rows(); track row.channel.id) {
         <div
+          [attr.data-channel]="row.channel.id"
           class="row"
           [class.selected]="row.channel.id === studio.channel()?.id"
           (contextmenu)="rowMenu($event, row.channel)"
@@ -433,6 +435,32 @@ export class ChannelRack {
       start: (((n.start + by * STEP) % length) + length) % length,
     }));
     void this.studio.setNotes(pattern.id, channel.id, notes);
+  }
+
+  protected dragOver(event: DragEvent): void {
+    if (event.dataTransfer?.types.includes(SOUND_DRAG)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  /** A sound dropped: on a sampler, its new sound; anywhere else, a sampler of its own. */
+  protected async drop(event: DragEvent): Promise<void> {
+    const path = event.dataTransfer?.getData(SOUND_DRAG);
+    if (!path) return;
+    event.preventDefault();
+    const id = (event.target as Element).closest('[data-channel]')?.getAttribute('data-channel');
+    const [sound] = await this.files.import([path]);
+    if (!sound) return;
+    const channel = this.studio.song()?.channels.find((c) => c.id === id);
+    if (channel && builtinName(channel.instrument) === 'sonevo.sampler') {
+      await this.studio.putChannel({
+        ...channel,
+        instrument: { ...channel.instrument, sample: sound.sample },
+      });
+    } else {
+      await this.studio.addChannel('sonevo.sampler', sound.label, sound.sample);
+    }
   }
 
   protected setSwing(swing: number): void {
