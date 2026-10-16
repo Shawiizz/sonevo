@@ -56,6 +56,27 @@ const MAX_FADER = gainToFader(1.25);
               <s-icon name="plus" [size]="12" /> {{ t('Effect') }}
             </button>
           </div>
+          @if (insert.sends?.length) {
+            <div class="sends">
+              @for (send of insert.sends; track send.to) {
+                <div
+                  class="send"
+                  [title]="t('How much is sent to {name}', { name: nameOf(send.to) })"
+                >
+                  <span>→ {{ nameOf(send.to) }}</span>
+                  <s-knob
+                    [value]="send.amount"
+                    [min]="0"
+                    [max]="1"
+                    [default]="0.5"
+                    [size]="20"
+                    [format]="percent"
+                    (changed)="setSend(insert, send.to, $event)"
+                  />
+                </div>
+              }
+            </div>
+          }
           <s-knob
             [value]="insert.pan"
             [min]="-1"
@@ -211,6 +232,31 @@ const MAX_FADER = gainToFader(1.25);
     s-knob ::ng-deep .value {
       font-size: 9px;
     }
+    .sends {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .send {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      span {
+        flex: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: var(--s-text-3);
+        font-size: 11px;
+      }
+      s-knob {
+        min-width: 22px;
+      }
+      s-knob ::ng-deep .value {
+        display: none;
+      }
+    }
     .level {
       flex: 1;
       min-height: 80px;
@@ -350,6 +396,17 @@ export class Mixer {
   protected dbText(gain: number): string {
     const db = gainToDb(gain);
     return Number.isFinite(db) ? `${db > 0 ? '+' : ''}${db.toFixed(1)} dB` : '−∞';
+  }
+
+  protected readonly percent = (v: number) => `${Math.round(v * 100)}%`;
+
+  protected nameOf(id: string): string {
+    return this.studio.song()?.inserts.find((i) => i.id === id)?.name ?? '';
+  }
+
+  protected setSend(insert: Insert, to: string, amount: number): void {
+    const sends = (insert.sends ?? []).map((s) => (s.to === to ? { ...s, amount } : s));
+    void this.studio.putInsert({ ...insert, sends });
   }
 
   protected outputName(insert: Insert): string {
