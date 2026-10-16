@@ -20,9 +20,9 @@ export class Files {
   readonly busy = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
 
-  private say(text: string): void {
+  private say(text: string, seconds = 4): void {
     this.notice.set(text);
-    setTimeout(() => this.notice.set(null), 4000);
+    setTimeout(() => this.notice.set(null), seconds * 1000);
   }
 
   /** Whether the song changed since saved may be left: asked if it did. */
@@ -130,8 +130,21 @@ export class Files {
   ): Promise<void> {
     this.busy.set(this.i18n.t('Exporting…'));
     try {
-      const missing = await api.exportWav(path, part, depth, rate);
-      this.say(missing.length ? missing.join(' · ') : this.i18n.t('Exported'));
+      const done = await api.exportWav(path, part, depth, rate);
+      const t = this.i18n.t;
+      if (done.missing.length) this.say(done.missing.join(' · '));
+      else if (done.loudness !== null && done.peak !== null)
+        this.say(
+          t(
+            'Exported: {lufs} LUFS, peaking at {peak} dB. Streaming services play songs at about -14 LUFS.',
+            {
+              lufs: done.loudness.toFixed(1),
+              peak: done.peak.toFixed(1),
+            },
+          ),
+          9,
+        );
+      else this.say(t('Exported'));
     } catch (e) {
       this.studio.fail(e);
     } finally {

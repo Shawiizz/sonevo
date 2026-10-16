@@ -51,7 +51,12 @@ export const api = {
   settings: () => invoke<Settings>('settings'),
   setSettings: (settings: Settings) => invoke<AudioStatus>('set_settings', { settings }),
   exportWav: (path: string, part: 'song' | 'loop' | 'stems', depth: string, sampleRate: number) =>
-    invoke<string[]>('export_wav', { path, part, depth, sampleRate }),
+    invoke<{ missing: string[]; loudness: number | null; peak: number | null }>('export_wav', {
+      path,
+      part,
+      depth,
+      sampleRate,
+    }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
   presets: (device: string) => invoke<PresetInfo[]>('presets', { device }),

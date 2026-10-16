@@ -256,6 +256,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Exported: {lufs} LUFS, peaking at {peak} dB. Streaming services play songs at about -14 LUFS.':
+    'Exporté : {lufs} LUFS, crête à {peak} dB. Les services de streaming jouent les morceaux vers -14 LUFS.',
   'Right-click the ruler': 'Clic droit sur la règle',
   'Add a marker, clear the loop': 'Ajouter un repère, enlever la boucle',
   'Click a marker': 'Clic sur un repère',

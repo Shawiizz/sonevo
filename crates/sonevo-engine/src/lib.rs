@@ -4,6 +4,7 @@
 
 mod compile;
 mod graph;
+mod loudness;
 mod meters;
 mod renderer;
 mod samples;
@@ -11,6 +12,7 @@ mod scope;
 mod wav;
 
 pub use compile::{played_notes, Mode, Plugins};
+pub use loudness::loudness;
 pub use renderer::Renderer;
 pub use samples::{decode, DecodeError, Samples};
 pub use scope::BANDS;

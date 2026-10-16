@@ -436,7 +436,16 @@ enum Part {
     Stems,
 }
 
-/// The song played through into WAV files at `path`: what could not be played, said plainly.
+#[derive(Serialize, Default)]
+struct Exported {
+    /// What could not be played, said plainly.
+    missing: Vec<String>,
+    /// How loud the file sounds as a whole, in LUFS, and its loudest sample in dB: not for stems.
+    loudness: Option<f64>,
+    peak: Option<f64>,
+}
+
+/// The song played through into WAV files at `path`.
 #[tauri::command(async)]
 fn export_wav(
     app: State<App>,
@@ -444,7 +453,7 @@ fn export_wav(
     part: Part,
     depth: String,
     sample_rate: u32,
-) -> Answer<Vec<String>> {
+) -> Answer<Exported> {
     let (song, folder) = {
         let studio = app.studio();
         (studio.song.clone(), studio.working_folder().to_owned())
@@ -455,10 +464,15 @@ fn export_wav(
         _ => Depth::Pcm24,
     };
     let rate = sample_rate.clamp(22_050, 192_000);
-    let write = |rendered: sonevo_engine::Rendered, path: &Path| -> Answer<Vec<String>> {
+    let write = |rendered: sonevo_engine::Rendered, path: &Path| -> Answer<Exported> {
         write_wav(path, rendered.sample_rate, &rendered.left, &rendered.right, depth)
             .map_err(|e| e.to_string())?;
-        Ok(rendered.missing)
+        let loudest = rendered.left.iter().chain(&rendered.right).fold(0.0f32, |a, s| a.max(s.abs()));
+        Ok(Exported {
+            loudness: sonevo_engine::loudness(&rendered.left, &rendered.right, rendered.sample_rate),
+            peak: (loudest > 0.0).then(|| 20.0 * f64::from(loudest).log10()),
+            missing: rendered.missing,
+        })
     };
     match part {
         Part::Song => write(sonevo_engine::render_part(&song, Some(&folder), rate, None), &path),
@@ -472,10 +486,10 @@ fn export_wav(
             for (i, insert) in tracks {
                 let name: String = insert.name.chars().filter(|c| !r#"<>:"/\\|?*"#.contains(*c)).collect();
                 let rendered = sonevo_engine::render_stem(&song, Some(&folder), rate, insert.id);
-                missing.extend(write(rendered, &path.join(format!("{i:02} {name}.wav")))?);
+                missing.extend(write(rendered, &path.join(format!("{i:02} {name}.wav")))?.missing);
             }
             missing.dedup();
-            Ok(missing)
+            Ok(Exported { missing, ..Exported::default() })
         }
     }
 }

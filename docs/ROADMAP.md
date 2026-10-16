@@ -154,6 +154,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 - ✅ Export WAV 16, 24 ou 32 bits, 44,1 / 48 / 96 kHz : le morceau, la boucle, ou **chaque
   piste de mixage seule (stems)**.
+- ✅ **Sonie** mesurée à l'export (LUFS intégrés selon l'UIT-R BS.1770, et la crête), avec ce
+  que les services de streaming en font.
 - ✅ Un morceau de démonstration au premier lancement (16 mesures de house).
 - ✅ **Modèles** de morceaux : Trap (808 qui glisse, charleys en roulements, cloches
   arpégées), Lo-fi (batterie swinguée, accords de septième) et Techno (basse acid qui pompe
