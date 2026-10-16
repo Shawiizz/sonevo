@@ -306,6 +306,31 @@ export class Studio {
     }
   }
 
+  /** A new pattern named `name`, `notes` for `channel` in it, as many bars long as they need. */
+  async addPatternOf(name: string, channel: Id, notes: Note[]): Promise<void> {
+    const song = this.song();
+    if (!song) return;
+    const bar = this.bar();
+    const end = Math.max(0, ...notes.map((n) => n.start + n.length));
+    const pattern: Pattern = {
+      id: newId(),
+      name,
+      color: COLORS[song.patterns.length % COLORS.length],
+      length: Math.max(bar, Math.ceil(end / bar) * bar),
+    };
+    const done = await this.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putPattern', pattern, index: null },
+        { type: 'setNotes', pattern: pattern.id, channel, notes },
+      ],
+    });
+    if (done) {
+      this.selectPattern(pattern.id);
+      this.dock.set('roll');
+    }
+  }
+
   async addInsert(): Promise<Insert | null> {
     const song = this.song();
     if (!song) return null;

@@ -71,6 +71,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation, chorus (et flanger), phaser.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Tranches** : le sampler coupe son son en 4 à 32 parts, une par touche depuis la note de
+  base, sa forme d'onde montre les coupes, et un clic en fait un pattern à remanier.
 - ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
   nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32

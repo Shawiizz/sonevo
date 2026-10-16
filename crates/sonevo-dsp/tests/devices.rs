@@ -61,6 +61,29 @@ fn every_instrument_preset_sounds() {
 }
 
 #[test]
+fn a_sampler_in_slices_plays_one_a_key() {
+    let sampler = builtin("sonevo.sampler").unwrap();
+    let mut device = sampler.make(RATE);
+    // four parts as loud as 0.1, 0.2, 0.3 and 0.4
+    let part = 4800;
+    let level: Vec<f32> = (0..4 * part).map(|i| 0.1 * (1 + i / part) as f32).collect();
+    device.set_sample(Some(Arc::new(Sample { sample_rate: RATE, left: level.clone(), right: level })));
+    device.set(sampler.param("slices").unwrap(), 1.0);
+    device.set(sampler.param("attack").unwrap(), 0.001);
+    let mut heard = Vec::new();
+    for block in 0..20 {
+        let (mut left, mut right) = (vec![0.0; BLOCK], vec![0.0; BLOCK]);
+        let events = [Event { at: 0, key: 62, velocity: 1.0, on: true }];
+        device.process(&CONTEXT, if block == 0 { &events } else { &[] }, &mut left, &mut right);
+        heard.extend(left);
+    }
+    assert!((heard[part / 2] - 0.3).abs() < 0.01, "{}", heard[part / 2]);
+    assert!(heard[part + 10..].iter().all(|s| *s == 0.0), "the slice played on");
+    let below = play(&mut *device, &[note(0, 59, true)], 4);
+    assert_eq!(below, 0.0, "a key under the root plays no slice");
+}
+
+#[test]
 fn every_instrument_sounds_then_ends() {
     for b in BUILTINS.iter().filter(|b| b.instrument) {
         let mut device = instrument(b.name);

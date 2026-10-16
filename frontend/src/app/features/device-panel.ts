@@ -108,6 +108,26 @@ const ABOUT: Record<string, string> = {
             </p>
           }
         }
+        @if (info()?.name === 'sonevo.sampler' && waveform(shown.device); as wave) {
+          <svg class="waveform" viewBox="0 0 100 40" preserveAspectRatio="none">
+            @for (p of wave.peaks; track $index) {
+              <rect
+                [attr.x]="$index"
+                [attr.y]="20 - p * 19"
+                width="0.7"
+                [attr.height]="p * 38 + 0.5"
+              />
+            }
+            @for (cut of wave.cuts; track $index) {
+              <line [attr.x1]="cut" [attr.x2]="cut" y1="0" y2="40" />
+            }
+          </svg>
+          @if (wave.cuts.length) {
+            <button class="s-btn slices" (click)="slicePattern(shown.device)">
+              {{ t('Make a pattern of its slices') }}
+            </button>
+          }
+        }
         @if (info()?.name === 'sonevo.sampler') {
           <div class="sample">
             <s-icon name="sample" />
@@ -291,6 +311,26 @@ const ABOUT: Record<string, string> = {
     .window {
       margin-bottom: 12px;
     }
+    .waveform {
+      display: block;
+      width: 100%;
+      height: 64px;
+      margin-bottom: 8px;
+      border-radius: var(--s-radius);
+      background: var(--s-void);
+      rect {
+        fill: var(--s-accent);
+        opacity: 0.8;
+      }
+      line {
+        stroke: var(--s-text);
+        stroke-width: 0.4;
+        vector-effect: non-scaling-stroke;
+      }
+    }
+    .slices {
+      margin-bottom: 12px;
+    }
     .listens {
       margin-bottom: 12px;
     }
@@ -411,6 +451,42 @@ export class DevicePanel {
       },
       { label: t('Back to its default'), run: () => this.set(device, p, p.default) },
     ]);
+  }
+
+  /** The sampler's sound as a hundred peaks, and where its slices are cut, along 100. */
+  protected waveform(device: Device): { peaks: number[]; cuts: number[] } | null {
+    const info = device.sample ? this.studio.sample(device.sample) : null;
+    if (!info?.peaks.length) return null;
+    const peaks = Array.from({ length: 100 }, (_, i) => {
+      const from = Math.floor((i / 100) * info.peaks.length);
+      const to = Math.max(from + 1, Math.floor(((i + 1) / 100) * info.peaks.length));
+      return Math.max(...info.peaks.slice(from, to));
+    });
+    const count = this.slices(device);
+    const cuts = Array.from({ length: Math.max(0, count - 1) }, (_, i) => ((i + 1) * 100) / count);
+    return { peaks, cuts };
+  }
+
+  private slices(device: Device): number {
+    const choice = Math.round(this.studio.value(device, 'slices'));
+    return choice > 0 ? 2 << choice : 0;
+  }
+
+  /** A pattern playing the slices one after the other, as long as the sound is at this tempo. */
+  protected slicePattern(device: Device): void {
+    const channel = this.channel();
+    const info = device.sample ? this.studio.sample(device.sample) : null;
+    const count = this.slices(device);
+    if (!channel || !info || !count) return;
+    const root = Math.round(this.studio.value(device, 'root'));
+    const each = this.studio.ticks(info.seconds) / count;
+    const notes = Array.from({ length: count }, (_, i) => ({
+      start: Math.round(i * each),
+      length: Math.max(1, Math.round(each)),
+      key: root + i,
+      velocity: 0.8,
+    }));
+    void this.studio.addPatternOf(`${channel.name} ${this.t('slices')}`, channel.id, notes);
   }
 
   protected readonly arpOrders = ARP_ORDERS;
