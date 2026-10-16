@@ -5,7 +5,7 @@
 use crate::device::Device;
 use crate::id::Id;
 use crate::song::{
-    Arrangement, Channel, Clip, ClipContent, Insert, Note, Pattern, Region, Signature, Song, Track,
+    Arrangement, Channel, Clip, ClipContent, Insert, Marker, Note, Pattern, Region, Signature, Song, Track,
 };
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
@@ -84,6 +84,13 @@ pub enum Edit {
     /// The arrangement at `index` among the others taken out.
     RemoveArrangement {
         index: usize,
+    },
+    /// A marker put back as it now is, or added.
+    PutMarker {
+        marker: Marker,
+    },
+    RemoveMarker {
+        id: Id,
     },
     /// Several edits undone as one: clips moved together.
     Batch {
@@ -229,6 +236,12 @@ impl Song {
                 }
                 self.arrangements.remove(index);
             }
+            Edit::PutMarker { mut marker } => {
+                marker.at = marker.at.max(0);
+                put(&mut self.markers, marker, None, |m| m.id);
+                self.markers.sort_by_key(|m| m.at);
+            }
+            Edit::RemoveMarker { id } => remove(&mut self.markers, id, |m| m.id)?,
             Edit::Batch { edits } => {
                 // all of them or none
                 let mut after = self.clone();

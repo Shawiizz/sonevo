@@ -76,6 +76,12 @@ export interface Pattern {
   swing?: number;
 }
 
+export interface Marker {
+  id: Id;
+  at: Ticks;
+  name: string;
+}
+
 export interface Track {
   id: Id;
   name: string;
@@ -157,6 +163,8 @@ export interface Song {
   inserts: Insert[];
   master: Insert;
   loopRegion?: Region;
+  /** Names along the playlist's ruler, in time order. */
+  markers?: Marker[];
 }
 
 export interface View {
@@ -299,6 +307,8 @@ export type Edit =
   | { type: 'switchArrangement'; index: number }
   | { type: 'renameArrangement'; name: string }
   | { type: 'removeArrangement'; index: number }
+  | { type: 'putMarker'; marker: Marker }
+  | { type: 'removeMarker'; id: Id }
   | { type: 'batch'; edits: Edit[] };
 
 export const COLORS = [

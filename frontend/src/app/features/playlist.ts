@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Clip, Id, newId, Point, PPQ, sampleLabel, STEP, Track } from '../core/models';
+import { Clip, Id, Marker, newId, Point, PPQ, sampleLabel, STEP, Track } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Files } from '../shell/files.service';
@@ -21,7 +21,9 @@ import { Rename } from '../shared/rename';
 import { hex, palette, Surface } from '../shared/surface';
 
 const HEADERS = 160;
-const RULER = 26;
+const RULER = 42;
+/** Where the markers' row of the ruler starts, under the bars' numbers. */
+const MARKS = 22;
 const EDGE = 7;
 
 type Drag =
@@ -366,7 +368,61 @@ export class Playlist implements OnDestroy {
       g.rect(x, 8, 1, RULER - 8).fill(palette().gridBar);
       s.text(String(n + 1), x + 4, 6, palette().text2, 11);
     }
+    for (const m of this.studio.song()?.markers ?? []) {
+      const x = this.x(m.at);
+      if (x < HEADERS - 1 || x > width) continue;
+      g.rect(x, MARKS, 2, RULER - MARKS - 1).fill(palette().accent);
+      s.text(m.name, x + 6, MARKS + 2, palette().text, 11);
+    }
     s.text(this.t('Tracks'), 12, 6, palette().text3, 11);
+  }
+
+  /** The marker whose flag is at `x` along the markers' row, if one is. */
+  private markerAt(x: number, y: number): Marker | null {
+    if (y < MARKS) return null;
+    const markers = this.studio.song()?.markers ?? [];
+    return (
+      [...markers].reverse().find((m) => {
+        const at = this.x(m.at);
+        return x >= at - 3 && x <= at + 10 + m.name.length * 6.5;
+      }) ?? null
+    );
+  }
+
+  private rulerMenu(event: MouseEvent, x: number, marker: Marker | null): void {
+    const t = this.t;
+    const items: MenuItem[] = [];
+    if (marker) {
+      items.push(
+        {
+          label: t('Rename the marker…'),
+          run: () =>
+            void this.rename.ask(t('Name of the marker'), marker.name).then((name) => {
+              if (name) void this.studio.edit({ type: 'putMarker', marker: { ...marker, name } });
+            }),
+        },
+        {
+          label: t('Delete the marker'),
+          danger: true,
+          run: () => this.studio.edit({ type: 'removeMarker', id: marker.id }),
+        },
+        { separator: true, label: '' },
+      );
+    }
+    const at = this.snapped(this.tickAt(x));
+    items.push({
+      label: t('Add a marker here'),
+      run: () => {
+        const n = (this.studio.song()?.markers?.length ?? 0) + 1;
+        void this.rename.ask(t('Name of the marker'), t('Marker {n}', { n })).then((name) => {
+          if (name) void this.studio.edit({ type: 'putMarker', marker: { id: newId(), at, name } });
+        });
+      },
+    });
+    if (this.studio.song()?.loopRegion) {
+      items.push({ label: t('Clear the loop'), run: () => this.setLoop(null) });
+    }
+    this.menus.show(event, items);
   }
 
   private paintOver(s: Surface): void {
@@ -511,8 +567,13 @@ export class Playlist implements OnDestroy {
     }
     if (y < RULER) {
       if (x < HEADERS) return;
+      const marker = this.markerAt(x, y);
       if (event.button === 2) {
-        this.setLoop(null);
+        this.rulerMenu(event, x, marker);
+        return;
+      }
+      if (marker) {
+        void api.seek(marker.at);
         return;
       }
       host.setPointerCapture(event.pointerId);

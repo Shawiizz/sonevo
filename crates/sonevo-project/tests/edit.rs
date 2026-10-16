@@ -1,5 +1,5 @@
 use sonevo_project::{
-    builtin, Clip, ClipContent, Device, Edit, EditError, History, Id, Insert, Note, Song, Track, PPQ,
+    builtin, Clip, ClipContent, Device, Edit, EditError, History, Id, Insert, Marker, Note, Song, Track, PPQ,
 };
 
 fn note(start: i64, key: u8) -> Note {
@@ -60,6 +60,25 @@ fn a_pattern_renamed_keeps_its_notes() {
     assert_eq!(song.patterns[0].name, "Verse");
     assert_eq!(song.patterns[0].notes_of(channel).len(), 1);
     assert_eq!(song.apply(Edit::RemovePattern { id: pattern }), Err(EditError::Last("pattern")));
+}
+
+#[test]
+fn markers_stay_in_time_order_renamed_moved_and_taken_out() {
+    let mut song = Song::new("A");
+    let drop = Marker { id: Id::new(), at: 16 * PPQ, name: "Drop".into() };
+    let intro = Marker { id: Id::new(), at: -5, name: "Intro".into() };
+    song.apply(Edit::PutMarker { marker: drop.clone() }).unwrap();
+    song.apply(Edit::PutMarker { marker: intro.clone() }).unwrap();
+    assert_eq!(
+        song.markers.iter().map(|m| (m.at, m.name.as_str())).collect::<Vec<_>>(),
+        [(0, "Intro"), (16 * PPQ, "Drop")]
+    );
+    song.apply(Edit::PutMarker { marker: Marker { at: 32 * PPQ, name: "Outro".into(), ..intro.clone() } })
+        .unwrap();
+    assert_eq!(song.markers[1].name, "Outro");
+    song.apply(Edit::RemoveMarker { id: drop.id }).unwrap();
+    assert_eq!(song.markers.len(), 1);
+    assert_eq!(song.apply(Edit::RemoveMarker { id: drop.id }), Err(EditError::Missing(drop.id)));
 }
 
 #[test]

@@ -2,8 +2,8 @@
 //! studio used once, to be played, taken apart and changed.
 
 use sonevo_project::{
-    builtin, Channel, Clip, ClipContent, Device, Id, Insert, Note, Pattern, Point, Send, Signature, Song,
-    Target, Ticks, COLORS, PPQ,
+    builtin, Channel, Clip, ClipContent, Device, Id, Insert, Marker, Note, Pattern, Point, Send, Signature,
+    Song, Target, Ticks, COLORS, PPQ,
 };
 use std::collections::BTreeMap;
 
@@ -186,6 +186,10 @@ pub fn song() -> Song {
     song.patterns = vec![beat, harmony, low, lead];
     song.clips = clips;
     song.inserts = vec![drums, synths, space];
+    song.markers = [(0, "Intro"), (4, "Groove"), (8, "Build"), (12, "Drop")]
+        .into_iter()
+        .map(|(bar, name)| Marker { id: Id::new(), at: bar * BAR, name: name.into() })
+        .collect();
     for (track, name) in song.tracks.iter_mut().zip(["Chords", "Beat", "Bass", "Lead", "", "Filter"]) {
         if !name.is_empty() {
             track.name = name.into();

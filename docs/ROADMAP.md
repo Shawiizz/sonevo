@@ -53,6 +53,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Vumètres et position envoyés à l'interface 30 fois par seconde.
 - ✅ Un gros morceau (49 000 notes, 400 clips) se recompile en 40 ms ; l'exemple
   `cargo run --release -p sonevo-engine --example big` le mesure.
+- ✅ **Repères** sur la règle de la playlist (Intro, Drop…) : un clic y va, un clic droit en
+  ajoute, renomme ou enlève.
 - ✅ **Clips audio** : chaque piste de la playlist joue ses sons dans la piste de mixage
   choisie (pour leur mettre des effets) ; fondus en entrée et en sortie, lecture à l'envers.
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau

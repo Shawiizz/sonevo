@@ -253,6 +253,17 @@ pub struct Song {
     /// The part played over and over, when looping.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loop_region: Option<Region>,
+    /// Names along the playlist's ruler, in time order: the verse, the drop.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Marker {
+    pub id: Id,
+    pub at: Ticks,
+    pub name: String,
 }
 
 /// The colours channels, patterns and mixer tracks take in turn.
@@ -300,6 +311,7 @@ impl Song {
             inserts: Vec::new(),
             master: Insert::new("Master", "#bcc3be"),
             loop_region: None,
+            markers: Vec::new(),
         }
     }
 
