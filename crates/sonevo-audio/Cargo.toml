@@ -1,0 +1,16 @@
+[package]
+name = "sonevo-audio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "The sound card: the engine's renderer played out of it"
+
+[dependencies]
+sonevo-engine.workspace = true
+thiserror.workspace = true
+cpal = { workspace = true, features = ["realtime", "asio"] }
+
+[dev-dependencies]
+sonevo-project.workspace = true
