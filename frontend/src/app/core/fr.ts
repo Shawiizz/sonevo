@@ -256,6 +256,18 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'FM synth': 'Synthé FM',
+  'An FM synth: one wave bends another, for electric pianos, bells and metallic basses. Brightness is how much; it falls as the note goes on.':
+    'Un synthé FM : une onde en déforme une autre, pour les pianos électriques, les cloches et les basses métalliques. La brillance dit de combien ; elle retombe à mesure que la note dure.',
+  Brightness: 'Brillance',
+  'Brightness at the start': 'Brillance au départ',
+  'Brightness fall': 'Chute de la brillance',
+  Grit: 'Grain',
+  'Electric piano': 'Piano électrique',
+  Bell: 'Cloche',
+  'FM bass': 'Basse FM',
+  Glass: 'Verre',
+  'Metal lead': 'Lead métallique',
   'Stretch it to fill the clip, at its own pitch':
     "L'étirer pour remplir le clip, sans changer sa hauteur",
   'Stretching…': 'Étirement…',

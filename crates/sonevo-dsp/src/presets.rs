@@ -13,6 +13,7 @@ const fn preset(device: &'static str, name: &'static str, values: &'static [(&'s
 
 const SYNTH: &str = "sonevo.synth";
 const DRUMS: &str = "sonevo.drums";
+const FM: &str = "sonevo.fm";
 const EQ: &str = "sonevo.eq";
 const COMPRESSOR: &str = "sonevo.compressor";
 const DELAY: &str = "sonevo.delay";
@@ -75,6 +76,26 @@ pub const PRESETS: &[Preset] = &[
         ("wave1", 1.0), ("wave2", 0.0), ("cutoff", 4000.0), ("envAmount", 0.2), ("sustain", 0.8),
         ("release", 0.2), ("lfoTarget", 1.0), ("lfoRate", 5.5), ("lfoAmount", 0.15), ("voices", 1.0),
         ("glide", 0.05), ("volume", -9.0),
+    ]),
+    preset(FM, "Electric piano", &[
+        ("ratio", 1.0), ("index", 0.8), ("bloom", 3.5), ("fade", 0.6), ("decay", 2.5), ("sustain", 0.15),
+        ("release", 0.5), ("volume", -8.0),
+    ]),
+    preset(FM, "Bell", &[
+        ("ratio", 3.5), ("index", 1.5), ("bloom", 5.0), ("fade", 2.0), ("attack", 0.001), ("decay", 4.0),
+        ("sustain", 0.0), ("release", 2.0), ("volume", -10.0),
+    ]),
+    preset(FM, "FM bass", &[
+        ("ratio", 1.0), ("index", 1.5), ("bloom", 6.0), ("fade", 0.12), ("feedback", 0.2), ("decay", 0.6),
+        ("sustain", 0.6), ("release", 0.1), ("volume", -6.0),
+    ]),
+    preset(FM, "Glass", &[
+        ("ratio", 7.0), ("index", 0.6), ("bloom", 2.0), ("fade", 1.0), ("decay", 3.0), ("sustain", 0.2),
+        ("release", 1.5), ("volume", -10.0),
+    ]),
+    preset(FM, "Metal lead", &[
+        ("ratio", 2.0), ("index", 3.0), ("bloom", 2.0), ("fade", 0.3), ("feedback", 0.6), ("sustain", 0.8),
+        ("release", 0.2), ("volume", -12.0),
     ]),
     preset(DRUMS, "Punchy kick", &[("sound", 0.0), ("decay", 0.8), ("tone", 0.6)]),
     preset(DRUMS, "Long 808 kick", &[("sound", 0.0), ("tune", -5.0), ("decay", 3.0), ("tone", 0.3)]),

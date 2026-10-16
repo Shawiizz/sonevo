@@ -314,6 +314,17 @@ fn pitch_of(device: &mut dyn Processor, events: &[Event], blocks: usize) -> f32 
 }
 
 #[test]
+fn the_fm_synth_unbent_is_a_sine_at_the_key() {
+    let fm = builtin("sonevo.fm").unwrap();
+    let mut device = fm.make(RATE);
+    device.set(fm.param("index").unwrap(), 0.0);
+    device.set(fm.param("bloom").unwrap(), 0.0);
+    device.set(fm.param("sustain").unwrap(), 1.0);
+    let heard = pitch_of(&mut *device, &[note(0, 69, true)], 40);
+    assert!((heard - 440.0).abs() < 5.0, "{heard}");
+}
+
+#[test]
 fn one_voice_plays_the_last_key_and_goes_back_to_the_one_held() {
     let mut synth = sine_synth(0.0);
     pitch_of(&mut *synth, &[note(0, 48, true)], 5);

@@ -4,6 +4,7 @@
 
 mod drums;
 pub mod effects;
+mod fm;
 mod param;
 mod presets;
 mod sampler;
@@ -100,6 +101,13 @@ pub const BUILTINS: &[Builtin] = &[
         instrument: true,
         params: sampler::PARAMS,
         make: |rate| Box::new(sampler::Sampler::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.fm",
+        label: "FM synth",
+        instrument: true,
+        params: fm::PARAMS,
+        make: |rate| Box::new(fm::Fm::new(rate)),
     },
     Builtin {
         name: "sonevo.eq",
