@@ -5,10 +5,8 @@ piano roll, playlist, mixer, automation, export), plus ce qu'il ne fait pas (un 
 les versions d'un morceau, des plugins isolés, Linux et macOS à terme).
 
 Chaque étape se termine par quelque chose qui marche de bout en bout, testé, commité et poussé.
-Une étape à moitié faite n'est pas laissée en l'état : on revient à la dernière version qui
-marche.
 
-Légende : ✅ fait · 🔨 en cours · ⬜ à faire
+Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 ---
 
@@ -16,117 +14,141 @@ Légende : ✅ fait · 🔨 en cours · ⬜ à faire
 
 - ✅ Prototype du moteur : un plugin CLAP dans son propre processus, mesuré
   ([résultats](spikes/engine.md)).
-- ⬜ Organisation du dépôt :
-  - `crates/sonevo-project` : le modèle du morceau et son format ;
-  - `crates/sonevo-engine` : le moteur temps réel ;
-  - `crates/sonevo-dsp` : instruments et effets intégrés ;
-  - `crates/sonevo-audio` : les sorties audio (WASAPI, ASIO) ;
-  - `crates/sonevo-clap`, `crates/sonevo-plugin-ipc` ;
-  - `apps/plugin-host` ;
-  - `apps/sonevo-desktop` (Tauri v2) ;
-  - `frontend` (Angular).
-- ⬜ CI GitHub Actions sous Windows : format, clippy, tests Rust, tests du frontend, build.
+- ✅ Organisation du dépôt (voir le README) : `sonevo-project`, `sonevo-dsp`, `sonevo-engine`,
+  `sonevo-audio`, `sonevo-plugins`, `sonevo-versions`, `sonevo-clap`, `sonevo-plugin-ipc`,
+  `plugin-host`, `sonevo-desktop`, `frontend`.
+- ✅ CI GitHub Actions sous Windows : format, clippy, tests Rust (dont un plugin tué en plein
+  jeu), tests et build du frontend.
+- ✅ Workflow de release : un tag `X.Y.Z` construit l'installateur et prépare une release en
+  brouillon, à publier à la main.
 
 ## 1. Le modèle du morceau et son format ouvert
 
-- ⬜ Le morceau :
-  - tempo et mesure ;
-  - **canaux** : un instrument, intégré ou plugin, et sa piste de mixage ;
-  - **patterns** : des notes par canal ;
-  - **playlist** : des pistes, des clips de pattern, des clips audio, des clips d'automation ;
-  - **mixer** : des pistes avec volume, panoramique, mute et solo, une chaîne d'effets, des envois, et le master.
-- ⬜ Chaque objet a un identifiant stable : renommer ou déplacer ne casse rien.
-- ⬜ Le format, un dossier `Morceau.sonevo/` :
-  - `song.json` : trié et indenté, toujours écrit de la même façon, pour des diffs propres ;
-  - `patterns/<id>.json` : un fichier par pattern, pour qu'une modification ne touche qu'un fichier ;
-  - `samples/<empreinte>.<ext>` : nommés par leur contenu, donc sans doublon ni lien cassé ;
-  - `plugins/<id>.state` : l'état des plugins.
-- ⬜ Lecture, écriture et validation, plus un numéro de version du format pour les migrations futures.
-- ⬜ Les modifications passent par des **opérations** : ajouter une note, déplacer un clip, changer un volume… Elles servent à annuler et rétablir sans limite, et préparent la collaboration.
-- ⬜ Tests : aller-retour lecture/écriture identique, diff minimal après une modification.
+- ✅ Le morceau : tempo, mesure, canaux, patterns, playlist (pistes, clips de pattern, d'audio
+  et d'automation), mixer (pistes, effets, envois, mute, solo, master).
+- ✅ Des identifiants stables et aléatoires : renommer ou déplacer ne casse rien.
+- ✅ Le format, un dossier `Morceau.sonevo/` : `song.json` trié, `patterns/<id>.json` une note
+  par ligne, `samples/<nom> <empreinte>.<ext>` (un son gardé une seule fois, quel que soit son
+  nom). Numéro de version du format ; un morceau d'un Sonevo plus récent est refusé
+  proprement ; ce qui pointe dans le vide est réparé à l'ouverture.
+- ✅ Les modifications passent par des **éditions** (une quinzaine de sortes : remettre un
+  objet tel qu'il est, en retirer un, changer un réglage, un lot tout-ou-rien). Annuler et
+  rétablir sur 200 pas ; un bouton tourné se défait d'un coup.
+- ✅ Tests : aller-retour lecture/écriture, éditions, annulation.
+- ⬜ L'état des plugins dans le projet (`plugins/<id>.state`).
 
 ## 2. Le moteur
 
-- ⬜ `sonevo-audio` : choix de la sortie (WASAPI, ASIO), taille de bloc, fréquence. Relance quand l'appareil change ou disparaît.
-- ⬜ Le transport : lecture, arrêt, position, boucle, tempo, métronome.
-- ⬜ Le graphe audio, compilé depuis le modèle :
-  - les canaux jouent leurs patterns, placés dans la playlist ;
-  - ils passent dans les pistes du mixer et leurs effets, puis dans le master.
-- ⬜ Modèle → moteur : un instantané compilé, échangé sans verrou entre deux blocs. Aucune allocation ni aucun verrou dans le thread audio.
-- ⬜ Événements à l'échantillon près, automation interpolée.
-- ⬜ Rendu hors temps réel avec le même code (export), et des tests audio reproductibles : rendu d'un morceau de test, puis vérification des débuts de notes et des niveaux.
-- ⬜ Vumètres et position de lecture envoyés à l'interface en binaire, 30 fois par seconde.
+- ✅ `sonevo-audio` : sorties WASAPI et ASIO, taille de bloc, sur un thread à elles ; une
+  carte qui s'arrête est rouverte toute seule.
+- ✅ Transport : lecture, pause, stop (retour au point de départ), position, boucle, mode
+  pattern ou morceau, métronome.
+- ✅ Graphe compilé depuis le morceau et échangé entre deux blocs, en gardant les instruments
+  et effets déjà là (une note qui sonne continue pendant qu'on modifie).
+- ✅ **Aucune allocation** sur le thread audio : un test compte chaque allocation pendant
+  2000 blocs avec effets, envois, changements de réglages et de morceau, et n'en trouve aucune.
+- ✅ Événements à l'échantillon près ; automation interpolée (volume, pan, réglages, tempo).
+- ✅ Rendu hors temps réel avec le même code, testé.
+- ✅ Vumètres et position envoyés à l'interface 30 fois par seconde.
+- ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).
 
 ## 3. Instruments et effets intégrés
 
-Ils sont écrits directement dans le moteur : les plus rapides, et ils marchent sans rien installer.
-
-- ⬜ **Sampler** : un son par touche ou étiré sur le clavier, avec enveloppe, volume, hauteur et sens inverse.
-- ⬜ **Drums** : une batterie synthétisée (grosse caisse, caisse claire, charleston, clap, toms), pour faire des rythmes sans aucun sample.
-- ⬜ **Synthé** : 2 oscillateurs (dents de scie, carré, sinus, triangle), filtre passe-bas résonant, enveloppes, LFO, unisson.
-- ⬜ **Effets** :
-  - EQ paramétrique ;
-  - compresseur ;
-  - delay ;
-  - reverb ;
-  - distorsion ;
-  - filtre ;
-  - limiteur sur le master.
-- ⬜ Leurs paramètres sont tous automatisables.
+- ✅ **Sampler**, **Drums** (8 sons synthétisés), **Synthé** (2 oscillateurs, filtre résonant
+  avec enveloppe, unisson jusqu'à 4).
+- ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
+  filtre, limiteur avec anticipation.
+- ✅ Tous leurs réglages sont automatisables.
+- ⬜ LFO du synthé.
 
 ## 4. Les plugins (CLAP, puis VST3)
 
-- ⬜ Recherche des plugins installés dans les dossiers habituels de Windows.
-- ⬜ Un processus par plugin, relancé s'il plante, avec renvoi des notes tenues.
-- ⬜ Paramètres (extension *params*) : affichés, automatisables.
-- ⬜ État (extension *state*) sauvegardé dans le projet.
-- ⬜ Fenêtre du plugin (extension *gui*), flottante.
-- ⬜ VST3 : chargement et lecture, en suivant le même principe.
+- ✅ Recherche des plugins dans les dossiers CLAP de Windows et ceux qu'on ajoute, chaque
+  fichier lu dans un processus à part (un plugin qui plante en étant lu ne fait rien tomber).
+- ✅ Un processus par plugin, relancé s'il plante, avec **renvoi des notes tenues** (aussi
+  après un bloc manqué).
+- ✅ Instruments au rack, effets au mixer.
+- ⬜ Paramètres (extension *params*), état (*state*), fenêtre du plugin (*gui*).
+- ⬜ VST3.
 
 ## 5. L'application
 
-Tauri v2 et Angular, dans le langage visuel de Ramure.
-
-- ⬜ Fenêtre : barre de titre, barre de transport (lecture, arrêt, tempo, position, métronome, boucle), panneaux redimensionnables.
-- ⬜ **Navigateur** : instruments, effets, plugins et samples, à glisser dans le morceau.
-- ⬜ **Rack des canaux et step sequencer** : un canal par ligne, 16 pas qu'on allume au clic.
-- ⬜ **Piano roll** (PixiJS) :
-  - dessiner, déplacer, étirer et effacer des notes ;
-  - sélection multiple, copier-coller ;
-  - aimantation, zoom, défilement ;
-  - vélocité ;
-  - gamme surlignée ;
-  - écoute des notes au clic.
-- ⬜ **Playlist** (PixiJS) : pistes ; clips de pattern, d'audio et d'automation à placer, étirer et découper ; région de boucle ; tête de lecture.
-- ⬜ **Mixer** : tranches avec vumètre, fader, panoramique, mute, solo, effets et envois.
-- ⬜ Fichier : nouveau, ouvrir, enregistrer, récents, enregistrement automatique, reprise après plantage.
-- ⬜ Réglages : sortie audio, taille de bloc, thème, langue.
-- ⬜ Annuler et rétablir partout (Ctrl+Z, Ctrl+Y), palette de commandes (Ctrl+P), raccourcis.
-- ⬜ Interface en français et en anglais.
+- ✅ Fenêtre, barre de titre, transport, panneaux, séparateur redimensionnable.
+- ✅ **Navigateur** : instruments, effets, plugins ; sons du disque à glisser dans la
+  playlist ou dont faire un sampler.
+- ✅ **Rack et step sequencer** : un canal par ligne, pas au clic, mute, volume, pan, piste
+  de mixage, prévisualisation, mini piano roll quand les notes ne sont pas des pas.
+- ✅ **Piano roll** (PixiJS) : dessiner, déplacer, étirer, effacer, sélection multiple,
+  copier-couper-coller, dupliquer, aimantation, zoom, vélocité, gamme éclairée, écoute des
+  notes, notes des autres canaux en fond.
+- ✅ **Playlist** (PixiJS) : pistes ; clips de pattern, d'audio (avec leur forme d'onde) et
+  d'automation à placer, déplacer, étirer, couper ; points d'automation dessinés ; boucle sur
+  la règle ; tête de lecture.
+- ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois.
+- ✅ Fichier : nouveau, démo, ouvrir, enregistrer, enregistrer sous, récents (le dernier
+  rouvert au lancement), **enregistrement automatique et reprise après plantage**.
+- ✅ Réglages : pilote, sortie, taille de bloc, langue, dossiers de plugins.
+- ✅ Annuler et rétablir (Ctrl+Z, Ctrl+Y), **palette de commandes (Ctrl+K)**, raccourcis,
+  le clavier de l'ordinateur comme piano.
+- ✅ Interface en français et en anglais (un test vérifie qu'aucun texte ne manque).
+- ✅ Chaque appareil s'explique en une phrase simple, pour les débutants.
+- ⬜ Renommer sur place (pour l'instant une petite fenêtre du système).
+- ⬜ Thème clair.
 
 ## 6. Les versions d'un morceau
 
-- ⬜ Un historique gardé dans le dossier du projet (git en interne, via gitoxide), invisible pour l'utilisateur.
-- ⬜ « Enregistrer une version » avec un nom, plus des versions automatiques.
-- ⬜ Revenir à une version, comparer deux versions à l'oreille.
-- ⬜ **Variantes** : dupliquer un pattern ou un arrangement en variante, puis passer de l'une à l'autre en A/B.
+- ✅ Un historique dans le dossier du morceau (`.versions`, un dépôt git écrit par gitoxide,
+  sans git installé, lisible par git).
+- ✅ Chaque enregistrement est une version ; on nomme celles qui comptent.
+- ✅ Écouter une ancienne version à la place du morceau (A/B), revenir à une version (l'état
+  actuel est gardé d'abord).
+- ✅ Variantes de patterns (dupliquer en variante).
+- ⬜ Variantes d'arrangement.
 
 ## 7. Export et finition
 
-- ⬜ Export WAV 16, 24 ou 32 bits, du morceau entier ou d'une région, et export des pistes séparées (stems).
-- ⬜ Un morceau de démonstration au premier lancement.
-- ⬜ Installeur NSIS, release et mise à jour automatique (comme Ramure).
+- ✅ Export WAV 16, 24 ou 32 bits, 44,1 / 48 / 96 kHz : le morceau, la boucle, ou **chaque
+  piste de mixage seule (stems)**.
+- ✅ Un morceau de démonstration au premier lancement (16 mesures de house).
+- ✅ Installateur NSIS, avec l'hôte de plugins.
+- ⬜ Mise à jour automatique (comme Ramure : clé de signature à créer).
 
 ## Plus tard
 
 - Enregistrement audio et entrée MIDI (clavier maître).
 - Grille de clips à lancer, modulateurs branchables partout.
-- Gamme et accords assistés, séparation de pistes et audio vers MIDI en local.
-- Collaboration en temps réel.
+- Accords assistés, séparation de pistes et audio vers MIDI en local.
+- Collaboration en temps réel (le modèle d'éditions y prépare).
 - macOS et Linux.
 
 ---
 
 ## Choix faits sans toi, à valider
 
-Cette section liste ce que j'ai décidé pendant la nuit, pour que tu le revoies au réveil.
+Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
+
+1. **Le morceau vit côté Rust.** L'interface envoie des éditions et reçoit le morceau entier
+   en retour. Simple et sûr ; pendant un glisser, l'interface dessine elle-même et n'envoie
+   qu'à la fin. Si un jour les gros morceaux rament, on enverra des différences.
+2. **Annuler garde des copies du morceau** (200 pas), pas un journal d'opérations. Le journal
+   viendra avec la collaboration.
+3. **Les clips audio vont directement au master** (pas encore de piste de mixage par clip).
+4. **L'automation du tempo** va de 60 à 240 BPM.
+5. **Le volume d'un canal** : 80 % est le gain unité, 100 % fait +3,9 dB ; une piste de mixage
+   va jusqu'à 125 % (+2 dB).
+6. **Solo** : une piste soloée laisse entendre celles qui l'alimentent et celles où elle va.
+7. **Stems** : une piste seule = ce qu'elle envoie au master (les envois qui l'alimentent
+   compris) ; le fichier « 00 Master » contient ce qui va au master sans passer par une piste.
+8. **Versions** : dépôt git nu dans `.versions` du dossier du morceau ; branche `versions`.
+   Chaque enregistrement crée une version automatique.
+9. **Enregistrement automatique** toutes les 20 secondes : un brouillon dans son dossier, un
+   morceau enregistré dans `%APPDATA%\com.shawiizz.sonevo\autosave`. Fermer la fenêtre
+   demande quoi faire des changements.
+10. **Noms des sons** : `<nom d'origine> <empreinte>.<ext>`, au lieu de l'empreinte seule.
+11. **Plugins** : CLAP seulement pour l'instant ; le scan se fait au lancement (rapide sans
+    plugins, plus lent avec beaucoup).
+12. **Le premier lancement ouvre la démo** ; les suivants rouvrent le dernier morceau.
+13. **Couleurs** : un violet issu du logo comme accent, sur un noir légèrement bleuté (même
+    structure que Ramure). L'icône : des barres de vumètre qui ondulent du bleu au vert.
+14. **Le clavier-piano** suit la position des touches (Z à M et Q à P), quelle que soit la
+    disposition du clavier ; + et − du pavé numérique changent l'octave.

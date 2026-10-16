@@ -1,0 +1,50 @@
+name: Release
+
+# A version tag (1.2.3) builds the Windows installer and attaches it to a draft release, to
+# be read over and published by hand.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    env:
+      LIBCLANG_PATH: C:\Program Files\LLVM\bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag is the app version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          if [ "$version" != "$TAG" ]; then echo "tag $TAG, app version $version"; exit 1; fi
+      - name: Rust (the version of rust-toolchain.toml)
+        shell: pwsh
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Frontend packages
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/sonevo-desktop
+          tauriScript: ../../frontend/node_modules/.bin/tauri
+          args: --config tauri.release.conf.json
+          tagName: ${{ github.ref_name }}
+          releaseName: Sonevo ${{ github.ref_name }}
+          releaseDraft: true

@@ -1,0 +1,13 @@
+{
+  "build": {
+    "beforeBuildCommand": {
+      "script": "pnpm build && cargo build --release -p sonevo-plugin-host",
+      "cwd": "../../frontend"
+    }
+  },
+  "bundle": {
+    "resources": {
+      "../../target/release/sonevo-plugin-host.exe": "sonevo-plugin-host.exe"
+    }
+  }
+}
