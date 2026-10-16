@@ -104,8 +104,8 @@ export const FR: Record<string, string> = {
   'This plugin is not available on this computer.':
     'Ce plugin n’est pas disponible sur cet ordinateur.',
   Device: 'Appareil',
-  'Choose a channel or an effect to see its settings.':
-    'Choisis une voie ou un effet pour voir ses réglages.',
+  'Open a pattern and click a channel, or click an effect in the mixer, to see its settings here.':
+    'Ouvre un pattern et clique une voie, ou clique un effet dans le mixeur, pour voir ses réglages ici.',
   'No sound yet': 'Pas encore de son',
   Oscillators: 'Oscillateurs',
   Volume: 'Volume',

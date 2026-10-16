@@ -302,7 +302,13 @@ function folded(text: string): string {
       </div>
     } @else {
       <div class="s-panel-head">{{ t('Device') }}</div>
-      <p class="s-empty">{{ t('Choose a channel or an effect to see its settings.') }}</p>
+      <p class="s-empty">
+        {{
+          t(
+            'Open a pattern and click a channel, or click an effect in the mixer, to see its settings here.'
+          )
+        }}
+      </p>
     }
   `,
   styles: `

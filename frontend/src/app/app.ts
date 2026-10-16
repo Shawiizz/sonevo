@@ -296,50 +296,55 @@ const PIANO: Record<string, number> = {
         min-height: 0;
       }
     }
+    /* as an editor's: full height, side by side; the one shown takes the view's ground and
+       opens into it, a line of light along its top */
     .tabs {
       flex: none;
       display: flex;
-      align-items: center;
-      gap: 2px;
+      align-items: stretch;
       height: var(--s-panel-head);
-      padding: 0 6px;
+      background: var(--s-void);
       border-bottom: 1px solid var(--s-line);
     }
     .tab {
-      height: 30px;
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 0 12px;
+      min-width: 0;
+      padding: 0 14px;
       border: 0;
-      border-radius: var(--s-radius);
+      border-right: 1px solid var(--s-line);
       background: transparent;
-      color: var(--s-text-2);
-      font-weight: 500;
+      color: var(--s-text-3);
+      font-size: 12px;
       cursor: pointer;
       .s-key {
         color: var(--s-text-3);
         font-size: 10px;
+        opacity: 0.7;
       }
       &:hover {
-        color: var(--s-text);
-        background: var(--s-hover);
+        color: var(--s-text-2);
+        background: var(--s-base);
       }
       &.on {
         color: var(--s-text);
-        background: var(--s-raised);
-        box-shadow: inset 0 -2px 0 var(--s-accent);
+        background: var(--s-base);
+        box-shadow: inset 0 1px 0 var(--s-accent);
+        /* over the bar's line: the tab and its view are one */
+        margin-bottom: -1px;
       }
       .dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 3px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
       }
       .close {
         display: inline-flex;
         padding: 3px;
         margin-right: -6px;
-        border-radius: 4px;
+        border-radius: var(--s-radius);
         color: var(--s-text-3);
         visibility: hidden;
         &:hover {
@@ -359,7 +364,7 @@ const PIANO: Record<string, number> = {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding-right: 8px;
+      padding: 0 12px;
       color: var(--s-text-3);
       font-size: 11px;
     }

@@ -111,7 +111,8 @@ export class Studio {
       const effect = insert.effects?.find((e) => e.id === id);
       if (effect) return { device: effect, owner: insert.name };
     }
-    const channel = this.channel();
+    // a channel's instrument where its pattern is open, the channel chosen there
+    const channel = this.editing() ? this.channel() : null;
     return channel ? { device: channel.instrument, owner: channel.name } : null;
   });
 
@@ -582,6 +583,7 @@ export class Studio {
 
   /** The tab `tab` shown: a pattern's played over and over, the song otherwise. */
   async showTab(tab: Tab): Promise<void> {
+    if (tab !== this.tab()) this.deviceId.set(null);
     this.tab.set(tab);
     const pattern = tabPattern(tab);
     if (pattern) {
