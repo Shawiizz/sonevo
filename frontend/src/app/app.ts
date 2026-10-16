@@ -23,6 +23,7 @@ import { ExportDialog } from './shell/export-dialog';
 import { Guide } from './shell/guide';
 import { RecoveryDialog } from './shell/recovery-dialog';
 import { SettingsDialog } from './shell/settings-dialog';
+import { Shortcuts } from './shell/shortcuts';
 import { Titlebar } from './shell/titlebar';
 import { Transport } from './shell/transport';
 import { Icon } from './shared/icon';
@@ -89,6 +90,7 @@ const PIANO: Record<string, number> = {
     RecoveryDialog,
     RenameField,
     SettingsDialog,
+    Shortcuts,
     Titlebar,
     Transport,
     VersionsPanel,
@@ -209,6 +211,9 @@ const PIANO: Record<string, number> = {
     }
     @if (files.exporting()) {
       <app-export-dialog (closed)="files.exporting.set(false)" />
+    }
+    @if (shortcutsOpen()) {
+      <app-shortcuts (closed)="shortcutsOpen.set(false)" />
     }
     @if (settingsOpen()) {
       <app-settings-dialog (closed)="settingsOpen.set(false)" />
@@ -379,6 +384,7 @@ export class App {
   ];
   protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
+  protected readonly shortcutsOpen = signal(false);
   protected readonly guideOpen = signal(!seen());
   protected readonly kept = signal<Kept[]>([]);
 
@@ -434,6 +440,7 @@ export class App {
       { label: t('Play the whole song'), run: () => this.studio.setMode(null) },
       { label: t('Cut every sound'), run: () => api.panic() },
       { label: t('Settings'), run: () => this.settingsOpen.set(true) },
+      { label: t('Shortcuts'), key: 'F1', run: () => this.shortcutsOpen.set(true) },
     ];
     for (const p of this.studio.song()?.patterns ?? []) {
       list.push({
@@ -506,6 +513,11 @@ export class App {
     if (event.code === 'Space') {
       event.preventDefault();
       this.studio.togglePlay();
+      return;
+    }
+    if (event.key === 'F1') {
+      event.preventDefault();
+      this.shortcutsOpen.set(true);
       return;
     }
     const docks: Record<string, Dock> = { F6: 'rack', F7: 'roll', F9: 'mixer' };
