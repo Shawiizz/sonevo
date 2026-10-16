@@ -34,6 +34,10 @@ const STEPS: Step[] = [
     show: { label: 'Show the mixer', dock: 'mixer' },
   },
   {
+    title: 'Sounds ready made',
+    text: 'Above each instrument and effect, Presets offers sounds already made: an 808 that glides, a soft pad, a big hall. And File, New song from a template, starts a whole song in a style, trap, lo-fi or techno, to be made your own.',
+  },
+  {
     title: 'Nothing is lost',
     text: 'Ctrl+S saves the song as a folder. Every save is kept as a version: under Versions, at the right, listen to an older one or go back to it. Ctrl+Z undoes, and should Sonevo close, your changes are offered back.',
   },

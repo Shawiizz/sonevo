@@ -255,6 +255,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Sounds ready made': 'Des sons tout faits',
+  'Above each instrument and effect, Presets offers sounds already made: an 808 that glides, a soft pad, a big hall. And File, New song from a template, starts a whole song in a style, trap, lo-fi or techno, to be made your own.':
+    "Au-dessus de chaque instrument et de chaque effet, Presets propose des sons déjà faits : une 808 qui glisse, une nappe douce, une grande salle. Et Fichier, Nouveau morceau d'après un modèle, lance tout un morceau dans un style, trap, lo-fi ou techno, à faire tien.",
   Slices: 'Tranches',
   'Make a pattern of its slices': 'En faire un pattern de tranches',
   slices: 'tranches',
