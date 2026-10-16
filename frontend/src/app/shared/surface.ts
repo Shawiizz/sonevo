@@ -10,6 +10,74 @@ export function token(name: string): number {
   return hex(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 }
 
+/** The colours the canvases draw with, by what they are for. */
+const DARK = {
+  accent: 0x8f8bf7,
+  play: 0x5fd3a8,
+  base: 0x0f1115,
+  void: 0x0c0e12,
+  line: 0x252a33,
+  lineStrong: 0x363c48,
+  text: 0xf0f2f6,
+  text2: 0xbcc2cf,
+  text3: 0x8d95a5,
+  /** Words on a colour of a clip or a note. */
+  onColor: 0x0b0c10,
+  picked: 0xffffff,
+  /** What dims a part: past a pattern's end, a muted track. */
+  shade: 0x000000,
+  rowWhite: 0x15181e,
+  rowBlack: 0x111318,
+  gridOctave: 0x2c323d,
+  gridBar: 0x3a414f,
+  gridBeat: 0x252a33,
+  gridStep: 0x1a1e25,
+  scaleRoot: 0x24213f,
+  scaleIn: 0x1b1e27,
+  scaleOut: 0x0e1014,
+  keyWhite: 0xd7dbe3,
+  keyBlack: 0x0b0c10,
+  keyLabel: 0x4a5160,
+  laneA: 0x12151a,
+  laneB: 0x101217,
+  laneLine: 0x1c2028,
+};
+
+const LIGHT: typeof DARK = {
+  accent: 0x6d5ce8,
+  play: 0x12936a,
+  base: 0xf7f8fa,
+  void: 0xeceff3,
+  line: 0xd8dce4,
+  lineStrong: 0xc2c8d3,
+  text: 0x14161c,
+  text2: 0x3b4250,
+  text3: 0x69717f,
+  onColor: 0x0b0c10,
+  picked: 0x14161c,
+  shade: 0xffffff,
+  rowWhite: 0xf6f7f9,
+  rowBlack: 0xebeef2,
+  gridOctave: 0xc2c8d3,
+  gridBar: 0xb3bac6,
+  gridBeat: 0xd8dce4,
+  gridStep: 0xe8ebf0,
+  scaleRoot: 0xdcd6fb,
+  scaleIn: 0xf6f7f9,
+  scaleOut: 0xe0e3e9,
+  keyWhite: 0xffffff,
+  keyBlack: 0x22252d,
+  keyLabel: 0x8a91a0,
+  laneA: 0xf7f8fa,
+  laneB: 0xf1f3f6,
+  laneLine: 0xe2e5eb,
+};
+
+/** The colours of the theme shown. */
+export function palette(): typeof DARK {
+  return document.documentElement.dataset['theme'] === 'light' ? LIGHT : DARK;
+}
+
 const STYLE = new TextStyle({
   fontFamily: 'Geist Variable, Segoe UI, sans-serif',
   fontSize: 11,

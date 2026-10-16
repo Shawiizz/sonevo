@@ -14,8 +14,9 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { inScale, isBlack, keyName, NAMES, Note, PPQ, SCALES, STEP } from '../core/models';
 import { Studio } from '../core/studio.service';
+import { Themes } from '../core/theme';
 import { Icon } from '../shared/icon';
-import { hex, Surface } from '../shared/surface';
+import { hex, palette, Surface } from '../shared/surface';
 
 const KEYS = 64;
 /** The notes copied last. */
@@ -127,6 +128,7 @@ type Drag =
 export class PianoRoll implements OnDestroy {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  private readonly themes = inject(Themes);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private surface: Surface | null = null;
 
@@ -176,6 +178,7 @@ export class PianoRoll implements OnDestroy {
     effect(() => {
       this.notes();
       this.studio.pattern();
+      this.themes.shown();
       this.snap();
       this.scale();
       this.root();
@@ -246,26 +249,32 @@ export class PianoRoll implements OnDestroy {
       const shade = scale
         ? inScale(key, this.root(), scale)
           ? key % 12 === this.root()
-            ? 0x24213f
-            : 0x1b1e27
-          : 0x0e1014
+            ? palette().scaleRoot
+            : palette().scaleIn
+          : palette().scaleOut
         : isBlack(key)
-          ? 0x111318
-          : 0x15181e;
+          ? palette().rowBlack
+          : palette().rowWhite;
       g.rect(KEYS, y, width - KEYS, this.rowHeight).fill(shade);
-      if (key % 12 === 0) g.rect(KEYS, y + this.rowHeight - 1, width - KEYS, 1).fill(0x2c323d);
+      if (key % 12 === 0)
+        g.rect(KEYS, y + this.rowHeight - 1, width - KEYS, 1).fill(palette().gridOctave);
     }
     // past the pattern's end, dimmed
     const end = this.x(length);
     if (end < width)
-      g.rect(end, RULER, width - end, bottom - RULER).fill({ color: 0x000000, alpha: 0.45 });
+      g.rect(end, RULER, width - end, bottom - RULER).fill({ color: palette().shade, alpha: 0.45 });
 
     // the grid
     const first = Math.max(0, Math.floor(this.scrollX / STEP) * STEP);
     for (let tick = first; this.x(tick) < width; tick += STEP) {
       const x = this.x(tick);
       if (x < KEYS) continue;
-      const strong = tick % bar === 0 ? 0x3a414f : tick % beat === 0 ? 0x252a33 : 0x1a1e25;
+      const strong =
+        tick % bar === 0
+          ? palette().gridBar
+          : tick % beat === 0
+            ? palette().gridBeat
+            : palette().gridStep;
       if (tick % beat !== 0 && this.perTick * STEP < 8) continue;
       g.rect(Math.round(x), RULER, 1, bottom - RULER).fill(strong);
     }
@@ -304,50 +313,54 @@ export class PianoRoll implements OnDestroy {
         alpha: 0.35 + n.velocity * 0.65,
       });
       if (picked)
-        g.roundRect(x, y + 1, w - 1, this.rowHeight - 2, 3).stroke({ width: 1.5, color: 0xffffff });
-      if (w > 34 && this.rowHeight >= 12) s.text(keyName(n.key), x + 4, y + 1, 0x0b0c10, 10);
+        g.roundRect(x, y + 1, w - 1, this.rowHeight - 2, 3).stroke({
+          width: 1.5,
+          color: palette().picked,
+        });
+      if (w > 34 && this.rowHeight >= 12)
+        s.text(keyName(n.key), x + 4, y + 1, palette().onColor, 10);
     });
 
     // the velocity lane
-    g.rect(0, bottom, width, VELOCITY).fill(0x0c0e12);
-    g.rect(0, bottom, width, 1).fill(0x252a33);
-    s.text(this.t('Velocity'), 8, bottom + 6, 0x8d95a5, 10);
+    g.rect(0, bottom, width, VELOCITY).fill(palette().void);
+    g.rect(0, bottom, width, 1).fill(palette().gridBeat);
+    s.text(this.t('Velocity'), 8, bottom + 6, palette().text3, 10);
     notes.forEach((n, i) => {
       const x = this.x(n.start);
       if (x < KEYS || x > width) return;
       const h = n.velocity * (VELOCITY - 12);
       const picked = this.selected.has(i);
-      g.rect(x, height - 4 - h, 2, h).fill(picked ? 0xffffff : color);
-      g.circle(x + 1, height - 4 - h, 3).fill(picked ? 0xffffff : color);
+      g.rect(x, height - 4 - h, 2, h).fill(picked ? palette().picked : color);
+      g.circle(x + 1, height - 4 - h, 3).fill(picked ? palette().picked : color);
     });
 
     // the keyboard: white keys under, the black ones over their left
-    g.rect(0, RULER, KEYS - 1, bottom - RULER).fill(0xd7dbe3);
+    g.rect(0, RULER, KEYS - 1, bottom - RULER).fill(palette().keyWhite);
     for (let key = this.top; key >= 0; key--) {
       const y = this.y(key);
       if (y > bottom) break;
       const lit = this.sounding === key;
       if (isBlack(key)) {
-        g.rect(0, y, KEYS * 0.6, this.rowHeight).fill(lit ? color : 0x0b0c10);
+        g.rect(0, y, KEYS * 0.6, this.rowHeight).fill(lit ? color : palette().onColor);
       } else {
         if (lit) g.rect(0, y, KEYS - 1, this.rowHeight).fill(color);
         // where two white keys meet without a black one between
         if (key % 12 === 0 || key % 12 === 5)
-          g.rect(0, y + this.rowHeight - 1, KEYS - 1, 1).fill(0x8d95a5);
+          g.rect(0, y + this.rowHeight - 1, KEYS - 1, 1).fill(palette().text3);
       }
-      if (key % 12 === 0) s.text(keyName(key), KEYS - 5, y + 1, 0x4a5160, 10, 1);
+      if (key % 12 === 0) s.text(keyName(key), KEYS - 5, y + 1, palette().keyLabel, 10, 1);
     }
 
     // the ruler
-    g.rect(0, 0, width, RULER).fill(0x0f1115);
-    g.rect(0, RULER - 1, width, 1).fill(0x252a33);
+    g.rect(0, 0, width, RULER).fill(palette().base);
+    g.rect(0, RULER - 1, width, 1).fill(palette().gridBeat);
     for (let tick = Math.floor(this.scrollX / bar) * bar; this.x(tick) < width; tick += bar) {
       const x = this.x(tick);
       if (x < KEYS - 1) continue;
-      g.rect(x, 6, 1, RULER - 6).fill(0x3a414f);
-      s.text(String(tick / bar + 1), x + 4, 5, 0xbcc2cf, 11);
+      g.rect(x, 6, 1, RULER - 6).fill(palette().gridBar);
+      s.text(String(tick / bar + 1), x + 4, 5, palette().text2, 11);
     }
-    if (end < width) g.rect(end - 1, 0, 2, bottom).fill({ color: 0x8f8bf7, alpha: 0.7 });
+    if (end < width) g.rect(end - 1, 0, 2, bottom).fill({ color: palette().accent, alpha: 0.7 });
   }
 
   /** What is drawn over the notes: a selection being made, the playhead. */
@@ -362,8 +375,8 @@ export class PianoRoll implements OnDestroy {
       const [y0, y1] = [Math.min(d.y0, d.y1), Math.max(d.y0, d.y1)];
       s.over
         .rect(x0, y0, x1 - x0, y1 - y0)
-        .fill({ color: 0x8f8bf7, alpha: 0.12 })
-        .stroke({ width: 1, color: 0x8f8bf7 });
+        .fill({ color: palette().accent, alpha: 0.12 })
+        .stroke({ width: 1, color: palette().accent });
     }
 
     // where playing is, the pattern going round
@@ -371,7 +384,7 @@ export class PianoRoll implements OnDestroy {
     if (view?.patternMode && view.patternMode === pattern?.id && this.studio.status().playing) {
       const at = this.studio.status().position % Math.max(1, length);
       const x = this.x(at);
-      if (x >= KEYS) s.over.rect(x, 0, 1.5, bottom).fill(0x5fd3a8);
+      if (x >= KEYS) s.over.rect(x, 0, 1.5, bottom).fill(palette().play);
     }
   }
 

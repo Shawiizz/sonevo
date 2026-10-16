@@ -22,15 +22,13 @@
   --s-danger: #ef6f6c;
   --s-warn: #f2b84b;
 
-  /* the grids of the piano roll and the playlist */
-  --s-grid-bar: #2c323d;
-  --s-grid-beat: #1e222a;
-  --s-grid-step: #15181e;
-  --s-key-white: #1a1d24;
-  --s-key-black: #111318;
-
   --s-font: 'Geist Variable', 'Segoe UI', sans-serif;
   --s-mono: 'Geist Mono Variable', 'Cascadia Mono', monospace;
+
+  /* the step sequencer's steps, off */
+  --s-step: #262b35;
+  --s-step-alt: #1c2028;
+  --s-step-hover: #333948;
 
   --s-titlebar: 44px;
   --s-transport: 52px;
@@ -39,4 +37,30 @@
   --s-radius: 6px;
   --s-radius-panel: 8px;
   --s-fast: 120ms;
+}
+
+/* the light theme: the same structure on near-white, the accent darkened to read on it */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --s-void: #eceff3;
+  --s-base: #f7f8fa;
+  --s-raised: #ffffff;
+  --s-hover: #e4e8ee;
+  --s-line: #d8dce4;
+  --s-line-strong: #c2c8d3;
+
+  --s-text: #14161c;
+  --s-text-2: #3b4250;
+  --s-text-3: #69717f;
+
+  --s-accent: #6d5ce8;
+  --s-on-accent: #ffffff;
+  --s-play: #12936a;
+  --s-record: #d23f3b;
+  --s-danger: #c63d39;
+  --s-warn: #b97a0c;
+
+  --s-step: #dfe3ea;
+  --s-step-alt: #e9ecf1;
+  --s-step-hover: #cfd5df;
 }

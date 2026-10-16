@@ -223,16 +223,16 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       padding: 0;
       border: 0;
       border-radius: 4px;
-      background: #262b35;
+      background: var(--s-step);
       cursor: pointer;
       &.alt {
-        background: #1c2028;
+        background: var(--s-step-alt);
       }
       &:nth-child(4n + 1) {
         margin-left: 4px;
       }
       &:hover {
-        background: #333948;
+        background: var(--s-step-hover);
       }
       &.on {
         background: var(--color);

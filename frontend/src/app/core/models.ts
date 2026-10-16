@@ -191,6 +191,7 @@ export interface Settings {
   buffer: number | null;
   input: string | null;
   language: string | null;
+  theme: string | null;
   recent: string[];
   folders: string[];
   pluginFolders: string[];

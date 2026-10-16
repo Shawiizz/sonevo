@@ -5,6 +5,7 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { OutputInfo, Settings } from '../core/models';
 import { Studio } from '../core/studio.service';
+import { Themes } from '../core/theme';
 
 const BUFFERS = [64, 128, 256, 512, 1024, 2048];
 
@@ -93,6 +94,28 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
             <button class="s-btn" (click)="addFolder()">{{ t('Add a folder') }}</button>
             <button class="s-btn" (click)="scan()" [disabled]="scanning()">
               {{ scanning() ? t('Looking…') : t('Look again') }}
+            </button>
+          </div>
+        </section>
+        <section>
+          <h3>{{ t('Theme') }}</h3>
+          <div class="s-seg" role="radiogroup">
+            <button role="radio" [attr.aria-checked]="!s.theme" (click)="setTheme(null)">
+              {{ t('The system’s') }}
+            </button>
+            <button
+              role="radio"
+              [attr.aria-checked]="s.theme === 'dark'"
+              (click)="setTheme('dark')"
+            >
+              {{ t('Dark') }}
+            </button>
+            <button
+              role="radio"
+              [attr.aria-checked]="s.theme === 'light'"
+              (click)="setTheme('light')"
+            >
+              {{ t('Light') }}
             </button>
           </div>
         </section>
@@ -200,6 +223,7 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
 export class SettingsDialog {
   protected readonly t = inject(I18n).t;
   private readonly i18n = inject(I18n);
+  private readonly themes = inject(Themes);
   protected readonly studio = inject(Studio);
   protected readonly scanning = signal(false);
   readonly closed = output();
@@ -261,6 +285,11 @@ export class SettingsDialog {
     } finally {
       this.scanning.set(false);
     }
+  }
+
+  protected async setTheme(theme: string | null): Promise<void> {
+    this.themes.set(theme);
+    await this.set({ theme });
   }
 
   protected async setLanguage(language: string | null): Promise<void> {

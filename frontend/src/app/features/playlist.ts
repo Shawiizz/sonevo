@@ -13,11 +13,12 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Clip, Id, newId, Point, PPQ, sampleLabel, STEP, Track } from '../core/models';
 import { Studio } from '../core/studio.service';
+import { Themes } from '../core/theme';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
-import { hex, Surface } from '../shared/surface';
+import { hex, palette, Surface } from '../shared/surface';
 
 const HEADERS = 160;
 const RULER = 26;
@@ -129,6 +130,7 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
 export class Playlist implements OnDestroy {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  private readonly themes = inject(Themes);
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
   private readonly rename = inject(Rename);
@@ -167,6 +169,7 @@ export class Playlist implements OnDestroy {
     effect(() => {
       this.studio.view();
       this.studio.pattern();
+      this.themes.shown();
       this.working = null;
       this.surface?.redraw();
     });
@@ -257,10 +260,15 @@ export class Playlist implements OnDestroy {
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
       if (y + this.laneHeight < RULER || y > height) return;
-      g.rect(HEADERS, y, width - HEADERS, this.laneHeight).fill(i % 2 ? 0x101217 : 0x12151a);
-      g.rect(HEADERS, y + this.laneHeight - 1, width - HEADERS, 1).fill(0x1c2028);
+      g.rect(HEADERS, y, width - HEADERS, this.laneHeight).fill(
+        i % 2 ? palette().laneB : palette().laneA,
+      );
+      g.rect(HEADERS, y + this.laneHeight - 1, width - HEADERS, 1).fill(palette().laneLine);
       if (track.mute)
-        g.rect(HEADERS, y, width - HEADERS, this.laneHeight).fill({ color: 0x000000, alpha: 0.35 });
+        g.rect(HEADERS, y, width - HEADERS, this.laneHeight).fill({
+          color: palette().shade,
+          alpha: 0.35,
+        });
     });
 
     // the loop, then the grid
@@ -268,7 +276,8 @@ export class Playlist implements OnDestroy {
     if (loop) {
       const a = Math.max(HEADERS, this.x(loop.start));
       const b = this.x(loop.end);
-      if (b > a) g.rect(a, RULER, b - a, height - RULER).fill({ color: 0x8f8bf7, alpha: 0.05 });
+      if (b > a)
+        g.rect(a, RULER, b - a, height - RULER).fill({ color: palette().accent, alpha: 0.05 });
     }
     const beat = PPQ;
     const fine = this.perTick * beat >= 14;
@@ -277,7 +286,9 @@ export class Playlist implements OnDestroy {
       if (x < HEADERS) continue;
       const isBar = tick % bar === 0;
       if (!isBar && !fine) continue;
-      g.rect(Math.round(x), RULER, 1, height - RULER).fill(isBar ? 0x262b35 : 0x181b22);
+      g.rect(Math.round(x), RULER, 1, height - RULER).fill(
+        isBar ? palette().gridBeat : palette().gridStep,
+      );
     }
 
     // the clips
@@ -295,39 +306,51 @@ export class Playlist implements OnDestroy {
       g.roundRect(x + 1, top, Math.max(4, w - 2), h, 4).fill({ color, alpha: 0.22 });
       g.roundRect(x + 1, top, Math.max(4, w - 2), 15, 4).fill({ color, alpha: 0.85 });
       if (picked)
-        g.roundRect(x + 1, top, Math.max(4, w - 2), h, 4).stroke({ width: 1.5, color: 0xffffff });
-      if (w > 30) s.text(this.clipName(clip), Math.max(x, HEADERS) + 6, top + 1, 0x0b0c10, 11);
+        g.roundRect(x + 1, top, Math.max(4, w - 2), h, 4).stroke({
+          width: 1.5,
+          color: palette().picked,
+        });
+      if (w > 30)
+        s.text(this.clipName(clip), Math.max(x, HEADERS) + 6, top + 1, palette().onColor, 11);
       this.paintContent(s, clip, x, top + 17, w, h - 19, color);
     }
 
     // the headers
-    g.rect(0, RULER, HEADERS, height - RULER).fill(0x0f1115);
+    g.rect(0, RULER, HEADERS, height - RULER).fill(palette().base);
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
       if (y + this.laneHeight < RULER || y > height) return;
-      g.rect(0, y + this.laneHeight - 1, HEADERS, 1).fill(0x1c2028);
-      g.circle(16, y + this.laneHeight / 2, 4.5).fill(track.mute ? 0x363c48 : 0x5fd3a8);
-      s.text(track.name, 30, y + this.laneHeight / 2 - 8, track.mute ? 0x8d95a5 : 0xf0f2f6, 12);
+      g.rect(0, y + this.laneHeight - 1, HEADERS, 1).fill(palette().laneLine);
+      g.circle(16, y + this.laneHeight / 2, 4.5).fill(
+        track.mute ? palette().lineStrong : palette().play,
+      );
+      s.text(
+        track.name,
+        30,
+        y + this.laneHeight / 2 - 8,
+        track.mute ? palette().text3 : palette().text,
+        12,
+      );
     });
-    g.rect(HEADERS - 1, RULER, 1, height - RULER).fill(0x252a33);
+    g.rect(HEADERS - 1, RULER, 1, height - RULER).fill(palette().line);
 
     // the ruler
-    g.rect(0, 0, width, RULER).fill(0x0f1115);
-    g.rect(0, RULER - 1, width, 1).fill(0x252a33);
+    g.rect(0, 0, width, RULER).fill(palette().base);
+    g.rect(0, RULER - 1, width, 1).fill(palette().line);
     if (loop) {
       const a = Math.max(HEADERS, this.x(loop.start));
       const b = this.x(loop.end);
-      if (b > a) g.rect(a, 2, b - a, RULER - 6).fill({ color: 0x8f8bf7, alpha: 0.45 });
+      if (b > a) g.rect(a, 2, b - a, RULER - 6).fill({ color: palette().accent, alpha: 0.45 });
     }
     const every = Math.max(1, Math.ceil(36 / (bar * this.perTick)));
     for (let tick = Math.floor(this.scrollX / bar) * bar; this.x(tick) < width; tick += bar) {
       const x = this.x(tick);
       const n = tick / bar;
       if (x < HEADERS - 1 || n % every !== 0) continue;
-      g.rect(x, 8, 1, RULER - 8).fill(0x3a414f);
-      s.text(String(n + 1), x + 4, 6, 0xbcc2cf, 11);
+      g.rect(x, 8, 1, RULER - 8).fill(palette().gridBar);
+      s.text(String(n + 1), x + 4, 6, palette().text2, 11);
     }
-    s.text(this.t('Tracks'), 12, 6, 0x8d95a5, 11);
+    s.text(this.t('Tracks'), 12, 6, palette().text3, 11);
   }
 
   /** What is drawn over the clips: a selection being made, the playhead. */
@@ -343,16 +366,16 @@ export class Playlist implements OnDestroy {
           Math.abs(d.x1 - d.x0),
           Math.abs(d.y1 - d.y0),
         )
-        .fill({ color: 0x8f8bf7, alpha: 0.12 })
-        .stroke({ width: 1, color: 0x8f8bf7 });
+        .fill({ color: palette().accent, alpha: 0.12 })
+        .stroke({ width: 1, color: palette().accent });
     }
 
     // where playing is
     if (!this.studio.view()?.patternMode) {
       const x = this.x(this.studio.status().position);
       if (x >= HEADERS && x <= width) {
-        s.over.rect(x, 0, 1.5, height).fill(0x5fd3a8);
-        s.over.poly([x - 5, 0, x + 6.5, 0, x + 0.75, 7]).fill(0x5fd3a8);
+        s.over.rect(x, 0, 1.5, height).fill(palette().play);
+        s.over.poly([x - 5, 0, x + 6.5, 0, x + 0.75, 7]).fill(palette().play);
       }
     }
   }
