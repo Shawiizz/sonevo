@@ -30,6 +30,7 @@ import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Icon } from '../shared/icon';
 import { MenuItem, Menus } from '../shared/menu';
+import { Extent, Scrollbar } from '../shared/scrollbar';
 import { hex, palette, Surface } from '../shared/surface';
 
 const KEYS = 64;
@@ -52,7 +53,7 @@ type Drag =
  */
 @Component({
   selector: 'app-piano-roll',
-  imports: [Icon],
+  imports: [Icon, Scrollbar],
   template: `
     <div class="s-panel-head">
       <span class="swatch" [style.background]="studio.channel()?.color"></span>
@@ -135,7 +136,15 @@ type Drag =
       (contextmenu)="$event.preventDefault()"
       (keydown)="key($event)"
       [style.cursor]="cursor()"
-    ></div>
+    >
+      <s-scrollbar class="across" [extent]="extents().x" (moved)="scrollTo('x', $event)" />
+      <s-scrollbar
+        class="down"
+        [vertical]="true"
+        [extent]="extents().y"
+        (moved)="scrollTo('y', $event)"
+      />
+    </div>
   `,
   styles: `
     :host {
@@ -185,6 +194,19 @@ type Drag =
       overflow: hidden;
       outline: none;
     }
+    /* along the notes, above the velocities */
+    .across {
+      left: 64px;
+      right: 10px;
+      bottom: 64px;
+      height: 10px;
+    }
+    .down {
+      top: 24px;
+      right: 0;
+      bottom: 74px;
+      width: 10px;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -225,6 +247,11 @@ export class PianoRoll implements OnDestroy {
   private perTick = 64 / PPQ;
   private top = 84;
   private rowHeight = 14;
+  /** Where the view is across the pattern and down its keys, for the scrollbars. */
+  protected readonly extents = signal<{ x: Extent; y: Extent }>({
+    x: { total: 0, view: 0, at: 0 },
+    y: { total: 0, view: 0, at: 0 },
+  });
   private selected = new Set<number>();
   private working: Note[] | null = null;
   private drag: Drag | null = null;
@@ -323,6 +350,7 @@ export class PianoRoll implements OnDestroy {
     const length = this.studio.pattern()?.length ?? this.studio.bar();
     const bottom = height - VELOCITY;
     const color = hex(this.studio.channel()?.color ?? '#8f8bf7');
+    this.showExtents(width, bottom, length);
     const bar = this.studio.bar();
     const beat = PPQ;
 
@@ -880,6 +908,7 @@ export class PianoRoll implements OnDestroy {
         Math.max(4 / PPQ, this.perTick * (event.deltaY < 0 ? 1.15 : 0.87)),
       );
       this.scrollX = Math.max(0, at - (x - KEYS) / this.perTick);
+      if (event.deltaY > 0) this.keepInPattern();
     } else if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
       const delta = event.shiftKey ? event.deltaY : event.deltaX;
       this.scrollX = Math.max(0, this.scrollX + delta / this.perTick);
@@ -891,7 +920,46 @@ export class PianoRoll implements OnDestroy {
 
   protected zoom(by: number): void {
     this.perTick = Math.min(1, Math.max(4 / PPQ, this.perTick * by));
+    this.keepInPattern();
     this.surface?.redraw();
+  }
+
+  protected scrollTo(along: 'x' | 'y', at: number): void {
+    if (along === 'x') this.scrollX = at;
+    else this.top = Math.max(10, Math.min(127, Math.round(127 - at)));
+    this.surface?.redraw();
+  }
+
+  /** Where the pattern ends, and a bar more to draw notes after it. */
+  private end(): number {
+    const bar = this.studio.bar();
+    return (this.studio.pattern()?.length ?? bar) + bar;
+  }
+
+  /** After a zoom, the view kept on the pattern: back to its start once all of it fits. */
+  private keepInPattern(): void {
+    const view = (this.host().nativeElement.clientWidth - KEYS) / this.perTick;
+    const pattern = this.end() - this.studio.bar();
+    this.scrollX = pattern <= view ? 0 : Math.max(0, Math.min(this.scrollX, this.end() - view));
+  }
+
+  /** The scrollbars told where the view is, once a drawing: keys counted from the top. */
+  private showExtents(width: number, bottom: number, length: number): void {
+    const view = Math.max(0, (width - KEYS) / this.perTick);
+    const x = {
+      total: Math.max(length + this.studio.bar(), this.scrollX + view),
+      view,
+      at: this.scrollX,
+    };
+    const y = {
+      total: 128,
+      view: Math.max(0, (bottom - RULER) / this.rowHeight),
+      at: 127 - this.top,
+    };
+    const now = this.extents();
+    const same = (a: Extent, b: Extent) =>
+      a.total === b.total && a.view === b.view && a.at === b.at;
+    if (!same(now.x, x) || !same(now.y, y)) this.extents.set({ x, y });
   }
 
   protected write(): void {

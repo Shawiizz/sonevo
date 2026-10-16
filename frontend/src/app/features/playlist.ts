@@ -29,6 +29,7 @@ import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
 import { MenuItem, Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
+import { Extent, Scrollbar } from '../shared/scrollbar';
 import { hex, palette, Surface } from '../shared/surface';
 
 const HEADERS = 160;
@@ -63,7 +64,7 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
  */
 @Component({
   selector: 'app-playlist',
-  imports: [Icon],
+  imports: [Icon, Scrollbar],
   template: `
     <div class="s-panel-head">
       <span>{{ t('Playlist') }}</span>
@@ -122,7 +123,15 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
       (dragover)="dragOver($event)"
       (drop)="drop($event)"
       [style.cursor]="cursor()"
-    ></div>
+    >
+      <s-scrollbar class="across" [extent]="extents().x" (moved)="scrollTo('x', $event)" />
+      <s-scrollbar
+        class="down"
+        [vertical]="true"
+        [extent]="extents().y"
+        (moved)="scrollTo('y', $event)"
+      />
+    </div>
   `,
   styles: `
     :host {
@@ -146,6 +155,18 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
       position: relative;
       overflow: hidden;
       outline: none;
+    }
+    .across {
+      left: 160px;
+      right: 10px;
+      bottom: 0;
+      height: 10px;
+    }
+    .down {
+      top: 42px;
+      right: 0;
+      bottom: 10px;
+      width: 10px;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -173,6 +194,11 @@ export class Playlist implements OnDestroy {
 
   private scrollX = 0;
   private scrollY = 0;
+  /** Where the view is across the song and down its tracks, for the scrollbars. */
+  protected readonly extents = signal<{ x: Extent; y: Extent }>({
+    x: { total: 0, view: 0, at: 0 },
+    y: { total: 0, view: 0, at: 0 },
+  });
   private perTick = 28 / PPQ;
   private laneHeight = 54;
   private selected = new Set<Id>();
@@ -285,6 +311,7 @@ export class Playlist implements OnDestroy {
     const song = this.studio.song();
     if (!song) return;
     const tracks = this.tracks;
+    this.showExtents(width, height);
 
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
@@ -1098,6 +1125,7 @@ export class Playlist implements OnDestroy {
         Math.max(1 / PPQ, this.perTick * (event.deltaY < 0 ? 1.15 : 0.87)),
       );
       this.scrollX = Math.max(0, at - (x - HEADERS) / this.perTick);
+      if (event.deltaY > 0) this.keepInSong();
     } else if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
       const delta = event.shiftKey ? event.deltaY : event.deltaX;
       this.scrollX = Math.max(0, this.scrollX + delta / this.perTick);
@@ -1111,7 +1139,47 @@ export class Playlist implements OnDestroy {
 
   protected zoom(by: number): void {
     this.perTick = Math.min(0.4, Math.max(1 / PPQ, this.perTick * by));
+    this.keepInSong();
     this.surface?.redraw();
+  }
+
+  protected scrollTo(along: 'x' | 'y', at: number): void {
+    if (along === 'x') this.scrollX = at;
+    else this.scrollY = this.clampScroll(at);
+    this.surface?.redraw();
+  }
+
+  /** Where the song ends, and a few bars more to place things after it. */
+  private end(): number {
+    const last = this.clips.reduce((end, c) => Math.max(end, c.start + c.length), 0);
+    return last + 8 * this.studio.bar();
+  }
+
+  /** The time in view, in ticks. */
+  private viewTicks(width = this.host().nativeElement.clientWidth): number {
+    return Math.max(0, (width - HEADERS) / this.perTick);
+  }
+
+  /** After a zoom, the view kept on the song: back to its start once all of it fits. */
+  private keepInSong(): void {
+    const view = this.viewTicks();
+    const song = this.end() - 8 * this.studio.bar();
+    this.scrollX = song <= view ? 0 : Math.max(0, Math.min(this.scrollX, this.end() - view));
+  }
+
+  /** The scrollbars told where the view is, once a drawing. */
+  private showExtents(width: number, height: number): void {
+    const view = this.viewTicks(width);
+    const x = { total: Math.max(this.end(), this.scrollX + view), view, at: this.scrollX };
+    const y = {
+      total: this.tracks.length * this.laneHeight + 40,
+      view: Math.max(0, height - RULER),
+      at: this.scrollY,
+    };
+    const now = this.extents();
+    const same = (a: Extent, b: Extent) =>
+      a.total === b.total && a.view === b.view && a.at === b.at;
+    if (!same(now.x, x) || !same(now.y, y)) this.extents.set({ x, y });
   }
 
   /** The playhead kept in view as the song plays: a page further once it leaves it. */
