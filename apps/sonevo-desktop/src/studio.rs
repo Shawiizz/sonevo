@@ -39,6 +39,8 @@ pub struct Status {
     pub audio: AudioStatus,
     /// While recording, the loudest the input was since the last look.
     pub recording: Option<f32>,
+    /// The most of its time a block took to play: 1 is all of it.
+    pub load: f32,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -401,6 +403,7 @@ impl Studio {
                 inserts: BTreeMap::new(),
                 audio,
                 recording,
+                load: 0.0,
             };
         };
         engine.collect();
@@ -415,6 +418,7 @@ impl Studio {
             inserts,
             audio,
             recording,
+            load: engine.busy(),
         }
     }
 }

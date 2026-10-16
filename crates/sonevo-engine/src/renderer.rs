@@ -6,7 +6,7 @@ use crate::meters::{self, Meters};
 use rtrb::{Consumer, Producer};
 use sonevo_dsp::{Context, Event, Sample};
 use sonevo_project::PPQ;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 pub enum Command {
@@ -50,6 +50,9 @@ pub enum Command {
 pub struct Shared {
     position: AtomicU64,
     playing: AtomicBool,
+    /// The most of a block's time a block took to play, since the last look, as bits of a
+    /// float.
+    load: AtomicU32,
     pub meters: Meters,
 }
 
@@ -58,6 +61,7 @@ impl Shared {
         Shared {
             position: AtomicU64::new(0f64.to_bits()),
             playing: AtomicBool::new(false),
+            load: AtomicU32::new(0),
             meters: Meters::new(),
         }
     }
@@ -69,6 +73,11 @@ impl Shared {
 
     pub fn playing(&self) -> bool {
         self.playing.load(Ordering::Relaxed)
+    }
+
+    /// The most of its time a block took since the last look: 1 is all of it.
+    pub fn load(&self) -> f32 {
+        f32::from_bits(self.load.swap(0, Ordering::Relaxed))
     }
 }
 
@@ -257,6 +266,7 @@ impl Renderer {
 
     /// Plays a block into `left` and `right`, as long as each other.
     pub fn render(&mut self, left: &mut [f32], right: &mut [f32]) {
+        let start = std::time::Instant::now();
         while let Ok(command) = self.commands.pop() {
             self.command(command);
         }
@@ -265,6 +275,11 @@ impl Renderer {
         }
         self.shared.position.store(self.position.to_bits(), Ordering::Relaxed);
         self.shared.playing.store(self.playing, Ordering::Relaxed);
+        let given = left.len() as f32 / self.sample_rate;
+        if given > 0.0 {
+            let load = start.elapsed().as_secs_f32() / given;
+            self.shared.load.fetch_max(load.to_bits(), Ordering::Relaxed);
+        }
     }
 
     /// Plays a block into interleaved frames of `channels` samples, the song's two in the

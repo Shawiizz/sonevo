@@ -1,7 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { formatPosition, newId, Pattern } from '../core/models';
+import { formatPosition, Pattern } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
@@ -132,6 +139,13 @@ import { Rename } from '../shared/rename';
 
     <div class="grow"></div>
 
+    <div
+      class="load s-mono"
+      [class.high]="load() > 0.7"
+      [title]="t('How much of its time the engine takes to play')"
+    >
+      CPU {{ (load() * 100).toFixed(0) }}%
+    </div>
     <div class="audio" [class.bad]="!!audioProblem()" [title]="audioTitle()">
       @if (audioProblem(); as problem) {
         {{ problem }}
@@ -273,6 +287,15 @@ import { Rename } from '../shared/rename';
     .grow {
       flex: 1;
     }
+    .load {
+      min-width: 64px;
+      color: var(--s-text-3);
+      font-size: 11px;
+      text-align: right;
+      &.high {
+        color: var(--s-warn);
+      }
+    }
     .audio {
       color: var(--s-text-3);
       font-size: 12px;
@@ -300,6 +323,16 @@ export class Transport {
   protected readonly tempoShown = computed(() => (this.draggingTempo() ?? this.tempo()).toFixed(1));
   protected readonly patternMode = computed(() => !!this.studio.view()?.patternMode);
   protected readonly recording = computed(() => this.studio.status().recording !== null);
+  /** Shown as the most of the last second or so, not each block's. */
+  protected readonly load = signal(0);
+  private loads: number[] = [];
+
+  constructor() {
+    effect(() => {
+      this.loads = [...this.loads, this.studio.status().load].slice(-30);
+      this.load.set(Math.max(...this.loads));
+    });
+  }
 
   protected readonly position = computed(() => {
     const song = this.studio.song();
@@ -404,23 +437,8 @@ export class Transport {
 
   /** A copy of `pattern` and its notes, to change one while keeping the other. */
   private async duplicate(pattern: Pattern): Promise<void> {
-    const copy: Pattern = { ...pattern, id: newId(), name: `${pattern.name} (2)` };
-    const notes = this.studio.view()?.notes[pattern.id] ?? {};
-    const song = this.studio.song();
-    const index = song ? song.patterns.findIndex((p) => p.id === pattern.id) + 1 : null;
-    const done = await this.studio.edit({
-      type: 'batch',
-      edits: [
-        { type: 'putPattern', pattern: copy, index },
-        ...Object.entries(notes).map(([channel, list]) => ({
-          type: 'setNotes' as const,
-          pattern: copy.id,
-          channel,
-          notes: list,
-        })),
-      ],
-    });
-    if (done) this.studio.selectPattern(copy.id);
+    const copy = await this.studio.duplicatePattern(pattern);
+    if (copy) this.studio.selectPattern(copy.id);
   }
 
   protected patternMenu(event: MouseEvent): void {

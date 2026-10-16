@@ -184,7 +184,9 @@ export class Playlist implements OnDestroy {
     });
     effect(() => {
       this.studio.status();
-      if (!this.studio.view()?.patternMode) this.surface?.redrawOver();
+      if (this.studio.view()?.patternMode) return;
+      this.follow();
+      this.surface?.redrawOver();
     });
   }
 
@@ -316,8 +318,10 @@ export class Playlist implements OnDestroy {
           width: 1.5,
           color: palette().picked,
         });
-      if (w > 30)
-        s.text(this.clipName(clip), Math.max(x, HEADERS) + 6, top + 1, palette().onColor, 11);
+      if (w > 30) {
+        s.text('▾', x + 4, top, palette().onColor, 11);
+        s.text(this.clipName(clip), Math.max(x + 16, HEADERS + 6), top + 1, palette().onColor, 11);
+      }
       this.paintContent(s, clip, x, top + 17, w, h - 19, color);
     }
 
@@ -534,6 +538,12 @@ export class Playlist implements OnDestroy {
       return;
     }
     const clip = hit.clip;
+    const lane = this.tracks.findIndex((t) => t.id === clip.track);
+    const top = this.laneY(lane) + 2;
+    if (y < top + 15 && x < this.x(clip.start) + 16) {
+      this.clipMenu(event, clip);
+      return;
+    }
     if (event.shiftKey) {
       if (this.selected.has(clip.id)) this.selected.delete(clip.id);
       else this.selected.add(clip.id);
@@ -904,6 +914,73 @@ export class Playlist implements OnDestroy {
   protected zoom(by: number): void {
     this.perTick = Math.min(0.4, Math.max(1 / PPQ, this.perTick * by));
     this.surface?.redraw();
+  }
+
+  /** The playhead kept in view as the song plays: a page further once it leaves it. */
+  private follow(): void {
+    const status = this.studio.status();
+    const width = this.host().nativeElement.clientWidth;
+    if (!status.playing || width <= HEADERS) return;
+    const x = this.x(status.position);
+    if (x < HEADERS || x > width - 24) {
+      this.scrollX = Math.max(0, status.position - 24 / this.perTick);
+      this.surface?.redraw();
+    }
+  }
+
+  /** What a clip's ▾ offers: its pattern edited or made its own, the clip copied or gone. */
+  private clipMenu(event: MouseEvent, clip: Clip): void {
+    const t = this.t;
+    const content = clip.content;
+    const pattern =
+      content.type === 'pattern'
+        ? this.studio.song()?.patterns.find((p) => p.id === content.pattern)
+        : undefined;
+    const items: MenuItem[] = [];
+    if (pattern) {
+      items.push(
+        {
+          label: t('Edit the pattern'),
+          run: () => {
+            this.studio.patternId.set(pattern.id);
+            this.studio.dock.set('rack');
+          },
+        },
+        {
+          label: t('Make unique: a pattern of its own'),
+          run: () => this.studio.duplicatePattern(pattern, [{ type: 'putClip', clip }]),
+        },
+        {
+          label: t('Rename the pattern…'),
+          run: () =>
+            void this.rename.ask(t('Name of the pattern'), pattern.name).then((name) => {
+              if (name)
+                void this.studio.edit({
+                  type: 'putPattern',
+                  pattern: { ...pattern, name },
+                  index: null,
+                });
+            }),
+        },
+        { separator: true, label: '' },
+      );
+    }
+    items.push(
+      {
+        label: t('Copy it after itself'),
+        run: () =>
+          this.studio.edit({
+            type: 'putClip',
+            clip: { ...clip, id: newId(), start: clip.start + clip.length },
+          }),
+      },
+      {
+        label: t('Delete'),
+        danger: true,
+        run: () => this.studio.edit({ type: 'removeClips', ids: [clip.id] }),
+      },
+    );
+    this.menus.show(event, items);
   }
 
   protected arrangementMenu(event: MouseEvent): void {

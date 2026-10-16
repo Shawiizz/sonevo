@@ -182,6 +182,11 @@ impl Engine {
         self.shared.playing()
     }
 
+    /// The most of its time a block took to play since the last look: 1 is all of it.
+    pub fn busy(&self) -> f32 {
+        self.shared.load()
+    }
+
     /// The loudest sample `meter` played since it was last read.
     pub fn meter(&self, meter: Meter) -> f32 {
         let slot = match meter {

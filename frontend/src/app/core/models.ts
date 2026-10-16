@@ -160,6 +160,8 @@ export interface Status {
   audio: AudioStatus;
   /** While recording, the loudest the input was since the last look. */
   recording: number | null;
+  /** The most of its time a block took to play: 1 is all of it. */
+  load: number;
 }
 
 export interface ParamInfo {

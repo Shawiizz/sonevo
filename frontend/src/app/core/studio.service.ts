@@ -33,6 +33,7 @@ const SILENT: Status = {
   inserts: {},
   audio: { device: null, sampleRate: 0, latencyMs: 0, failed: false, error: null },
   recording: null,
+  load: 0,
 };
 
 /**
@@ -311,6 +312,34 @@ export class Studio {
       signature: next.signature,
       loopRegion: next.loopRegion ?? null,
     });
+  }
+
+  /** A copy of `pattern` and its notes, placed after it: the copy, once made. */
+  async duplicatePattern(pattern: Pattern, extra: Edit[] = []): Promise<Pattern | null> {
+    const copy: Pattern = { ...pattern, id: newId(), name: `${pattern.name} (2)` };
+    const notes = this.view()?.notes[pattern.id] ?? {};
+    const index = (this.song()?.patterns.findIndex((p) => p.id === pattern.id) ?? -1) + 1;
+    const done = await this.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putPattern', pattern: copy, index },
+        ...Object.entries(notes).map(([channel, list]) => ({
+          type: 'setNotes' as const,
+          pattern: copy.id,
+          channel,
+          notes: list,
+        })),
+        ...extra.map((edit) =>
+          edit.type === 'putClip' && edit.clip.content.type === 'pattern'
+            ? {
+                ...edit,
+                clip: { ...edit.clip, content: { type: 'pattern' as const, pattern: copy.id } },
+              }
+            : edit,
+        ),
+      ],
+    });
+    return done ? copy : null;
   }
 
   selectPattern(id: Id): void {

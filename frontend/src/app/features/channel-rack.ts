@@ -146,6 +146,12 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       gap: 6px;
       height: 40px;
       padding: 0 10px;
+      /* a long pattern's steps scroll the rack across, never squeeze the row */
+      width: max-content;
+      min-width: 100%;
+      > * {
+        flex: none;
+      }
       &.selected {
         background: var(--s-raised);
       }
