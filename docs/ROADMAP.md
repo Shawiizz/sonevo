@@ -107,8 +107,13 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Plugins d'effet** sur les pistes de mixage : le son de la piste leur est passé (et leurs
   entrées en plus reçoivent du silence) ; un bloc en retard laisse passer le son tel quel.
   Essayé avec `plugins/test-effect`, un gain CLAP fait pour ça.
-- ⬜ Mettre le plugin au premier plan est permis par Sonevo, non vérifié pendant la nuit
-  (l'application testée n'était pas au premier plan).
+- ✅ Essayé avec un vrai plugin, **Surge XT** (CLAP) : il joue, sa fenêtre s'ouvre au premier
+  plan, son état (son preset) s'enregistre avec le morceau.
+- ✅ **Export et contrôle du mix avec les plugins** : chaque plugin rejoué depuis l'état qu'il a à
+  ce moment-là (y compris ce qu'on a changé dans sa fenêtre), chaque bloc attendu.
+- ✅ **Panneau d'un plugin** : ses réglages tels qu'il les a (et écrits à sa façon, « -7.20 dB »),
+  relus toutes les 1,5 s ; les 12 premiers et ceux du morceau montrés, les autres cherchés par
+  leur nom (Surge en a 775).
 - ⬜ VST3.
 
 ## 5. L'application
