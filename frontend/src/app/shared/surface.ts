@@ -104,6 +104,9 @@ export class Surface {
   private ready = false;
   private destroyed = false;
   private observer: ResizeObserver | null = null;
+  /** The host's size in the screen's own pixels, as the browser lays it out. */
+  private pixels: { width: number; height: number } | null = null;
+  /** The size drawn in, in CSS pixels: the host's, to a fraction of one. */
   width = 0;
   height = 0;
 
@@ -118,7 +121,6 @@ export class Surface {
       backgroundAlpha: 0,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
       preference: 'webgl',
       // drawn when something changed, never otherwise
       autoStart: false,
@@ -127,11 +129,25 @@ export class Surface {
       this.app.destroy(true);
       return;
     }
-    this.host.appendChild(this.app.canvas);
-    this.app.canvas.style.display = 'block';
+    const canvas = this.app.canvas;
+    this.host.appendChild(canvas);
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     this.app.stage.addChild(this.shapes, this.words, this.over);
-    this.observer = new ResizeObserver(() => this.redraw());
-    this.observer.observe(this.host);
+    // a pixel of the canvas on each of the screen's, so that a scale such as 115 % blurs nothing
+    this.observer = new ResizeObserver((entries) => {
+      const box = entries[0]?.devicePixelContentBoxSize?.[0];
+      this.pixels = box ? { width: box.inlineSize, height: box.blockSize } : null;
+      this.redraw();
+    });
+    try {
+      this.observer.observe(this.host, { box: 'device-pixel-content-box' });
+    } catch {
+      this.observer.observe(this.host);
+    }
+    // the canvas cleared when the graphics card was taken away, drawn again once it is back
+    canvas.addEventListener('webglcontextrestored', () => this.redraw());
     this.ready = true;
     this.frame();
   }
@@ -143,9 +159,14 @@ export class Surface {
     if (this.wanted) {
       this.wanted = false;
       this.wantedOver = true;
-      this.width = this.host.clientWidth;
-      this.height = this.host.clientHeight;
-      this.app.renderer.resize(this.width, this.height);
+      const ratio = window.devicePixelRatio || 1;
+      const pixels = this.pixels ?? {
+        width: Math.round(this.host.clientWidth * ratio),
+        height: Math.round(this.host.clientHeight * ratio),
+      };
+      this.width = pixels.width / ratio;
+      this.height = pixels.height / ratio;
+      this.app.renderer.resize(this.width, this.height, ratio);
       this.shapes.clear();
       this.used = 0;
       this.paint(this);
@@ -180,7 +201,9 @@ export class Surface {
     if (t.style.fill !== color) t.style.fill = color;
     if (t.style.fontSize !== size) t.style.fontSize = size;
     t.anchor.set(anchor, 0);
-    t.position.set(Math.round(x), Math.round(y));
+    // on the screen's pixels, the words drawn as sharp as they were written
+    const r = this.app.renderer.resolution;
+    t.position.set(Math.round(x * r) / r, Math.round(y * r) / r);
     t.visible = true;
   }
 

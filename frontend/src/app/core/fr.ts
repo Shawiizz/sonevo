@@ -257,6 +257,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'The pattern edited: its steps below.': 'Le pattern ouvert : ses pas ci-dessous.',
+  'Hear it alone': "L'écouter seul",
+  'Back to the whole song': 'Revenir au morceau entier',
   'Look for a setting by its name': 'Chercher un réglage par son nom',
   '{count} more settings: look for one by its name.':
     '{count} réglages de plus : cherches-en un par son nom.',

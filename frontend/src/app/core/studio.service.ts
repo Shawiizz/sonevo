@@ -558,6 +558,16 @@ export class Studio {
     return done ? copy : null;
   }
 
+  /** When a pattern was last opened from the playlist, for the rack to show it. */
+  readonly opened = signal(0);
+
+  /** The pattern `id` edited in the rack, shown there. */
+  openPattern(id: Id): void {
+    this.selectPattern(id);
+    this.dock.set('rack');
+    this.opened.set(performance.now());
+  }
+
   selectPattern(id: Id): void {
     this.patternId.set(id);
     if (this.view()?.patternMode) void this.setMode(id);

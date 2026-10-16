@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { builtinName, Channel, COLORS, Edit, Insert, newId, Note, STEP } from '../core/models';
@@ -51,6 +59,22 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
   selector: 'app-channel-rack',
   imports: [Icon, Knob, Meter],
   template: `
+    @if (studio.pattern(); as pattern) {
+      <div class="head" [class.flash]="flash()">
+        <span class="dot" [style.background]="pattern.color"></span>
+        <span class="title">{{ pattern.name }}</span>
+        <span class="what">{{ t('The pattern edited: its steps below.') }}</span>
+        <span class="grow"></span>
+        <button
+          class="s-bar-btn"
+          [class.on]="studio.view()?.patternMode"
+          (click)="hearAlone()"
+          [title]="t('Play the pattern chosen, over and over')"
+        >
+          {{ studio.view()?.patternMode ? t('Back to the whole song') : t('Hear it alone') }}
+        </button>
+      </div>
+    }
     <div class="rows" (dragover)="dragOver($event)" (drop)="drop($event)">
       @for (row of rows(); track row.channel.id) {
         <div
@@ -178,6 +202,38 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       flex-direction: column;
       min-height: 0;
       height: 100%;
+    }
+    .head {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--s-line);
+      transition: background 600ms ease-out;
+      &.flash {
+        background: color-mix(in srgb, var(--s-accent) 22%, transparent);
+        transition: none;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+      }
+      .title {
+        font-weight: 600;
+      }
+      .what {
+        color: var(--s-text-3);
+        font-size: 12px;
+      }
+      .grow {
+        flex: 1;
+      }
+      .on {
+        color: var(--s-accent);
+      }
     }
     .rows {
       flex: 1;
@@ -341,6 +397,20 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
 export class ChannelRack {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  /** The pattern just opened from the playlist, lit up for a moment. */
+  protected readonly flash = signal(false);
+  private readonly lit = effect((onCleanup) => {
+    const at = this.studio.opened();
+    if (!at || performance.now() - at > 500) return;
+    untracked(() => this.flash.set(true));
+    const timer = setTimeout(() => this.flash.set(false), 350);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  protected hearAlone(): void {
+    const view = this.studio.view();
+    void this.studio.setMode(view?.patternMode ? null : (this.studio.pattern()?.id ?? null));
+  }
   private readonly named = inject(I18n).named;
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);

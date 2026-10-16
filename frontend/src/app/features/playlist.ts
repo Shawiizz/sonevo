@@ -732,7 +732,7 @@ export class Playlist implements OnDestroy {
     } else if (!this.selected.has(clip.id)) {
       this.selected = new Set([clip.id]);
     }
-    if (clip.content.type === 'pattern') this.studio.patternId.set(clip.content.pattern);
+    if (clip.content.type === 'pattern') this.studio.selectPattern(clip.content.pattern);
     this.working = this.clips.map((c) => ({ ...c }));
     if (event.altKey) {
       // copies dragged away, the clips left in place
@@ -1076,10 +1076,7 @@ export class Playlist implements OnDestroy {
   protected double(event: MouseEvent): void {
     const { x, y } = this.point(event);
     const hit = y > RULER && x > HEADERS ? this.hit(x, y) : null;
-    if (hit?.clip.content.type === 'pattern') {
-      this.studio.patternId.set(hit.clip.content.pattern);
-      this.studio.dock.set('rack');
-    }
+    if (hit?.clip.content.type === 'pattern') this.studio.openPattern(hit.clip.content.pattern);
   }
 
   private clampScroll(y: number): number {
@@ -1139,10 +1136,7 @@ export class Playlist implements OnDestroy {
       items.push(
         {
           label: t('Edit the pattern'),
-          run: () => {
-            this.studio.patternId.set(pattern.id);
-            this.studio.dock.set('rack');
-          },
+          run: () => this.studio.openPattern(pattern.id),
         },
         {
           label: t('Make unique: a pattern of its own'),
