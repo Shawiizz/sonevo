@@ -17,7 +17,7 @@ import { Mixer } from './features/mixer';
 import { PianoRoll } from './features/piano-roll';
 import { Playlist } from './features/playlist';
 import { VersionsPanel } from './features/versions-panel';
-import { Files } from './shell/files.service';
+import { Files, TEMPLATES } from './shell/files.service';
 import { Command, Palette } from './shell/palette';
 import { ExportDialog } from './shell/export-dialog';
 import { Guide } from './shell/guide';
@@ -420,7 +420,11 @@ export class App {
       { label: t('Play / pause'), key: 'Space', run: () => this.studio.togglePlay() },
       { label: t('Stop'), run: () => api.stop() },
       { label: t('New song'), key: 'Ctrl+N', run: () => this.files.newSong() },
-      { label: t('Open the demo'), run: () => this.files.newSong(true) },
+      { label: t('Open the demo'), run: () => this.files.newSong('demo') },
+      ...TEMPLATES.map((s) => ({
+        label: t('New song from the template {name}', { name: t(s.label) }),
+        run: () => this.files.newSong(s.id),
+      })),
       { label: t('Open…'), key: 'Ctrl+O', run: () => this.files.open() },
       { label: t('Save'), key: 'Ctrl+S', run: () => this.files.save() },
       { label: t('Save as…'), key: 'Ctrl+Shift+S', run: () => this.files.saveAs() },

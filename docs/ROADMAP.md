@@ -143,6 +143,9 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Export WAV 16, 24 ou 32 bits, 44,1 / 48 / 96 kHz : le morceau, la boucle, ou **chaque
   piste de mixage seule (stems)**.
 - ✅ Un morceau de démonstration au premier lancement (16 mesures de house).
+- ✅ **Modèles** de morceaux : Trap (808 qui glisse, charleys en roulements, cloches
+  arpégées), Lo-fi (batterie swinguée, accords de septième) et Techno (basse acid qui pompe
+  sous le kick, filtre qui s'ouvre), faits des presets ; dans Fichier.
 - ✅ Installateur NSIS, avec l'hôte de plugins.
 - ⬜ Mise à jour automatique (comme Ramure : clé de signature à créer).
 

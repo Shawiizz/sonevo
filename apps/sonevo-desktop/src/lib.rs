@@ -6,6 +6,7 @@ mod demo;
 mod midi;
 mod settings;
 mod studio;
+mod templates;
 
 use serde::{Deserialize, Serialize};
 use settings::Settings;
@@ -76,10 +77,16 @@ fn redo(app: State<App>) -> serde_json::Value {
     view(&studio)
 }
 
+/// A new song: empty, the demo, or one of the templates.
 #[tauri::command]
-fn new_song(app: State<App>, demo: bool) -> serde_json::Value {
+fn new_song(app: State<App>, template: Option<String>) -> serde_json::Value {
+    let song = match template.as_deref() {
+        Some("demo") => demo::song(),
+        Some(name) => templates::song(name).unwrap_or_else(|| Song::new("Untitled")),
+        None => Song::new("Untitled"),
+    };
     let mut studio = app.studio();
-    studio.replace(if demo { demo::song() } else { Song::new("Untitled") }, None);
+    studio.replace(song, None);
     view(&studio)
 }
 

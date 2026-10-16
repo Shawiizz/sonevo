@@ -4,6 +4,14 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Studio } from '../core/studio.service';
 
+/** The songs to start from, a style each: the demo is house. */
+export const TEMPLATES = [
+  { id: 'demo', label: 'House' },
+  { id: 'trap', label: 'Trap' },
+  { id: 'lofi', label: 'Lo-fi' },
+  { id: 'techno', label: 'Techno' },
+];
+
 /** New, open, save, export: what the File menu and its shortcuts do. */
 @Injectable({ providedIn: 'root' })
 export class Files {
@@ -31,9 +39,10 @@ export class Files {
     return left;
   }
 
-  async newSong(demo = false): Promise<void> {
+  /** A new song: empty, or from the template named (`demo` is the demo's). */
+  async newSong(template: string | null = null): Promise<void> {
     if (!(await this.leave())) return;
-    this.studio.show(await api.newSong(demo));
+    this.studio.show(await api.newSong(template));
   }
 
   async open(folder?: string): Promise<void> {

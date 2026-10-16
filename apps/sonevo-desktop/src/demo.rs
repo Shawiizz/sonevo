@@ -7,10 +7,10 @@ use sonevo_project::{
 };
 use std::collections::BTreeMap;
 
-const STEP: Ticks = PPQ / 4;
-const BAR: Ticks = PPQ * 4;
+pub(crate) const STEP: Ticks = PPQ / 4;
+pub(crate) const BAR: Ticks = PPQ * 4;
 
-fn channel(name: &str, color: usize, instrument: Device, insert: Id) -> Channel {
+pub(crate) fn channel(name: &str, color: usize, instrument: Device, insert: Id) -> Channel {
     Channel {
         id: Id::new(),
         name: name.into(),
@@ -29,11 +29,11 @@ fn drum(sound: f64) -> Device {
 }
 
 /// Notes on the sixteenth steps given, of a bar.
-fn steps(steps: &[i64], key: u8, velocity: f32) -> Vec<Note> {
+pub(crate) fn steps(steps: &[i64], key: u8, velocity: f32) -> Vec<Note> {
     steps.iter().map(|&s| Note { start: s * STEP, length: STEP, key, velocity }).collect()
 }
 
-fn pattern(name: &str, color: usize, bars: i64, notes: Vec<(Id, Vec<Note>)>) -> Pattern {
+pub(crate) fn pattern(name: &str, color: usize, bars: i64, notes: Vec<(Id, Vec<Note>)>) -> Pattern {
     Pattern {
         id: Id::new(),
         name: name.into(),

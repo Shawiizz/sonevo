@@ -5,7 +5,7 @@ import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
-import { Files } from './files.service';
+import { Files, TEMPLATES } from './files.service';
 
 @Component({
   selector: 'app-titlebar',
@@ -131,7 +131,15 @@ export class Titlebar {
     const t = this.t;
     this.menus.below(event, [
       { label: t('New song'), key: 'Ctrl+N', run: () => this.files.newSong() },
-      { label: t('Open the demo'), run: () => this.files.newSong(true) },
+      { label: t('Open the demo'), run: () => this.files.newSong('demo') },
+      {
+        label: t('New song from a template…'),
+        run: () =>
+          this.menus.show(
+            event,
+            TEMPLATES.map((s) => ({ label: t(s.label), run: () => this.files.newSong(s.id) })),
+          ),
+      },
       { label: t('Open…'), key: 'Ctrl+O', run: () => this.files.open() },
       { separator: true, label: '' },
       { label: t('Save'), key: 'Ctrl+S', run: () => this.files.save() },
