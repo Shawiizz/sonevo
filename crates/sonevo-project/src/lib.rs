@@ -4,12 +4,14 @@
 //! small diff.
 
 mod device;
+mod edit;
 mod format;
 mod id;
 mod song;
 mod time;
 
 pub use device::{builtin, Device, DeviceKind};
+pub use edit::{Edit, EditError, History};
 pub use format::{import_sample, load, save, FormatError, FORMAT, SONG_FILE};
 pub use id::Id;
 pub use song::{
