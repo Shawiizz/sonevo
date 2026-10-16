@@ -4137,6 +4137,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sonevo-plugins"
+version = "0.1.0"
+dependencies = [
+ "sonevo-dsp",
+ "sonevo-engine",
+ "sonevo-plugin-ipc",
+ "sonevo-project",
+ "tempfile",
+]
+
+[[package]]
 name = "sonevo-project"
 version = "0.1.0"
 dependencies = [

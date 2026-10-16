@@ -1,0 +1,17 @@
+[package]
+name = "sonevo-plugins"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "The plugins installed, found, and each played in a process of its own"
+
+[dependencies]
+sonevo-dsp.workspace = true
+sonevo-plugin-ipc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+sonevo-engine.workspace = true
+sonevo-project.workspace = true

@@ -1,0 +1,129 @@
+//! These tests play Sonevo's own test synth, built beside them by
+//! `cargo build -p sonevo-test-synth -p sonevo-plugin-host`.
+
+use sonevo_dsp::{Context, Event, Processor};
+use sonevo_plugins::{scan, Remote};
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+const RATE: f32 = 48_000.0;
+
+fn built() -> PathBuf {
+    let deps = std::env::current_exe().unwrap();
+    deps.parent().unwrap().parent().unwrap().join("sonevo_test_synth.dll")
+}
+
+/// A folder with the test synth installed in it, as a CLAP bundle.
+fn installed() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let vendor = dir.path().join("Sonevo");
+    std::fs::create_dir_all(&vendor).unwrap();
+    std::fs::copy(built(), vendor.join("Test Synth.clap")).expect("the test synth is built");
+    dir
+}
+
+fn play(remote: &mut Remote, events: &[Event], blocks: usize) -> f32 {
+    let context = Context { sample_rate: RATE, tempo: 120.0 };
+    let mut loudest = 0.0f32;
+    for i in 0..blocks {
+        let (mut left, mut right) = ([0.0f32; 256], [0.0f32; 256]);
+        remote.process(&context, if i == 0 { events } else { &[] }, &mut left, &mut right);
+        loudest = left.iter().chain(&right).fold(loudest, |a, s| a.max(s.abs()));
+    }
+    loudest
+}
+
+fn note(on: bool) -> Event {
+    Event { at: 0, key: 60, velocity: 0.9, on }
+}
+
+#[test]
+fn bundles_in_subfolders_are_found_and_what_is_not_a_plugin_is_left_out() {
+    let dir = installed();
+    std::fs::write(dir.path().join("Broken.clap"), b"not a plugin").unwrap();
+    let found = scan(&[dir.path().to_owned(), Path::new("Z:/nowhere").to_owned()]);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].id, "dev.sonevo.test-synth");
+    assert_eq!(found[0].name, "Sonevo Test Synth");
+    assert!(found[0].instrument);
+}
+
+#[test]
+fn a_plugin_plays_in_its_own_process_and_plays_on_after_a_crash() {
+    let dir = installed();
+    let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
+    let mut remote = Remote::start(&bundle, "dev.sonevo.test-synth", RATE).unwrap();
+    // the process starting: blocks are silent until it answers
+    let start = Instant::now();
+    let mut heard = play(&mut remote, &[note(true)], 1);
+    while heard == 0.0 && start.elapsed() < Duration::from_secs(10) {
+        heard = play(&mut remote, &[], 1);
+    }
+    assert!(heard > 0.01, "the plugin never answered");
+
+    // its process killed, as a crash would: started again, the key held pressed again
+    kill_hosts(&bundle);
+    let start = Instant::now();
+    while remote.restarts() == 0 && start.elapsed() < Duration::from_secs(10) {
+        play(&mut remote, &[], 1);
+    }
+    assert_eq!(remote.restarts(), 1);
+    let start = Instant::now();
+    let mut again = 0.0;
+    while again == 0.0 && start.elapsed() < Duration::from_secs(10) {
+        again = play(&mut remote, &[], 4);
+    }
+    assert!(again > 0.01, "the key held was not pressed again");
+    play(&mut remote, &[note(false)], 200);
+    assert!(play(&mut remote, &[], 2) < 1e-4);
+}
+
+/// Ends the plugin host processes playing `bundle`, as a crash would.
+fn kill_hosts(bundle: &Path) {
+    let name = bundle.file_name().unwrap().to_string_lossy();
+    let script = format!(
+        "Get-CimInstance Win32_Process -Filter \"Name='sonevo-plugin-host.exe'\" | \
+         Where-Object {{ $_.CommandLine -like '*{name}*' }} | \
+         ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"
+    );
+    let status =
+        std::process::Command::new("powershell").args(["-NoProfile", "-Command", &script]).status().unwrap();
+    assert!(status.success());
+}
+
+#[test]
+fn a_song_plays_a_plugin_through_the_engine() {
+    use sonevo_project::{Device, DeviceKind, Song};
+    let dir = installed();
+    let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
+    let mut song = Song::new("Plugin");
+    song.channels[0].instrument = Device {
+        kind: DeviceKind::Clap {
+            bundle: bundle.to_string_lossy().into_owned(),
+            plugin: "dev.sonevo.test-synth".into(),
+        },
+        ..Device::builtin("")
+    };
+    let channel = song.channels[0].id;
+    let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
+    engine.set_plugins(std::sync::Arc::new(|bundle: &str, id: &str, rate: f32| {
+        Remote::start(Path::new(bundle), id, rate)
+            .map(|r| Box::new(r) as Box<dyn Processor>)
+            .map_err(|e| e.to_string())
+    }));
+    assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
+    engine.note(channel, 64, 0.9, true);
+    let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
+    let start = Instant::now();
+    let mut heard = 0.0f32;
+    while heard < 0.01 && start.elapsed() < Duration::from_secs(10) {
+        renderer.render(&mut left, &mut right);
+        heard = left.iter().fold(0.0, |a, s| a.max(s.abs()));
+    }
+    assert!(heard >= 0.01, "the plugin was not heard");
+
+    // without a way to start plugins, the engine says so
+    let (mut plain, _renderer) = sonevo_engine::Engine::new(RATE);
+    let missing = plain.load(&song, sonevo_engine::Mode::Song, None);
+    assert_eq!(missing, ["dev.sonevo.test-synth: plugins are not played here"]);
+}

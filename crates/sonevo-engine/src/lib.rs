@@ -14,7 +14,7 @@ mod renderer;
 mod samples;
 mod wav;
 
-pub use compile::Mode;
+pub use compile::{Mode, Plugins};
 pub use renderer::Renderer;
 pub use samples::{decode, DecodeError, Samples};
 pub use wav::{write_wav, Depth};
@@ -42,6 +42,7 @@ pub struct Engine {
     sample_rate: f32,
     mirror: Mirror,
     samples: Samples,
+    plugins: Option<Arc<Plugins>>,
 }
 
 impl Engine {
@@ -57,12 +58,18 @@ impl Engine {
             sample_rate,
             mirror: Mirror::default(),
             samples: Samples::default(),
+            plugins: None,
         };
         (engine, renderer)
     }
 
     pub fn sample_rate(&self) -> f32 {
         self.sample_rate
+    }
+
+    /// How the plugins songs name are started.
+    pub fn set_plugins(&mut self, plugins: Arc<Plugins>) {
+        self.plugins = Some(plugins);
     }
 
     /// The sounds the songs play, for one decoded already to be given.
@@ -77,7 +84,8 @@ impl Engine {
         if folder.is_some() {
             self.samples.set_folder(folder);
         }
-        let compiled = compile(song, mode, &self.mirror, self.sample_rate, &mut self.samples);
+        let compiled =
+            compile(song, mode, &self.mirror, self.sample_rate, &mut self.samples, self.plugins.as_deref());
         let mut missing = compiled.missing;
         match self.commands.push(Command::Swap(compiled.graph)) {
             Ok(()) => self.mirror = compiled.mirror,

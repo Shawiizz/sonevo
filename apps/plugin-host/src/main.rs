@@ -2,6 +2,10 @@
 //! plugin crash, only this process goes, and the engine plays on.
 //!
 //! `sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>`
+//!
+//! `sonevo-plugin-host --scan <bundle>` writes the plugins of a bundle, a line each: id,
+//! name, vendor and features, separated by tabs. A bundle that crashes as it is read crashes
+//! only this process.
 
 use sonevo_clap::Bundle;
 use sonevo_plugin_ipc::PluginEnd;
@@ -24,6 +28,11 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if let [scan, bundle] = args.as_slice() {
+        if scan == "--scan" {
+            return list(Path::new(bundle));
+        }
+    }
     let [link, bundle, id, rate, max_frames, engine] = args.as_slice() else {
         return Err(
             "usage: sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>"
@@ -53,6 +62,21 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     })?;
     let instance = played.join().map_err(|_| "the plugin failed while playing")?;
     drop(instance);
+    Ok(())
+}
+
+fn list(bundle: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let clean = |text: &str| text.replace(['\t', '\n', '\r'], " ");
+    for plugin in Bundle::open(bundle)?.plugins() {
+        let features: Vec<String> = plugin.features.iter().map(|f| clean(f)).collect();
+        println!(
+            "{}\t{}\t{}\t{}",
+            clean(&plugin.id),
+            clean(&plugin.name),
+            clean(&plugin.vendor),
+            features.join(",")
+        );
+    }
     Ok(())
 }
 

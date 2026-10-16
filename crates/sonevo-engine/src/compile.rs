@@ -49,8 +49,12 @@ pub struct Compiled {
     pub missing: Vec<String>,
 }
 
+/// Starts a plugin: its bundle, its id, the sample rate; or says why it could not.
+pub type Plugins = dyn Fn(&str, &str, f32) -> Result<Box<dyn Processor>, String> + Send + Sync;
+
 struct Slots<'a> {
     before: &'a Mirror,
+    plugins: Option<&'a Plugins>,
     sample_rate: f32,
     slots: Vec<Option<Box<dyn Processor>>>,
     keep: Vec<(usize, usize)>,
@@ -66,16 +70,19 @@ impl Slots<'_> {
         if !device.enabled {
             return None;
         }
-        let Some(made) = device.builtin_name().and_then(builtin) else {
-            let name = match &device.kind {
-                DeviceKind::Clap { plugin, .. } => plugin.as_str(),
-                DeviceKind::Builtin { name } => name.as_str(),
-            };
-            self.missing.push(format!("{name} is not available"));
-            return None;
+        let params = match &device.kind {
+            DeviceKind::Builtin { name } => match builtin(name) {
+                Some(made) => made.params,
+                None => {
+                    self.missing.push(format!("{name} is not available"));
+                    return None;
+                }
+            },
+            // a plugin's settings are its own, kept by it
+            DeviceKind::Clap { .. } => &[],
         };
         let values: Vec<f64> =
-            made.params.iter().map(|p| device.params.get(p.id).map_or(p.default, |&v| p.clamp(v))).collect();
+            params.iter().map(|p| device.params.get(p.id).map_or(p.default, |&v| p.clamp(v))).collect();
         let sample = device.sample.as_deref().and_then(|name| {
             let loaded = samples.get(name);
             if loaded.is_none() {
@@ -102,8 +109,23 @@ impl Slots<'_> {
                 self.samples.push((slot, sample));
             }
         } else {
-            let mut processor = made.make(self.sample_rate);
-            for (i, (&value, param)) in values.iter().zip(made.params).enumerate() {
+            let mut processor = match &device.kind {
+                DeviceKind::Builtin { name } => builtin(name).expect("found above").make(self.sample_rate),
+                DeviceKind::Clap { bundle, plugin } => {
+                    let started = match self.plugins {
+                        Some(start) => start(bundle, plugin, self.sample_rate),
+                        None => Err("plugins are not played here".into()),
+                    };
+                    match started {
+                        Ok(processor) => processor,
+                        Err(e) => {
+                            self.missing.push(format!("{plugin}: {e}"));
+                            return None;
+                        }
+                    }
+                }
+            };
+            for (i, (&value, param)) in values.iter().zip(params).enumerate() {
                 if value != param.default {
                     processor.set(i, value);
                 }
@@ -111,13 +133,7 @@ impl Slots<'_> {
             processor.set_sample(sample);
             self.slots.push(Some(processor));
         }
-        let held = Held {
-            slot,
-            params: made.params,
-            kind: device.kind.clone(),
-            values,
-            sample: device.sample.clone(),
-        };
+        let held = Held { slot, params, kind: device.kind.clone(), values, sample: device.sample.clone() };
         self.devices.insert(device.id, held);
         Some(slot)
     }
@@ -228,9 +244,11 @@ pub fn compile(
     before: &Mirror,
     sample_rate: f32,
     samples: &mut Samples,
+    plugins: Option<&Plugins>,
 ) -> Compiled {
     let mut slots = Slots {
         before,
+        plugins,
         sample_rate,
         slots: Vec::new(),
         keep: Vec::new(),
