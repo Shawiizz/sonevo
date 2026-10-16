@@ -28,7 +28,16 @@ pub const PARAMS: &[Param] = &[
     Param::linear("sustain", "Sustain", 0.0, 1.0, 0.7, ""),
     Param::log("release", "Release", 0.005, 10.0, 0.25, "s"),
     Param::linear("volume", "Volume", -36.0, 6.0, -6.0, "dB"),
+    Param::choice("lfoTarget", "LFO moves", LFO_TARGETS, 0),
+    Param::log("lfoRate", "LFO speed", 0.05, 20.0, 4.0, "Hz"),
+    Param::linear("lfoAmount", "LFO depth", 0.0, 1.0, 0.0, ""),
 ];
+
+/// What the LFO moves: the filter (a wah), the pitch (a vibrato), the level (a tremolo).
+const LFO_TARGETS: &[&str] = &["Cutoff", "Pitch", "Volume"];
+/// How far the LFO moves the cutoff, and the pitch, at its full depth.
+const LFO_OCTAVES: f32 = 3.0;
+const LFO_SEMITONES: f32 = 2.0;
 
 const VOICES: usize = 16;
 const MAX_UNISON: usize = 4;
@@ -73,7 +82,9 @@ impl Voice {
 
 pub struct Synth {
     sample_rate: f32,
-    values: [f64; 19],
+    values: [f64; 22],
+    /// Where the LFO is in its cycle, from 0 to 1: the same for every voice.
+    lfo: f32,
     voices: [Voice; VOICES],
     /// Each unison copy's detune (cents at full spread) and pan, for the count chosen.
     layout: [(f32, f32, f32); MAX_UNISON],
@@ -85,7 +96,8 @@ impl Synth {
     pub fn new(sample_rate: f32) -> Synth {
         let mut synth = Synth {
             sample_rate,
-            values: [0.0; 19],
+            values: [0.0; 22],
+            lfo: 0.0,
             voices: [Voice::idle(); VOICES],
             layout: [(0.0, 1.0, 1.0); MAX_UNISON],
             unison: 1,
@@ -164,6 +176,10 @@ impl Synth {
         let unison = self.unison;
         let layout = self.layout;
         let gain = self.gain;
+        let (lfo_target, lfo_step, depth) = (self.values[19].round() as i32, self.v(20) / rate, self.v(21));
+        let lfo_start = self.lfo;
+        let lfo_at =
+            |frame: usize| (std::f32::consts::TAU * (lfo_start + frame as f32 * lfo_step)).sin() * depth;
         for voice in self.voices.iter_mut().filter(|v| !v.amp.idle()) {
             let mut steps = [(0.0f32, 0.0f32); MAX_UNISON];
             for (u, step) in steps.iter_mut().enumerate().take(unison) {
@@ -171,25 +187,29 @@ impl Synth {
                 let f = voice.frequency * detune / rate;
                 *step = (f, f * ratio2);
             }
-            for (l, r) in left.iter_mut().zip(right.iter_mut()) {
+            for (frame, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
                 let env = voice.env.next();
+                let lfo = if depth > 0.0 { lfo_at(frame) } else { 0.0 };
                 if voice.filter_in == 0 {
-                    let moved = cutoff * 2f32.powf(amount * ENV_OCTAVES * env);
+                    let wah = if lfo_target == 0 { LFO_OCTAVES * lfo } else { 0.0 };
+                    let moved = (cutoff * 2f32.powf(amount * ENV_OCTAVES * env + wah)).min(rate * 0.45);
                     voice.left.set(moved, resonance, rate);
                     voice.right.set(moved, resonance, rate);
                     voice.filter_in = FILTER_EVERY;
                 }
                 voice.filter_in -= 1;
                 let (mut sum_l, mut sum_r) = (0.0, 0.0);
+                let vibrato = if lfo_target == 1 { 2f32.powf(lfo * LFO_SEMITONES / 12.0) } else { 1.0 };
                 for u in 0..unison {
-                    let (d1, d2) = steps[u];
+                    let (d1, d2) = (steps[u].0 * vibrato, steps[u].1 * vibrato);
                     let s = (1.0 - mix) * wave1.at(voice.phase1[u], d1) + mix * wave2.at(voice.phase2[u], d2);
                     sum_l += s * layout[u].1;
                     sum_r += s * layout[u].2;
                     voice.phase1[u] = (voice.phase1[u] + d1) % 1.0;
                     voice.phase2[u] = (voice.phase2[u] + d2) % 1.0;
                 }
-                let level = voice.amp.next() * voice.velocity * gain;
+                let tremolo = if lfo_target == 2 { 1.0 - (depth - lfo) * 0.5 } else { 1.0 };
+                let level = voice.amp.next() * voice.velocity * gain * tremolo;
                 *l += voice.left.process(sum_l).low * level;
                 *r += voice.right.process(sum_r).low * level;
                 if voice.amp.idle() {
@@ -226,6 +246,7 @@ impl Processor for Synth {
             }
         }
         self.render(&mut left[done..], &mut right[done..]);
+        self.lfo = (self.lfo + frames as f32 * self.v(20) / self.sample_rate).fract();
     }
 
     fn reset(&mut self) {

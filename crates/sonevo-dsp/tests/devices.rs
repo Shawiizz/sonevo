@@ -198,3 +198,19 @@ fn every_builtin_the_song_names_exists() {
         assert!(builtin(name).is_some(), "{name}");
     }
 }
+
+#[test]
+fn the_synth_lfo_makes_a_tremolo() {
+    let synth = builtin("sonevo.synth").unwrap();
+    let mut device = synth.make(RATE);
+    device.set(synth.param("sustain").unwrap(), 1.0);
+    device.set(synth.param("lfoTarget").unwrap(), 2.0);
+    device.set(synth.param("lfoRate").unwrap(), 2.0);
+    device.set(synth.param("lfoAmount").unwrap(), 1.0);
+    play(device.as_mut(), &[note(0, 57, true)], 10);
+    // a quarter of a second apart, half a cycle at 2 Hz: one loud, one quiet
+    let a = play(device.as_mut(), &[], 1);
+    play(device.as_mut(), &[], 24);
+    let b = play(device.as_mut(), &[], 1);
+    assert!(a.max(b) > 3.0 * a.min(b), "{a} then {b}");
+}
