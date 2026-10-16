@@ -43,6 +43,6 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Plugins the tests load
-        run: cargo build -p sonevo-test-synth -p plugin-host
+        run: cargo build -p sonevo-test-synth -p sonevo-plugin-host
       - name: Rust tests
         run: cargo test --workspace
