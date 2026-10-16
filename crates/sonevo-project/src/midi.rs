@@ -162,6 +162,11 @@ pub fn read_midi(bytes: &[u8]) -> Result<Midi, MidiError> {
                 }
             }
         }
+        // keys still down when the track ends are let go of there
+        let last = tick * PPQ / per_quarter;
+        for (_, key, start, velocity) in down {
+            track.notes.push(Note { start, length: (last - start).max(1), key, velocity });
+        }
         r.at = end;
         if !track.notes.is_empty() {
             track.notes.sort_by_key(|n| (n.start, n.key));
@@ -258,6 +263,23 @@ mod tests {
         bytes.extend(events);
         let midi = read_midi(&bytes).unwrap();
         assert_eq!(midi.tracks[0].notes, [Note { start: 0, length: PPQ, key: 60, velocity: 100.0 / 127.0 }]);
+    }
+
+    #[test]
+    fn a_key_never_let_go_of_lasts_to_the_end_of_its_track() {
+        let mut bytes = b"MThd".to_vec();
+        bytes.extend(6u32.to_be_bytes());
+        bytes.extend([0, 0, 0, 1, 0x03, 0xC0]);
+        // a note on, then the end of the track two beats later
+        let events = [0x00, 0x90, 60, 100, 0x8F, 0x00, 0xFF, 0x2F, 0x00];
+        bytes.extend(b"MTrk");
+        bytes.extend((events.len() as u32).to_be_bytes());
+        bytes.extend(events);
+        let midi = read_midi(&bytes).unwrap();
+        assert_eq!(
+            midi.tracks[0].notes,
+            [Note { start: 0, length: 2 * PPQ, key: 60, velocity: 100.0 / 127.0 }]
+        );
     }
 
     #[test]

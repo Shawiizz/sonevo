@@ -238,7 +238,8 @@ export class PianoRoll implements OnDestroy {
   private centre(): void {
     const notes = this.notes();
     const keys = notes.map((n) => n.key);
-    const middle = keys.length ? Math.round((Math.min(...keys) + Math.max(...keys)) / 2) : 60;
+    const [low, high] = keys.reduce(([a, b], k) => [Math.min(a, k), Math.max(b, k)], [127, 0]);
+    const middle = keys.length ? Math.round((low + high) / 2) : 60;
     const rows = Math.floor(
       (this.host().nativeElement.clientHeight - RULER - VELOCITY) / this.rowHeight,
     );

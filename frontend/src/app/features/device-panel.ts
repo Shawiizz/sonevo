@@ -485,7 +485,7 @@ export class DevicePanel {
       length: Math.max(1, Math.round(each)),
       key: root + i,
       velocity: 0.8,
-    }));
+    })).filter((n) => n.key <= 127);
     void this.studio.addPatternOf(`${channel.name} ${this.t('slices')}`, channel.id, notes);
   }
 

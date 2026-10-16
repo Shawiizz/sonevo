@@ -279,7 +279,8 @@ export class Studio {
       pan: 0,
     }));
     const bar = this.bar();
-    const end = Math.max(...midi.tracks.flatMap((t) => t.notes.map((n) => n.start + n.length)));
+    let end = 0;
+    for (const n of midi.tracks.flatMap((t) => t.notes)) end = Math.max(end, n.start + n.length);
     const pattern: Pattern = {
       id: newId(),
       name,
@@ -311,7 +312,7 @@ export class Studio {
     const song = this.song();
     if (!song) return;
     const bar = this.bar();
-    const end = Math.max(0, ...notes.map((n) => n.start + n.length));
+    const end = notes.reduce((last, n) => Math.max(last, n.start + n.length), 0);
     const pattern: Pattern = {
       id: newId(),
       name,

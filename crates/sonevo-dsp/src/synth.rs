@@ -324,14 +324,17 @@ impl Synth {
                 }
             }
         }
+        // the next part of the block, cut at a note, goes on from here
+        self.lfo = (lfo_start + left.len() as f32 * lfo_step).fract();
     }
 }
 
 impl Processor for Synth {
     fn set(&mut self, index: usize, value: f64) {
         if let Some(p) = PARAMS.get(index) {
+            let was = self.values[index].round();
             self.values[index] = p.clamp(value);
-            if index == 22 {
+            if index == 22 && self.values[index].round() != was {
                 // the voices sounding in one way let go of before playing the other
                 for voice in &mut self.voices {
                     voice.amp.release();
@@ -362,7 +365,6 @@ impl Processor for Synth {
             }
         }
         self.render(&mut left[done..], &mut right[done..]);
-        self.lfo = (self.lfo + frames as f32 * self.lfo_rate() / self.sample_rate).fract();
     }
 
     fn reset(&mut self) {

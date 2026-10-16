@@ -336,6 +336,30 @@ fn glide_slides_from_one_key_to_the_next() {
 }
 
 #[test]
+fn the_lfo_goes_on_across_a_note_in_the_middle_of_a_block() {
+    let synth = builtin("sonevo.synth").unwrap();
+    let play = |split: bool| {
+        let mut device = sine_synth(0.0);
+        device.set(synth.param("lfoTarget").unwrap(), 2.0);
+        device.set(synth.param("lfoRate").unwrap(), 20.0);
+        device.set(synth.param("lfoAmount").unwrap(), 1.0);
+        device.set(synth.param("voices").unwrap(), 0.0);
+        let (mut left, mut right) = (vec![0.0; BLOCK * 4], vec![0.0; BLOCK * 4]);
+        let mut events = vec![note(0, 48, true)];
+        if split {
+            // a key pressed and let go of at once, mid-block: nothing heard of it
+            events.push(Event { at: 700, key: 100, velocity: 0.0, on: true });
+            events.push(Event { at: 700, key: 100, velocity: 0.0, on: false });
+        }
+        device.process(&CONTEXT, &events, &mut left, &mut right);
+        left
+    };
+    let (whole, cut) = (play(false), play(true));
+    let differs = whole.iter().zip(&cut).skip(700).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+    assert!(differs < 1e-3, "the LFO jumped at the note: {differs}");
+}
+
+#[test]
 fn the_synth_lfo_makes_a_tremolo() {
     let synth = builtin("sonevo.synth").unwrap();
     let mut device = synth.make(RATE);
