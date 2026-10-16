@@ -54,6 +54,11 @@ const ABOUT: Record<string, string> = {
         @if (about(); as about) {
           <p class="about">{{ t(about) }}</p>
         }
+        @if (studio.plugin(shown.device)) {
+          <button class="s-btn window" (click)="openWindow(shown.device)">
+            <s-icon name="maximize" [size]="12" /> {{ t('Open its window') }}
+          </button>
+        }
         @if (info()?.name === 'sonevo.sampler') {
           <div class="sample">
             <s-icon name="sample" />
@@ -176,6 +181,9 @@ const ABOUT: Record<string, string> = {
           color: var(--s-on-accent);
         }
       }
+    }
+    .window {
+      margin-bottom: 12px;
     }
     .sample {
       display: flex;
@@ -309,6 +317,11 @@ export class DevicePanel {
         });
       }
     }
+  }
+
+  protected async openWindow(device: Device): Promise<void> {
+    if (!(await api.openPluginWindow(device.id)))
+      this.studio.fail(this.t('This plugin has no window of its own.'));
   }
 
   protected sampleName(device: Device): string {

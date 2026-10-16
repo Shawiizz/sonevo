@@ -316,6 +316,12 @@ fn param_info(p: &sonevo_dsp::Param) -> ParamInfo {
     }
 }
 
+/// Opens the window of the plugin the device `device` plays: false if it has none.
+#[tauri::command]
+fn open_plugin_window(device: Id) -> bool {
+    sonevo_plugins::open_window(device)
+}
+
 /// The settings a plugin lets be moved, as its knobs show them.
 #[tauri::command(async)]
 fn plugin_params(bundle: String, id: String) -> Vec<ParamInfo> {
@@ -688,6 +694,7 @@ pub fn run() {
             plugins,
             scan_plugins,
             plugin_params,
+            open_plugin_window,
             sample_info,
             kept,
             recover,

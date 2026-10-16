@@ -42,12 +42,19 @@ pub struct Remote {
 
 impl Remote {
     /// Starts the plugin `id` of the bundle at `bundle`, for blocks at `sample_rate`; its
-    /// settings, as [`crate::params`] gave them, set by index.
-    pub fn start(bundle: &Path, id: &str, sample_rate: f32, params: &[Param]) -> std::io::Result<Remote> {
+    /// settings, as [`crate::params`] gave them, set by index; its window opened when the
+    /// event `window` is set, if named.
+    pub fn start(
+        bundle: &Path,
+        id: &str,
+        sample_rate: f32,
+        params: &[Param],
+        window: Option<&str>,
+    ) -> std::io::Result<Remote> {
         let host = host_program()?;
         let name = format!("sonevo-{}-{}", std::process::id(), LINKS.fetch_add(1, Ordering::Relaxed));
         let end = EngineEnd::create(&name)?;
-        let args: Vec<String> = vec![
+        let mut args: Vec<String> = vec![
             name,
             bundle.to_string_lossy().into_owned(),
             id.to_owned(),
@@ -55,6 +62,7 @@ impl Remote {
             MAX_FRAMES.to_string(),
             std::process::id().to_string(),
         ];
+        args.extend(window.map(str::to_owned));
         let child = spawn(&host, &args)?;
         let restarts = Arc::new(AtomicU64::new(0));
         let stop = Arc::new(AtomicBool::new(false));

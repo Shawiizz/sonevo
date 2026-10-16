@@ -2,6 +2,8 @@
 //! sixteen voices of a soft electric piano, a note's start and end on the very frame asked,
 //! and its volume a setting the host moves.
 
+#[cfg(windows)]
+mod view;
 mod voice;
 
 use clap_sys::entry::clap_plugin_entry;
@@ -106,6 +108,9 @@ struct Synth {
     voices: Voices,
     /// The setting `VOLUME`: the gain the voices are played at, from 0 to 1.
     volume: f64,
+    /// Its window, while the host shows it.
+    #[cfg(windows)]
+    view: windows_sys::Win32::Foundation::HWND,
 }
 
 unsafe extern "C" fn factory_create(
@@ -133,6 +138,8 @@ unsafe extern "C" fn factory_create(
         },
         voices: Voices::new(48_000.0),
         volume: DEFAULT_VOLUME,
+        #[cfg(windows)]
+        view: std::ptr::null_mut(),
     });
     Box::into_raw(synth) as *const clap_plugin
 }
@@ -307,6 +314,10 @@ unsafe extern "C" fn params_flush(
 
 unsafe extern "C" fn plugin_extension(_plugin: *const clap_plugin, id: *const c_char) -> *const c_void {
     let id = unsafe { CStr::from_ptr(id) };
+    #[cfg(windows)]
+    if id == clap_sys::ext::gui::CLAP_EXT_GUI {
+        return &view::GUI as *const clap_sys::ext::gui::clap_plugin_gui as *const c_void;
+    }
     if id == CLAP_EXT_PARAMS {
         &PARAMS as *const clap_plugin_params as *const c_void
     } else if id == CLAP_EXT_AUDIO_PORTS {

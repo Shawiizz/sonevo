@@ -4246,6 +4246,7 @@ dependencies = [
  "sonevo-plugin-ipc",
  "sonevo-project",
  "tempfile",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4265,6 +4266,7 @@ name = "sonevo-test-synth"
 version = "0.1.0"
 dependencies = [
  "clap-sys",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -1,7 +1,9 @@
 //! One plugin played in a process of its own, for the engine that started it: should the
 //! plugin crash, only this process goes, and the engine plays on.
 //!
-//! `sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>`
+//! `sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>
+//! [<window event>]`: the window event, set by the engine's process, opens the plugin's
+//! window.
 //!
 //! `sonevo-plugin-host --scan <bundle>` writes the plugins of a bundle, a line each: id,
 //! name, vendor and features, separated by tabs. A bundle that crashes as it is read crashes
@@ -9,6 +11,8 @@
 //!
 //! `sonevo-plugin-host --params <bundle> <plugin id>` writes the plugin's settings, a line
 //! each: id, name, least, most, default, and `stepped` or not.
+
+mod window;
 
 use sonevo_clap::Bundle;
 use sonevo_plugin_ipc::PluginEnd;
@@ -41,17 +45,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             return describe(Path::new(bundle), id);
         }
     }
-    let [link, bundle, id, rate, max_frames, engine] = args.as_slice() else {
-        return Err(
-            "usage: sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>"
-                .into(),
-        );
+    let (played_args, window) = match args.len() {
+        7 => (&args[..6], Some(args[6].as_str())),
+        _ => (&args[..], None),
+    };
+    let [link, bundle, id, rate, max_frames, engine] = played_args else {
+        return Err("usage: sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> \
+                    <engine pid> [<window event>]"
+            .into());
     };
     let (rate, max_frames, engine): (f64, u32, u32) = (rate.parse()?, max_frames.parse()?, engine.parse()?);
     let mut end = PluginEnd::open(link)?;
     let bundle = Bundle::open(Path::new(bundle))?;
+    let title = bundle.plugins().into_iter().find(|p| p.id == *id).map_or_else(|| id.clone(), |p| p.name);
     let mut instance = bundle.instantiate(id)?;
     instance.activate(rate, max_frames)?;
+    // the plugin's window, kept on this thread while the instance plays on the other
+    let mut windows =
+        window.zip(instance.gui()).and_then(|(name, gui)| window::Windows::new(name, gui, &title));
 
     // the plugin made, activated and dropped here, played on a thread of its own
     let engine = Engine::watch(engine)?;
@@ -68,6 +79,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         instance.stop();
         instance
     })?;
+    while !played.is_finished() {
+        match &mut windows {
+            Some(windows) => windows.serve(LOOK_UP),
+            None => std::thread::sleep(LOOK_UP),
+        }
+    }
+    // the window closed before the plugin goes
+    drop(windows);
     let instance = played.join().map_err(|_| "the plugin failed while playing")?;
     drop(instance);
     Ok(())

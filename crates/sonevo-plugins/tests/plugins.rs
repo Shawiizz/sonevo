@@ -52,7 +52,7 @@ fn bundles_in_subfolders_are_found_and_what_is_not_a_plugin_is_left_out() {
 fn a_plugin_plays_in_its_own_process_and_plays_on_after_a_crash() {
     let dir = installed();
     let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
-    let mut remote = Remote::start(&bundle, "dev.sonevo.test-synth", RATE, &[]).unwrap();
+    let mut remote = Remote::start(&bundle, "dev.sonevo.test-synth", RATE, &[], None).unwrap();
     // the process starting: blocks are silent until it answers
     let start = Instant::now();
     let mut heard = play(&mut remote, &[note(true)], 1);

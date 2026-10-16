@@ -11,7 +11,10 @@ description = "The plugins installed, found, and each played in a process of its
 sonevo-dsp.workspace = true
 sonevo-engine.workspace = true
 sonevo-plugin-ipc.workspace = true
+sonevo-project.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-sonevo-project.workspace = true

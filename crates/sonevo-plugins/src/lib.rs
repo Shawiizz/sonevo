@@ -8,6 +8,7 @@ mod remote;
 pub use remote::Remote;
 
 use sonevo_dsp::{Param, Processor};
+use sonevo_project::Id;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -150,6 +151,33 @@ pub fn params(bundle: &str, id: &str) -> &'static [Param] {
     params
 }
 
+/// The name of the event that opens the window of the plugin `device` plays.
+fn window_event(device: Id) -> String {
+    format!("sonevo-window-{}-{device}", std::process::id())
+}
+
+/// Opens the window of the plugin `device` plays, in the plugin's own process: false if it
+/// is not playing, or has none.
+#[cfg(windows)]
+pub fn open_window(device: Id) -> bool {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_STATE};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+    let name: Vec<u16> = format!("Local\\{}", window_event(device)).encode_utf16().chain([0]).collect();
+    // SAFETY: plain Win32 calls, the name living through them
+    unsafe {
+        let event = OpenEventW(EVENT_MODIFY_STATE, 0, name.as_ptr());
+        if event.is_null() {
+            return false;
+        }
+        // Sonevo, in front, lets the plugin's process bring its window in front of it
+        AllowSetForegroundWindow(ASFW_ANY);
+        let set = SetEvent(event) != 0;
+        CloseHandle(event);
+        set
+    }
+}
+
 /// CLAP plugins, for the engine: each described by its process, played in another.
 pub struct Clap;
 
@@ -158,9 +186,15 @@ impl sonevo_engine::Plugins for Clap {
         params(bundle, id)
     }
 
-    fn start(&self, bundle: &str, id: &str, sample_rate: f32) -> Result<Box<dyn Processor>, String> {
+    fn start(
+        &self,
+        device: Id,
+        bundle: &str,
+        id: &str,
+        sample_rate: f32,
+    ) -> Result<Box<dyn Processor>, String> {
         let params = params(bundle, id);
-        Remote::start(Path::new(bundle), id, sample_rate, params)
+        Remote::start(Path::new(bundle), id, sample_rate, params, Some(&window_event(device)))
             .map(|remote| Box::new(remote) as Box<dyn Processor>)
             .map_err(|e| e.to_string())
     }

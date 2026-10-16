@@ -55,8 +55,15 @@ pub struct Compiled {
 pub trait Plugins: Send + Sync {
     /// The settings the plugin lets be moved, as its knobs show them.
     fn params(&self, bundle: &str, id: &str) -> &'static [Param];
-    /// Starts the plugin for blocks at `sample_rate`, or says why it could not.
-    fn start(&self, bundle: &str, id: &str, sample_rate: f32) -> Result<Box<dyn Processor>, String>;
+    /// Starts the plugin the device `device` plays for blocks at `sample_rate`, or says why it
+    /// could not.
+    fn start(
+        &self,
+        device: Id,
+        bundle: &str,
+        id: &str,
+        sample_rate: f32,
+    ) -> Result<Box<dyn Processor>, String>;
 }
 
 struct Slots<'a> {
@@ -119,7 +126,7 @@ impl Slots<'_> {
                 DeviceKind::Builtin { name } => builtin(name).expect("found above").make(self.sample_rate),
                 DeviceKind::Clap { bundle, plugin } => {
                     let started = match self.plugins {
-                        Some(plugins) => plugins.start(bundle, plugin, self.sample_rate),
+                        Some(plugins) => plugins.start(device.id, bundle, plugin, self.sample_rate),
                         None => Err("plugins are not played here".into()),
                     };
                     match started {

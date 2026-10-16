@@ -11,6 +11,9 @@ use clap_sys::events::{
     clap_event_header, clap_event_note, clap_event_param_value, clap_input_events, clap_output_events,
     CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_NOTE_OFF, CLAP_EVENT_NOTE_ON, CLAP_EVENT_PARAM_VALUE,
 };
+use clap_sys::ext::gui::{
+    clap_plugin_gui, clap_window, clap_window_handle, CLAP_EXT_GUI, CLAP_WINDOW_API_WIN32,
+};
 use clap_sys::ext::params::{
     clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS, CLAP_PARAM_IS_HIDDEN, CLAP_PARAM_IS_READONLY,
     CLAP_PARAM_IS_STEPPED,
@@ -391,6 +394,88 @@ impl Instance {
         let status =
             unsafe { (*self.plugin).process.map_or(CLAP_PROCESS_ERROR, |go| go(self.plugin, &process)) };
         status != CLAP_PROCESS_ERROR
+    }
+}
+
+/// A plugin's own window, opened and closed on the main thread while its instance plays on
+/// the audio one. Closed before the instance is dropped.
+pub struct Gui {
+    plugin: *const clap_plugin,
+    gui: *const clap_plugin_gui,
+    open: bool,
+}
+
+// Used on the main thread only, as CLAP wants of its window's calls.
+unsafe impl Send for Gui {}
+
+impl Instance {
+    /// The plugin's window, if it has one Windows can show.
+    pub fn gui(&self) -> Option<Gui> {
+        // SAFETY: on the main thread, the plugin initialised
+        let gui = unsafe {
+            (*self.plugin)
+                .get_extension
+                .map_or(std::ptr::null(), |get| get(self.plugin, CLAP_EXT_GUI.as_ptr()))
+        } as *const clap_plugin_gui;
+        if gui.is_null() {
+            return None;
+        }
+        // SAFETY: the extension lives as long as the plugin
+        let supported = unsafe {
+            (*gui).is_api_supported.is_some_and(|ok| ok(self.plugin, CLAP_WINDOW_API_WIN32.as_ptr(), false))
+        };
+        supported.then_some(Gui { plugin: self.plugin, gui, open: false })
+    }
+}
+
+impl Gui {
+    /// Shows the plugin's window inside `parent`, a window of Windows: its size, to make the
+    /// parent fit it.
+    pub fn open(&mut self, parent: *mut c_void) -> Result<(u32, u32), ClapError> {
+        if self.open {
+            return Err(fail("the window is open already"));
+        }
+        // SAFETY: on the main thread; every pointer outlives the calls
+        unsafe {
+            let gui = &*self.gui;
+            if !gui.create.is_some_and(|create| create(self.plugin, CLAP_WINDOW_API_WIN32.as_ptr(), false)) {
+                return Err(fail("the plugin made no window"));
+            }
+            self.open = true;
+            let (mut width, mut height) = (0u32, 0u32);
+            if !gui.get_size.is_some_and(|size| size(self.plugin, &mut width, &mut height)) {
+                (width, height) = (640, 400);
+            }
+            let window = clap_window {
+                api: CLAP_WINDOW_API_WIN32.as_ptr(),
+                specific: clap_window_handle { win32: parent },
+            };
+            if !gui.set_parent.is_some_and(|set| set(self.plugin, &window)) {
+                self.close();
+                return Err(fail("the plugin's window could not be placed"));
+            }
+            if let Some(show) = gui.show {
+                show(self.plugin);
+            }
+            Ok((width, height))
+        }
+    }
+
+    /// Hides and destroys the plugin's window, if open.
+    pub fn close(&mut self) {
+        if !std::mem::take(&mut self.open) {
+            return;
+        }
+        // SAFETY: on the main thread, the window made
+        unsafe {
+            let gui = &*self.gui;
+            if let Some(hide) = gui.hide {
+                hide(self.plugin);
+            }
+            if let Some(destroy) = gui.destroy {
+                destroy(self.plugin);
+            }
+        }
     }
 }
 

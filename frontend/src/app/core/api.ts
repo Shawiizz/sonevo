@@ -70,6 +70,7 @@ export const api = {
   record: () => invoke<void>('record'),
   stopRecording: () => invoke<View>('stop_recording'),
   inputs: () => invoke<string[]>('inputs'),
+  openPluginWindow: (device: Id) => invoke<boolean>('open_plugin_window', { device }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };
