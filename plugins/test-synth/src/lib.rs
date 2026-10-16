@@ -246,6 +246,34 @@ static AUDIO_PORTS: clap_plugin_audio_ports =
 static NOTE_PORTS: clap_plugin_note_ports =
     clap_plugin_note_ports { count: Some(note_ports_count), get: Some(note_ports_get) };
 
+/// Its state, beyond what the host keeps of its settings: the volume again, to try saving
+/// and loading with.
+static STATE: clap_sys::ext::state::clap_plugin_state =
+    clap_sys::ext::state::clap_plugin_state { save: Some(state_save), load: Some(state_load) };
+
+unsafe extern "C" fn state_save(
+    plugin: *const clap_plugin,
+    stream: *const clap_sys::stream::clap_ostream,
+) -> bool {
+    let bytes = unsafe { synth(plugin) }.volume.to_le_bytes();
+    let stream = unsafe { &*stream };
+    stream.write.is_some_and(|write| unsafe { write(stream, bytes.as_ptr() as *const c_void, 8) } == 8)
+}
+
+unsafe extern "C" fn state_load(
+    plugin: *const clap_plugin,
+    stream: *const clap_sys::stream::clap_istream,
+) -> bool {
+    let mut bytes = [0u8; 8];
+    let stream = unsafe { &*stream };
+    let read = stream.read.map_or(0, |read| unsafe { read(stream, bytes.as_mut_ptr() as *mut c_void, 8) });
+    if read != 8 {
+        return false;
+    }
+    unsafe { synth(plugin) }.volume = f64::from_le_bytes(bytes).clamp(0.0, 1.0);
+    true
+}
+
 /// The one setting: the volume.
 const VOLUME: clap_id = 0;
 const DEFAULT_VOLUME: f64 = 0.8;
@@ -318,7 +346,9 @@ unsafe extern "C" fn plugin_extension(_plugin: *const clap_plugin, id: *const c_
     if id == clap_sys::ext::gui::CLAP_EXT_GUI {
         return &view::GUI as *const clap_sys::ext::gui::clap_plugin_gui as *const c_void;
     }
-    if id == CLAP_EXT_PARAMS {
+    if id == clap_sys::ext::state::CLAP_EXT_STATE {
+        &STATE as *const clap_sys::ext::state::clap_plugin_state as *const c_void
+    } else if id == CLAP_EXT_PARAMS {
         &PARAMS as *const clap_plugin_params as *const c_void
     } else if id == CLAP_EXT_AUDIO_PORTS {
         &AUDIO_PORTS as *const clap_plugin_audio_ports as *const c_void

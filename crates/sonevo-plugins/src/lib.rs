@@ -12,7 +12,7 @@ use sonevo_project::Id;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// A plugin a bundle offers.
@@ -151,9 +151,21 @@ pub fn params(bundle: &str, id: &str) -> &'static [Param] {
     params
 }
 
-/// The name of the event that opens the window of the plugin `device` plays.
-fn window_event(device: Id) -> String {
-    format!("sonevo-window-{}-{device}", std::process::id())
+/// What the events reaching the process of the plugin `device` plays are named after.
+fn control(device: Id) -> String {
+    format!("sonevo-plugin-{}-{device}", std::process::id())
+}
+
+/// The event `name`, opened to be set or waited on: none if no plugin's process made it.
+#[cfg(windows)]
+fn open_event(name: &str) -> Option<windows_sys::Win32::Foundation::HANDLE> {
+    use windows_sys::Win32::System::Threading::{
+        OpenEventW, EVENT_MODIFY_STATE, SYNCHRONIZATION_SYNCHRONIZE,
+    };
+    let name: Vec<u16> = format!("Local\\{name}").encode_utf16().chain([0]).collect();
+    // SAFETY: a plain Win32 call, the name living through it
+    let event = unsafe { OpenEventW(EVENT_MODIFY_STATE | SYNCHRONIZATION_SYNCHRONIZE, 0, name.as_ptr()) };
+    (!event.is_null()).then_some(event)
 }
 
 /// Opens the window of the plugin `device` plays, in the plugin's own process: false if it
@@ -161,15 +173,11 @@ fn window_event(device: Id) -> String {
 #[cfg(windows)]
 pub fn open_window(device: Id) -> bool {
     use windows_sys::Win32::Foundation::CloseHandle;
-    use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_STATE};
+    use windows_sys::Win32::System::Threading::SetEvent;
     use windows_sys::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
-    let name: Vec<u16> = format!("Local\\{}", window_event(device)).encode_utf16().chain([0]).collect();
-    // SAFETY: plain Win32 calls, the name living through them
+    let Some(event) = open_event(&format!("{}-window", control(device))) else { return false };
+    // SAFETY: plain Win32 calls on an event open
     unsafe {
-        let event = OpenEventW(EVENT_MODIFY_STATE, 0, name.as_ptr());
-        if event.is_null() {
-            return false;
-        }
         // Sonevo, in front, lets the plugin's process bring its window in front of it
         AllowSetForegroundWindow(ASFW_ANY);
         let set = SetEvent(event) != 0;
@@ -178,8 +186,53 @@ pub fn open_window(device: Id) -> bool {
     }
 }
 
-/// CLAP plugins, for the engine: each described by its process, played in another.
-pub struct Clap;
+/// How long a plugin is given to save its state.
+const SAVE_TIME: u32 = 3000;
+
+/// The state of the plugin `device` plays, as it saves it, asked of its process: none if it
+/// is not playing, has none, or took too long.
+#[cfg(windows)]
+pub fn save_state(device: Id) -> Option<Vec<u8>> {
+    use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
+    use windows_sys::Win32::System::Threading::{SetEvent, WaitForSingleObject};
+    let name = control(device);
+    let save = open_event(&format!("{name}-save"))?;
+    let Some(saved) = open_event(&format!("{name}-saved")) else {
+        // SAFETY: the event is open
+        unsafe { CloseHandle(save) };
+        return None;
+    };
+    // SAFETY: plain Win32 calls on events open
+    let done = unsafe {
+        SetEvent(save);
+        let done = WaitForSingleObject(saved, SAVE_TIME) == WAIT_OBJECT_0;
+        CloseHandle(save);
+        CloseHandle(saved);
+        done
+    };
+    if !done {
+        return None;
+    }
+    std::fs::read(std::env::temp_dir().join(format!("{name}.state"))).ok()
+}
+
+/// CLAP plugins, for the engine: each described by its process, played in another, its
+/// state given back from the folder of the song open, as it was saved there.
+pub struct Clap {
+    folder: Arc<Mutex<Option<PathBuf>>>,
+}
+
+impl Clap {
+    /// Plugins whose states are in `<folder>/plugins`, the folder followed as it changes.
+    pub fn new(folder: Arc<Mutex<Option<PathBuf>>>) -> Clap {
+        Clap { folder }
+    }
+}
+
+/// Where the state of the plugin `device` plays is kept in the song's folder `folder`.
+pub fn state_file(folder: &Path, device: Id) -> PathBuf {
+    folder.join("plugins").join(format!("{device}.state"))
+}
 
 impl sonevo_engine::Plugins for Clap {
     fn params(&self, bundle: &str, id: &str) -> &'static [Param] {
@@ -194,7 +247,9 @@ impl sonevo_engine::Plugins for Clap {
         sample_rate: f32,
     ) -> Result<Box<dyn Processor>, String> {
         let params = params(bundle, id);
-        Remote::start(Path::new(bundle), id, sample_rate, params, Some(&window_event(device)))
+        let folder = self.folder.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        let state = folder.map(|f| state_file(&f, device)).filter(|f| f.is_file());
+        Remote::start(Path::new(bundle), id, sample_rate, params, Some((&control(device), state.as_deref())))
             .map(|remote| Box::new(remote) as Box<dyn Processor>)
             .map_err(|e| e.to_string())
     }

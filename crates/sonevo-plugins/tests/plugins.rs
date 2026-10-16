@@ -106,7 +106,7 @@ fn a_song_plays_a_plugin_through_the_engine() {
     };
     let channel = song.channels[0].id;
     let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
-    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap));
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap::new(std::sync::Arc::default())));
     assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
     engine.note(channel, 64, 0.9, true);
     let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
@@ -143,7 +143,7 @@ fn a_plugins_settings_are_read_and_set_from_the_song() {
     .with("0", 0.0);
     let channel = song.channels[0].id;
     let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
-    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap));
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap::new(std::sync::Arc::default())));
     assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
     engine.note(channel, 64, 0.9, true);
     let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
@@ -166,4 +166,50 @@ fn a_plugins_settings_are_read_and_set_from_the_song() {
         answered = left.iter().any(|s| s.abs() > 0.01);
     }
     assert!(answered, "the plugin was not heard once turned up");
+}
+
+#[test]
+fn a_plugins_state_is_saved_and_given_back_from_the_songs_folder() {
+    use sonevo_project::{Device, DeviceKind, Song};
+    let dir = installed();
+    let bundle = dir.path().join("Sonevo").join("Test Synth.clap").to_string_lossy().into_owned();
+    let mut song = Song::new("State");
+    song.channels[0].instrument = Device {
+        kind: DeviceKind::Clap { bundle, plugin: "dev.sonevo.test-synth".into() },
+        ..Device::builtin("")
+    };
+    let device = song.channels[0].instrument.id;
+    let channel = song.channels[0].id;
+    let folder = tempfile::tempdir().unwrap();
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(Some(folder.path().to_owned())));
+
+    // played, its state saved: the volume it starts at
+    let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap::new(shared.clone())));
+    assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
+    let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
+    renderer.render(&mut left, &mut right);
+    let start = Instant::now();
+    let mut saved = None;
+    while saved.is_none() && start.elapsed() < Duration::from_secs(10) {
+        saved = sonevo_plugins::save_state(device);
+    }
+    assert_eq!(saved.as_deref(), Some(&0.8f64.to_le_bytes()[..]));
+
+    // a state where the volume is nothing, in the song's folder: the plugin started again is silent
+    drop((engine, renderer));
+    let file = sonevo_plugins::state_file(folder.path(), device);
+    std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+    std::fs::write(&file, 0.0f64.to_le_bytes()).unwrap();
+    let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap::new(shared)));
+    assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
+    engine.note(channel, 64, 0.9, true);
+    let start = Instant::now();
+    let mut heard = false;
+    while start.elapsed() < Duration::from_secs(3) {
+        renderer.render(&mut left, &mut right);
+        heard |= left.iter().any(|s| s.abs() > 0.0);
+    }
+    assert!(!heard, "the state was not given back");
 }

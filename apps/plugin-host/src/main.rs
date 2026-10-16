@@ -2,8 +2,8 @@
 //! plugin crash, only this process goes, and the engine plays on.
 //!
 //! `sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>
-//! [<window event>]`: the window event, set by the engine's process, opens the plugin's
-//! window.
+//! [<control> [<state file>]]`: the events named after `control` open the plugin's window
+//! and save its state; the state file, if given, is loaded before the plugin plays.
 //!
 //! `sonevo-plugin-host --scan <bundle>` writes the plugins of a bundle, a line each: id,
 //! name, vendor and features, separated by tabs. A bundle that crashes as it is read crashes
@@ -12,7 +12,7 @@
 //! `sonevo-plugin-host --params <bundle> <plugin id>` writes the plugin's settings, a line
 //! each: id, name, least, most, default, and `stepped` or not.
 
-mod window;
+mod control;
 
 use sonevo_clap::Bundle;
 use sonevo_plugin_ipc::PluginEnd;
@@ -45,13 +45,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             return describe(Path::new(bundle), id);
         }
     }
-    let (played_args, window) = match args.len() {
-        7 => (&args[..6], Some(args[6].as_str())),
-        _ => (&args[..], None),
+    let (played_args, control, state) = match args.len() {
+        8 => (&args[..6], Some(args[6].as_str()), Some(Path::new(&args[7]))),
+        7 => (&args[..6], Some(args[6].as_str()), None),
+        _ => (&args[..], None, None),
     };
     let [link, bundle, id, rate, max_frames, engine] = played_args else {
         return Err("usage: sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> \
-                    <engine pid> [<window event>]"
+                    <engine pid> [<control> [<state file>]]"
             .into());
     };
     let (rate, max_frames, engine): (f64, u32, u32) = (rate.parse()?, max_frames.parse()?, engine.parse()?);
@@ -59,10 +60,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let bundle = Bundle::open(Path::new(bundle))?;
     let title = bundle.plugins().into_iter().find(|p| p.id == *id).map_or_else(|| id.clone(), |p| p.name);
     let mut instance = bundle.instantiate(id)?;
+    // the state saved with the song, given back before anything plays
+    if let Some(bytes) = state.and_then(|path| std::fs::read(path).ok()) {
+        if !instance.load_state(&bytes) {
+            eprintln!("sonevo-plugin-host: the plugin would not take its state back");
+        }
+    }
     instance.activate(rate, max_frames)?;
-    // the plugin's window, kept on this thread while the instance plays on the other
-    let mut windows =
-        window.zip(instance.gui()).and_then(|(name, gui)| window::Windows::new(name, gui, &title));
+    // its window and its state, kept on this thread while the instance plays on the other
+    let mut control =
+        control.and_then(|name| control::Control::new(name, instance.gui(), instance.keeper(), &title));
 
     // the plugin made, activated and dropped here, played on a thread of its own
     let engine = Engine::watch(engine)?;
@@ -80,13 +87,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         instance
     })?;
     while !played.is_finished() {
-        match &mut windows {
-            Some(windows) => windows.serve(LOOK_UP),
+        match &mut control {
+            Some(control) => control.serve(LOOK_UP),
             None => std::thread::sleep(LOOK_UP),
         }
     }
     // the window closed before the plugin goes
-    drop(windows);
+    drop(control);
     let instance = played.join().map_err(|_| "the plugin failed while playing")?;
     drop(instance);
     Ok(())

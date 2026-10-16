@@ -18,10 +18,12 @@ use clap_sys::ext::params::{
     clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS, CLAP_PARAM_IS_HIDDEN, CLAP_PARAM_IS_READONLY,
     CLAP_PARAM_IS_STEPPED,
 };
+use clap_sys::ext::state::{clap_plugin_state, CLAP_EXT_STATE};
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{clap_process, CLAP_PROCESS_ERROR};
+use clap_sys::stream::{clap_istream, clap_ostream};
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::path::Path;
@@ -477,6 +479,79 @@ impl Gui {
             }
         }
     }
+}
+
+/// What a plugin keeps of itself, beyond its settings (a sound, a preset made in its window),
+/// saved on the main thread while its instance plays on the audio one.
+pub struct Keeper {
+    plugin: *const clap_plugin,
+    state: *const clap_plugin_state,
+}
+
+// Used on the main thread only, as CLAP wants of its state's calls.
+unsafe impl Send for Keeper {}
+
+impl Instance {
+    fn state(&self) -> *const clap_plugin_state {
+        // SAFETY: on the main thread, the plugin initialised
+        (unsafe {
+            (*self.plugin)
+                .get_extension
+                .map_or(std::ptr::null(), |get| get(self.plugin, CLAP_EXT_STATE.as_ptr()))
+        }) as *const clap_plugin_state
+    }
+
+    /// What saves the plugin's state, if it has one.
+    pub fn keeper(&self) -> Option<Keeper> {
+        let state = self.state();
+        (!state.is_null()).then_some(Keeper { plugin: self.plugin, state })
+    }
+
+    /// Gives the plugin back a state it saved: false if it would not take it.
+    pub fn load_state(&mut self, bytes: &[u8]) -> bool {
+        let state = self.state();
+        if state.is_null() {
+            return false;
+        }
+        let mut reading = Reading { bytes, at: 0 };
+        let stream =
+            clap_istream { ctx: &mut reading as *mut Reading as *mut c_void, read: Some(stream_read) };
+        // SAFETY: on the main thread; the stream outlives the call
+        unsafe { (*state).load.is_some_and(|load| load(self.plugin, &stream)) }
+    }
+}
+
+impl Keeper {
+    /// The plugin's state, as it saves it: none if it would not.
+    pub fn save(&self) -> Option<Vec<u8>> {
+        let mut bytes: Vec<u8> = Vec::new();
+        let stream =
+            clap_ostream { ctx: &mut bytes as *mut Vec<u8> as *mut c_void, write: Some(stream_write) };
+        // SAFETY: on the main thread; the stream outlives the call
+        let saved = unsafe { (*self.state).save.is_some_and(|save| save(self.plugin, &stream)) };
+        saved.then_some(bytes)
+    }
+}
+
+struct Reading<'a> {
+    bytes: &'a [u8],
+    at: usize,
+}
+
+unsafe extern "C" fn stream_write(stream: *const clap_ostream, buffer: *const c_void, size: u64) -> i64 {
+    let bytes = unsafe { &mut *((*stream).ctx as *mut Vec<u8>) };
+    let written = unsafe { std::slice::from_raw_parts(buffer as *const u8, size as usize) };
+    bytes.extend_from_slice(written);
+    size as i64
+}
+
+unsafe extern "C" fn stream_read(stream: *const clap_istream, buffer: *mut c_void, size: u64) -> i64 {
+    let reading = unsafe { &mut *((*stream).ctx as *mut Reading) };
+    let left = &reading.bytes[reading.at..];
+    let count = left.len().min(size as usize);
+    unsafe { std::ptr::copy_nonoverlapping(left.as_ptr(), buffer as *mut u8, count) };
+    reading.at += count;
+    count as i64
 }
 
 impl Instance {

@@ -71,6 +71,8 @@ pub struct Studio {
     audio_error: Option<String>,
     comparing: Option<Compared>,
     recording: Option<Recording>,
+    /// The folder plugins take their states back from: the song's.
+    plugin_folder: Arc<std::sync::Mutex<Option<PathBuf>>>,
 }
 
 /// An input being recorded, from where playing was when it started.
@@ -108,6 +110,7 @@ impl Studio {
             audio_error: None,
             comparing: None,
             recording: None,
+            plugin_folder: Arc::default(),
         }
     }
 
@@ -141,6 +144,7 @@ impl Studio {
             }
         }
         let folder = self.folder.clone().unwrap_or_else(|| self.draft.clone());
+        *self.plugin_folder.lock().unwrap_or_else(|e| e.into_inner()) = Some(folder.clone());
         let (song, folder) = match &self.comparing {
             Some(c) => (&c.song, c.folder.clone()),
             None => (&self.song, folder),
@@ -241,10 +245,26 @@ impl Studio {
         Ok(mended)
     }
 
+    /// The states of the plugins the song plays, saved into `folder` beside it.
+    fn save_plugin_states(&self, folder: &Path) {
+        let instruments = self.song.channels.iter().map(|c| &c.instrument);
+        let effects = self.song.inserts.iter().chain([&self.song.master]).flat_map(|i| i.effects.iter());
+        for device in instruments.chain(effects).filter(|d| d.builtin_name().is_none()) {
+            if let Some(bytes) = sonevo_plugins::save_state(device.id) {
+                let file = sonevo_plugins::state_file(folder, device.id);
+                if let Some(dir) = file.parent() {
+                    let _ = std::fs::create_dir_all(dir);
+                }
+                let _ = std::fs::write(file, bytes);
+            }
+        }
+    }
+
     /// Saves where the song was saved last; false if it never was.
     pub fn save(&mut self) -> Result<bool, String> {
         let Some(folder) = self.folder.clone() else { return Ok(false) };
         sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
+        self.save_plugin_states(&folder);
         self.dirty = false;
         self.forget_autosave();
         // every save is a version, made without asking
@@ -263,6 +283,7 @@ impl Studio {
     pub fn make_version(&mut self, name: &str) -> Result<(), String> {
         let Some(folder) = self.folder.clone() else { return Err("Save the song first".into()) };
         sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
+        self.save_plugin_states(&folder);
         self.dirty = false;
         sonevo_versions::record(&folder, name, false).map_err(|e| e.to_string())?;
         Ok(())
@@ -307,6 +328,7 @@ impl Studio {
             }
         }
         sonevo_project::save(folder, &self.song).map_err(|e| e.to_string())?;
+        self.save_plugin_states(folder);
         self.forget_autosave();
         self.folder = Some(folder.to_owned());
         self.dirty = false;
@@ -346,7 +368,7 @@ impl Studio {
         });
         match started.map(|output| (output, engine_in.recv())) {
             Ok((output, Ok(mut engine))) => {
-                engine.set_plugins(Arc::new(sonevo_plugins::Clap));
+                engine.set_plugins(Arc::new(sonevo_plugins::Clap::new(self.plugin_folder.clone())));
                 self.output = Some(output);
                 self.engine = Some(engine);
                 self.audio_error = None;

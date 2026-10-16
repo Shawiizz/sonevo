@@ -36,6 +36,23 @@ fn a_note_played_sounds_from_its_frame_on_and_dies_away_once_released() {
 }
 
 #[test]
+fn a_state_saved_is_given_back() {
+    let bundle = Bundle::open(&synth_path()).expect("the test synth is built");
+    let synth = bundle.instantiate("dev.sonevo.test-synth").unwrap();
+    let saved = synth.keeper().expect("the synth keeps a state").save().unwrap();
+    assert_eq!(saved, 0.8f64.to_le_bytes());
+    // another synth, given a state where its volume is nothing: silent
+    let mut other = bundle.instantiate("dev.sonevo.test-synth").unwrap();
+    assert!(other.load_state(&0.0f64.to_le_bytes()));
+    assert!(!other.load_state(b"short"));
+    other.activate(48_000.0, 512).unwrap();
+    let (mut left, mut right) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+    let on = Note { at: 0, key: 69, velocity: 1.0, on: true };
+    assert!(other.process(&[on], &[], &mut left, &mut right));
+    assert!(left.iter().all(|&s| s == 0.0));
+}
+
+#[test]
 fn a_setting_is_listed_and_moved_from_the_frame_asked() {
     let bundle = Bundle::open(&synth_path()).expect("the test synth is built");
     let mut synth = bundle.instantiate("dev.sonevo.test-synth").unwrap();

@@ -1,7 +1,9 @@
-//! The plugin's window, in a window of this process: opened when the engine's process asks
-//! through a named event, closed by its own close button, on the main thread as CLAP wants.
+//! What the engine's process asks of the plugin besides playing, through named events, done
+//! on the main thread as CLAP wants: its window, in a window of this process, closed by its
+//! own close button; its state, saved to a file for the engine's process to take.
 
-use sonevo_clap::Gui;
+use sonevo_clap::{Gui, Keeper};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Once;
 use std::time::Duration;
@@ -9,7 +11,7 @@ use windows_sys::Win32::Foundation::{
     CloseHandle, HANDLE, HWND, LPARAM, LRESULT, RECT, WAIT_OBJECT_0, WPARAM,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows_sys::Win32::System::Threading::{CreateEventW, WaitForSingleObject};
+use windows_sys::Win32::System::Threading::{CreateEventW, SetEvent, WaitForMultipleObjects};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     AdjustWindowRectEx, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, PeekMessageW,
     RegisterClassW, SetForegroundWindow, SetWindowPos, ShowWindow, TranslateMessage, CW_USEDEFAULT, MSG,
@@ -35,35 +37,53 @@ unsafe extern "system" fn handle(window: HWND, message: u32, w: WPARAM, l: LPARA
     unsafe { DefWindowProcW(window, message, w, l) }
 }
 
-/// The plugin's window, and the event that asks for it.
-pub struct Windows {
-    asked: HANDLE,
-    gui: Gui,
+/// The events the engine's process sets: `<name>-window` for the window, `<name>-save` for
+/// the state, answered by `<name>-saved` once the state is in `<temp>/<name>.state`.
+pub struct Control {
+    /// The window and the save asked for, waited on together.
+    asked: [HANDLE; 2],
+    saved: HANDLE,
+    gui: Option<Gui>,
+    keeper: Option<Keeper>,
+    state: PathBuf,
     title: String,
     window: HWND,
 }
 
-impl Windows {
-    /// Listens for the event `name` asking for the plugin's window, titled `title`.
-    pub fn new(name: &str, gui: Gui, title: &str) -> Option<Windows> {
-        let name = wide(&format!("Local\\{name}"));
-        // SAFETY: a plain Win32 call, the name living through it
-        let asked = unsafe { CreateEventW(std::ptr::null(), 0, 0, name.as_ptr()) };
-        (!asked.is_null()).then(|| Windows {
+fn event(name: &str) -> HANDLE {
+    let name = wide(&format!("Local\\{name}"));
+    // SAFETY: a plain Win32 call, the name living through it
+    unsafe { CreateEventW(std::ptr::null(), 0, 0, name.as_ptr()) }
+}
+
+impl Control {
+    /// Listens for the events of `name`, the plugin's window titled `title`.
+    pub fn new(name: &str, gui: Option<Gui>, keeper: Option<Keeper>, title: &str) -> Option<Control> {
+        let asked = [event(&format!("{name}-window")), event(&format!("{name}-save"))];
+        let saved = event(&format!("{name}-saved"));
+        let control = Control {
             asked,
+            saved,
             gui,
+            keeper,
+            state: std::env::temp_dir().join(format!("{name}.state")),
             title: title.to_owned(),
             window: std::ptr::null_mut(),
-        })
+        };
+        // closed by its drop, should one fail
+        let opened = !asked.iter().chain([&saved]).any(|e| e.is_null());
+        opened.then_some(control)
     }
 
     /// Waits up to `time` for anything to do, and does it: the window opened or brought to
     /// the front when asked, closed when its button was pressed, its messages handled.
     pub fn serve(&mut self, time: Duration) {
         let wait = if self.window.is_null() { time } else { Duration::from_millis(8) };
-        // SAFETY: the event is open
-        if unsafe { WaitForSingleObject(self.asked, wait.as_millis() as u32) } == WAIT_OBJECT_0 {
-            self.show();
+        // SAFETY: the events are open
+        match unsafe { WaitForMultipleObjects(2, self.asked.as_ptr(), 0, wait.as_millis() as u32) } {
+            w if w == WAIT_OBJECT_0 => self.show(),
+            w if w == WAIT_OBJECT_0 + 1 => self.save(),
+            _ => {}
         }
         if CLOSED.swap(false, Ordering::AcqRel) {
             self.close();
@@ -78,7 +98,22 @@ impl Windows {
         }
     }
 
+    /// The plugin's state written for the engine's process: nothing written if it has none.
+    fn save(&mut self) {
+        let bytes = self.keeper.as_ref().and_then(Keeper::save);
+        let written = bytes.is_some_and(|bytes| {
+            let part = self.state.with_extension("part");
+            std::fs::write(&part, bytes).and_then(|()| std::fs::rename(&part, &self.state)).is_ok()
+        });
+        if !written {
+            let _ = std::fs::remove_file(&self.state);
+        }
+        // SAFETY: the event is open
+        unsafe { SetEvent(self.saved) };
+    }
+
     fn show(&mut self) {
+        let Some(gui) = &mut self.gui else { return };
         if !self.window.is_null() {
             // SAFETY: the window is ours
             unsafe { SetForegroundWindow(self.window) };
@@ -113,7 +148,7 @@ impl Windows {
             if window.is_null() {
                 return;
             }
-            match self.gui.open(window) {
+            match gui.open(window) {
                 Ok((width, height)) => {
                     // the window made as large as the plugin's, its frame around it
                     let mut frame = RECT { left: 0, top: 0, right: width as i32, bottom: height as i32 };
@@ -133,7 +168,9 @@ impl Windows {
     }
 
     fn close(&mut self) {
-        self.gui.close();
+        if let Some(gui) = &mut self.gui {
+            gui.close();
+        }
         if !self.window.is_null() {
             // SAFETY: the window is ours
             unsafe { DestroyWindow(self.window) };
@@ -142,10 +179,13 @@ impl Windows {
     }
 }
 
-impl Drop for Windows {
+impl Drop for Control {
     fn drop(&mut self) {
         self.close();
-        // SAFETY: the event is ours
-        unsafe { CloseHandle(self.asked) };
+        let _ = std::fs::remove_file(&self.state);
+        // SAFETY: the events are ours
+        for event in self.asked.into_iter().chain([self.saved]).filter(|e| !e.is_null()) {
+            unsafe { CloseHandle(event) };
+        }
     }
 }

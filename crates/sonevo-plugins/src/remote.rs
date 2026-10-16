@@ -42,14 +42,14 @@ pub struct Remote {
 
 impl Remote {
     /// Starts the plugin `id` of the bundle at `bundle`, for blocks at `sample_rate`; its
-    /// settings, as [`crate::params`] gave them, set by index; its window opened when the
-    /// event `window` is set, if named.
+    /// settings, as [`crate::params`] gave them, set by index; its window and state reached
+    /// through the events named after `control`, its state loaded from `state` first.
     pub fn start(
         bundle: &Path,
         id: &str,
         sample_rate: f32,
         params: &[Param],
-        window: Option<&str>,
+        control: Option<(&str, Option<&Path>)>,
     ) -> std::io::Result<Remote> {
         let host = host_program()?;
         let name = format!("sonevo-{}-{}", std::process::id(), LINKS.fetch_add(1, Ordering::Relaxed));
@@ -62,7 +62,10 @@ impl Remote {
             MAX_FRAMES.to_string(),
             std::process::id().to_string(),
         ];
-        args.extend(window.map(str::to_owned));
+        if let Some((name, state)) = control {
+            args.push(name.to_owned());
+            args.extend(state.map(|s| s.to_string_lossy().into_owned()));
+        }
         let child = spawn(&host, &args)?;
         let restarts = Arc::new(AtomicU64::new(0));
         let stop = Arc::new(AtomicBool::new(false));
