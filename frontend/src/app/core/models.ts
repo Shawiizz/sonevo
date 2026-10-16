@@ -375,6 +375,25 @@ export const SCALES: { name: string; steps: number[] }[] = [
   { name: 'Dorian', steps: [0, 2, 3, 5, 7, 9, 10] },
 ];
 
+/** Chord progressions known to work, as degrees of a major or a minor scale, a bar each. */
+export const PROGRESSIONS: { name: string; scale: number; degrees: number[] }[] = [
+  { name: 'Pop: I V vi IV', scale: 0, degrees: [0, 4, 5, 3] },
+  { name: 'Sad: vi IV I V', scale: 0, degrees: [5, 3, 0, 4] },
+  { name: 'Fifties: I vi IV V', scale: 0, degrees: [0, 5, 3, 4] },
+  { name: 'Jazz: ii V I', scale: 0, degrees: [1, 4, 0, 0] },
+  { name: 'Epic: i VI III VII', scale: 1, degrees: [0, 5, 2, 6] },
+  { name: 'Dark: i iv VI v', scale: 1, degrees: [0, 3, 5, 4] },
+  { name: 'Flamenco: i VII VI V', scale: 1, degrees: [0, 6, 5, 4] },
+];
+
+/** The keys of the chord on `degree` of the seven-note scale `steps` from `root`, around `base`. */
+export function degreeChord(degree: number, steps: number[], root: number, base: number): number[] {
+  return [0, 2, 4].map((third) => {
+    const at = degree + third;
+    return base + root + steps[at % steps.length] + 12 * Math.floor(at / steps.length);
+  });
+}
+
 /**
  * The keys of a chord from `key`, of `notes` notes: a scale's own, a note in two of it apart
  * (its chords sound right in it, minor or major as it wants); without a scale, major.

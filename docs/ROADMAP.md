@@ -85,6 +85,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
 - ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus
   long ou plus court, sur les notes choisies ou toutes.
+- ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
+  épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
 - ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.

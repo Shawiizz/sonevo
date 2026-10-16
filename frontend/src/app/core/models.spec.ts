@@ -1,12 +1,14 @@
 import {
   barLength,
   chordKeys,
+  degreeChord,
   formatPosition,
   isBlack,
   keyName,
   newId,
   PPQ,
   sampleLabel,
+  SCALES,
 } from './models';
 
 describe('models', () => {
@@ -53,5 +55,12 @@ describe('models', () => {
     const ids = new Set(Array.from({ length: 100 }, newId));
     expect(ids.size).toBe(100);
     for (const id of ids) expect(id).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('builds the chords of a scale on its degrees', () => {
+    const [major, minor] = [SCALES[0].steps, SCALES[1].steps];
+    expect(degreeChord(0, major, 0, 48)).toEqual([48, 52, 55]);
+    expect(degreeChord(5, major, 0, 48)).toEqual([57, 60, 64]);
+    expect(degreeChord(6, minor, 0, 48)).toEqual([58, 62, 65]);
   });
 });

@@ -14,12 +14,14 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import {
   chordKeys,
+  degreeChord,
   inScale,
   isBlack,
   keyName,
   NAMES,
   Note,
   PPQ,
+  PROGRESSIONS,
   SCALES,
   STEP,
 } from '../core/models';
@@ -671,7 +673,84 @@ export class PianoRoll implements OnDestroy {
       label: t(label),
       run: () => this.change(tool),
     }));
+    items.push(
+      { separator: true, label: '' },
+      {
+        label: t('Write a chord progression…'),
+        run: () =>
+          this.menus.show(
+            event,
+            PROGRESSIONS.map((p) => ({ label: t(p.name), run: () => this.progression(p) })),
+          ),
+      },
+      { label: t('Write a melody in the scale'), run: () => this.melody() },
+    );
     this.menus.below(event, items);
+  }
+
+  /** The pattern's notes for this channel made a progression's chords, a bar each, in its scale. */
+  private progression(p: (typeof PROGRESSIONS)[number]): void {
+    const pattern = this.studio.pattern();
+    const channel = this.studio.channel();
+    if (!pattern || !channel) return;
+    this.scale.set(p.scale);
+    const steps = SCALES[p.scale].steps;
+    const bar = this.studio.bar();
+    // as long as the progression at least
+    const bars = Math.max(p.degrees.length, Math.round(pattern.length / bar));
+    const notes: Note[] = [];
+    for (let b = 0; b < bars; b++) {
+      const degree = p.degrees[b % p.degrees.length];
+      for (const key of degreeChord(degree, steps, this.root(), 48)) {
+        notes.push({ start: b * bar, length: bar, key, velocity: 0.7 });
+      }
+    }
+    void this.studio.edit({
+      type: 'batch',
+      edits: [
+        {
+          type: 'putPattern',
+          pattern: { ...pattern, length: Math.max(pattern.length, bars * bar) },
+          index: null,
+        },
+        { type: 'setNotes', pattern: pattern.id, channel: channel.id, notes },
+      ],
+    });
+  }
+
+  /** A melody of the scale chosen, or the major one: a walk up and down it, on eighths and quarters. */
+  private melody(): void {
+    const pattern = this.studio.pattern();
+    const channel = this.studio.channel();
+    if (!pattern || !channel) return;
+    const steps = SCALES[this.scale()]?.steps ?? SCALES[0].steps;
+    const notes: Note[] = [];
+    let degree = steps.length;
+    for (let at = 0; at < pattern.length;) {
+      const long = Math.random() < 0.35;
+      const length = (long ? PPQ : PPQ / 2) * (Math.random() < 0.15 ? 2 : 1);
+      // now and then a rest; the walk keeps to two octaves
+      if (Math.random() > 0.15) {
+        degree = Math.max(
+          0,
+          Math.min(2 * steps.length, degree + Math.round((Math.random() - 0.5) * 4)),
+        );
+        const key =
+          60 +
+          this.root() +
+          steps[degree % steps.length] +
+          12 * Math.floor(degree / steps.length) -
+          12;
+        notes.push({
+          start: at,
+          length: Math.min(length, pattern.length - at),
+          key,
+          velocity: 0.6 + Math.random() * 0.3,
+        });
+      }
+      at += length;
+    }
+    void this.studio.setNotes(pattern.id, channel.id, notes);
   }
 
   /** The notes chosen, or every one when none is, changed by `tool`. */
