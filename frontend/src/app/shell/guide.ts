@@ -16,7 +16,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'A beat, step by step',
-    text: 'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone.',
+    text: 'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me, at the bottom, starts one in a style.',
     show: { label: 'Show the channel rack', dock: 'rack' },
   },
   {

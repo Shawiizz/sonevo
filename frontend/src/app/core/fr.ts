@@ -256,6 +256,7 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'A little different': 'Un peu différent',
   'Write a beat for me': 'Écrire un rythme pour moi',
   'The drums play a beat of the style chosen': 'La batterie joue un rythme du style choisi',
   'Hip-hop': 'Hip-hop',
@@ -596,8 +597,8 @@ export const FR: Record<string, string> = {
     'Le morceau ouvert est une démo. Appuie sur Espace, ou sur le bouton lecture en haut à gauche, et regarde la ligne avancer dans la playlist : chaque bloc de couleur est un pattern, une petite boucle de notes, placée dans le temps.',
   'Play the demo': 'Jouer la démo',
   'A beat, step by step': 'Un rythme, pas à pas',
-  'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone.':
-    'Le rack de voies contient les instruments, un par ligne. Ses cases sont les pas du pattern choisi en haut : seize par mesure. Clique une case, et l’instrument joue à cet endroit. Clique-la à nouveau, et il disparaît.',
+  'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me, at the bottom, starts one in a style.':
+    'Le rack de voies contient les instruments, un par ligne. Ses cases sont les pas du pattern choisi en haut : seize par mesure. Clique une case, et l’instrument joue à cet endroit. Clique-la à nouveau, et il disparaît. Écrire un rythme pour moi, en bas, en lance un dans un style.',
   'A melody, note by note': 'Une mélodie, note par note',
   'Double-click an instrument’s name to open its piano roll: time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale at the top, and the notes that go well together light up. Tools writes chord progressions and melodies for you.':
     'Double-clique le nom d’un instrument pour ouvrir son piano roll : le temps va vers la droite, les notes montent vers le haut. Clique pour dessiner une note, tire sa fin pour l’allonger, clic droit pour l’enlever. Choisis une gamme en haut, et les notes qui vont bien ensemble s’éclairent. Outils écrit pour toi des suites d’accords et des mélodies.',

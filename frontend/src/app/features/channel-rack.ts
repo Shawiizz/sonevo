@@ -443,10 +443,45 @@ export class ChannelRack {
 
   /** A step-long note every `every` steps of the pattern, in place of its notes. */
   protected beatMenu(event: MouseEvent): void {
-    this.menus.below(
-      event,
-      BEATS.map((beat) => ({ label: this.t(beat.name), run: () => this.writeBeat(beat.steps) })),
-    );
+    this.menus.below(event, [
+      ...BEATS.map((beat) => ({ label: this.t(beat.name), run: () => this.writeBeat(beat.steps) })),
+      { separator: true, label: '' },
+      { label: this.t('A little different'), run: () => this.vary() },
+    ]);
+  }
+
+  /** The drums' steps in the pattern changed a little: a hit more or fewer, softer hats between. */
+  private vary(): void {
+    const song = this.studio.song();
+    const pattern = this.studio.pattern();
+    if (!song || !pattern) return;
+    const steps = Math.floor(pattern.length / STEP);
+    const edits: Edit[] = [];
+    for (const channel of song.channels) {
+      if (builtinName(channel.instrument) !== 'sonevo.drums') continue;
+      const notes = [...this.studio.notes(pattern.id, channel.id)];
+      if (!notes.length) continue;
+      const taken = new Set(notes.map((n) => Math.round(n.start / STEP)));
+      const free = Array.from({ length: steps }, (_, i) => i).filter((i) => !taken.has(i));
+      const hat = Math.round(this.studio.value(channel.instrument, 'sound')) === 2;
+      if (hat && free.length) {
+        // ghost notes, soft, a few of the steps free
+        for (const step of free.filter(() => Math.random() < 0.25)) {
+          notes.push({ start: step * STEP, length: STEP, key: STEP_KEY, velocity: 0.35 });
+        }
+      } else if (Math.random() < 0.5 && free.length) {
+        const step = free[Math.floor(Math.random() * free.length)];
+        notes.push({ start: step * STEP, length: STEP, key: STEP_KEY, velocity: 0.7 });
+      } else if (notes.length > 1) {
+        // one off the beat let go of, those on it kept
+        const off = notes.filter((n) => Math.round(n.start / STEP) % 4 !== 0);
+        const gone = off[Math.floor(Math.random() * off.length)];
+        if (gone) notes.splice(notes.indexOf(gone), 1);
+      }
+      notes.sort((a, b) => a.start - b.start || a.key - b.key);
+      edits.push({ type: 'setNotes', pattern: pattern.id, channel: channel.id, notes });
+    }
+    if (edits.length) void this.studio.edit({ type: 'batch', edits });
   }
 
   /** Each drum channel's notes in the pattern made those of its sound in `steps`, every bar. */
