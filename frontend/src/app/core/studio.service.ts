@@ -9,6 +9,7 @@ import {
   Edit,
   Id,
   Insert,
+  Midi,
   newId,
   Note,
   Pattern,
@@ -250,6 +251,57 @@ export class Studio {
     };
     if (await this.edit({ type: 'putPattern', pattern, index: null })) {
       this.selectPattern(pattern.id);
+    }
+  }
+
+  /** The MIDI file at `path` made a new pattern, each of its tracks played by a synth of its own. */
+  async importMidi(path: string): Promise<void> {
+    const song = this.song();
+    if (!song) return;
+    let midi: Midi;
+    try {
+      midi = await api.midiFile(path);
+    } catch (e) {
+      this.fail(e);
+      return;
+    }
+    const name = path
+      .split(/[\\/]/)
+      .pop()!
+      .replace(/\.midi?$/i, '');
+    const channels: Channel[] = midi.tracks.map((track, i) => ({
+      id: newId(),
+      name: track.name || (midi.tracks.length > 1 ? `${name} ${i + 1}` : name),
+      color: COLORS[(song.channels.length + i) % COLORS.length],
+      instrument: { id: newId(), kind: { type: 'builtin', name: 'sonevo.synth' }, params: {} },
+      volume: 0.8,
+      pan: 0,
+    }));
+    const bar = this.bar();
+    const end = Math.max(...midi.tracks.flatMap((t) => t.notes.map((n) => n.start + n.length)));
+    const pattern: Pattern = {
+      id: newId(),
+      name,
+      color: COLORS[song.patterns.length % COLORS.length],
+      length: Math.max(bar, Math.ceil(end / bar) * bar),
+    };
+    const done = await this.edit({
+      type: 'batch',
+      edits: [
+        ...channels.map((channel) => ({ type: 'putChannel' as const, channel, index: null })),
+        { type: 'putPattern', pattern, index: null },
+        ...midi.tracks.map((track, i) => ({
+          type: 'setNotes' as const,
+          pattern: pattern.id,
+          channel: channels[i].id,
+          notes: track.notes,
+        })),
+      ],
+    });
+    if (done) {
+      this.selectPattern(pattern.id);
+      this.channelId.set(channels[0].id);
+      this.dock.set('roll');
     }
   }
 

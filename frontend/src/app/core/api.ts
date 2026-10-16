@@ -7,6 +7,7 @@ import type {
   Entry,
   Id,
   Kept,
+  Midi,
   OutputInfo,
   ParamInfo,
   PluginInfo,
@@ -51,6 +52,8 @@ export const api = {
   exportWav: (path: string, part: 'song' | 'loop' | 'stems', depth: string, sampleRate: number) =>
     invoke<string[]>('export_wav', { path, part, depth, sampleRate }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
+  midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
+  exportMidi: (pattern: Id, path: string) => invoke<void>('export_midi', { pattern, path }),
   places: () => invoke<Entry[]>('places'),
   versions: () => invoke<VersionInfo[]>('versions'),
   makeVersion: (name: string) => invoke<View>('make_version', { name }),

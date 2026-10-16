@@ -409,9 +409,10 @@ export class App {
   protected readonly octave = signal(4);
   private readonly held = new Map<string, { channel: string; key: number }>();
 
-  protected readonly toast = computed(
-    () => this.studio.error() ?? this.files.busy() ?? this.files.notice(),
-  );
+  protected readonly toast = computed(() => {
+    const error = this.studio.error();
+    return error ? this.t(error) : (this.files.busy() ?? this.files.notice());
+  });
 
   protected readonly commands = computed<Command[]>(() => {
     const t = this.t;
@@ -424,6 +425,8 @@ export class App {
       { label: t('Save'), key: 'Ctrl+S', run: () => this.files.save() },
       { label: t('Save as…'), key: 'Ctrl+Shift+S', run: () => this.files.saveAs() },
       { label: t('Export as WAV…'), key: 'Ctrl+E', run: () => this.files.exportWav() },
+      { label: t('Import a MIDI file…'), run: () => this.files.importMidi() },
+      { label: t('Export the pattern as MIDI…'), run: () => this.files.exportMidi() },
       { label: t('Undo'), key: 'Ctrl+Z', run: () => this.studio.undo() },
       { label: t('Redo'), key: 'Ctrl+Y', run: () => this.studio.redo() },
       { label: t('Show the channel rack'), key: 'F6', run: () => this.studio.dock.set('rack') },

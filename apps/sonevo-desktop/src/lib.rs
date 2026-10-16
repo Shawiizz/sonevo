@@ -10,7 +10,7 @@ mod studio;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
 use sonevo_engine::{write_wav, Depth, Mode};
-use sonevo_project::{Edit, Id, Song, Ticks};
+use sonevo_project::{write_midi, Edit, Id, Midi, Note, Song, Ticks};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -478,7 +478,7 @@ struct Entry {
     folder: bool,
 }
 
-const SOUNDS: [&str; 7] = ["wav", "flac", "mp3", "ogg", "aif", "aiff", "wave"];
+const SOUNDS: [&str; 9] = ["wav", "flac", "mp3", "ogg", "aif", "aiff", "wave", "mid", "midi"];
 
 /// The folders and sounds in `folder`, folders first.
 #[tauri::command(async)]
@@ -501,6 +501,38 @@ fn browse(folder: PathBuf) -> Answer<Vec<Entry>> {
         b.folder.cmp(&a.folder).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     Ok(entries)
+}
+
+/// The MIDI file at `path`, its tracks that play notes.
+#[tauri::command]
+fn midi_file(path: PathBuf) -> Answer<Midi> {
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    let midi = sonevo_project::read_midi(&bytes).map_err(|e| e.to_string())?;
+    if midi.tracks.is_empty() {
+        return Err("This MIDI file plays no notes".into());
+    }
+    Ok(midi)
+}
+
+/// The pattern `pattern` written as a MIDI file at `path`: a track for each channel it plays.
+#[tauri::command]
+fn export_midi(app: State<App>, pattern: Id, path: PathBuf) -> Answer<()> {
+    let bytes = {
+        let studio = app.studio();
+        let song = &studio.song;
+        let pattern = song.patterns.iter().find(|p| p.id == pattern).ok_or("No such pattern")?;
+        let tracks: Vec<(&str, &[Note])> = song
+            .channels
+            .iter()
+            .map(|c| (c.name.as_str(), pattern.notes_of(c.id)))
+            .filter(|(_, notes)| !notes.is_empty())
+            .collect();
+        if tracks.is_empty() {
+            return Err("This pattern plays no notes".into());
+        }
+        write_midi(song.tempo, &tracks)
+    };
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
 /// The folders the browser starts from: the song's sounds, those added, the user's music.
@@ -688,6 +720,8 @@ pub fn run() {
             settings,
             set_settings,
             export_wav,
+            midi_file,
+            export_midi,
             browse,
             places,
             versions,

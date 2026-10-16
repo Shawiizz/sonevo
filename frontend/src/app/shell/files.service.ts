@@ -82,6 +82,31 @@ export class Files {
 
   readonly exporting = signal(false);
 
+  async importMidi(): Promise<void> {
+    const chosen = (await open({
+      title: this.i18n.t('Import a MIDI file'),
+      filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }],
+    })) as string | null;
+    if (chosen) await this.studio.importMidi(chosen);
+  }
+
+  async exportMidi(): Promise<void> {
+    const pattern = this.studio.pattern();
+    if (!pattern) return;
+    const chosen = await save({
+      title: this.i18n.t('Export the pattern as MIDI'),
+      defaultPath: `${pattern.name}.mid`,
+      filters: [{ name: 'MIDI', extensions: ['mid'] }],
+    });
+    if (!chosen) return;
+    try {
+      await api.exportMidi(pattern.id, chosen);
+      this.say(this.i18n.t('Exported'));
+    } catch (e) {
+      this.studio.fail(e);
+    }
+  }
+
   exportWav(): void {
     this.exporting.set(true);
   }

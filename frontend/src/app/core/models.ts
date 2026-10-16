@@ -41,6 +41,12 @@ export interface Note {
   velocity: number;
 }
 
+/** What a MIDI file holds: its first tempo, and its tracks that play notes. */
+export interface Midi {
+  tempo: number | null;
+  tracks: { name: string; notes: Note[] }[];
+}
+
 export interface Pattern {
   id: Id;
   name: string;

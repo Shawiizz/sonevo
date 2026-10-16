@@ -56,6 +56,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau
   joue, posé sur une nouvelle piste là où l'enregistrement a commencé.
 - ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
+- ✅ **Fichiers MIDI** : un .mid ouvert (menu des patterns, palette, ou clic dans le navigateur)
+  devient un pattern, chaque piste jouée par un synthé ; un pattern s'exporte en .mid.
 - ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).
 
 ## 3. Instruments et effets intégrés
@@ -177,3 +179,5 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
     Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
 18. **Thème** : par défaut celui du système.
+19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
+    reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.

@@ -100,18 +100,32 @@ import { SOUND_DRAG } from './playlist';
             <button
               class="item"
               [class.listening]="listening() === e.path"
-              [draggable]="!e.folder"
+              [draggable]="!e.folder && !isMidi(e)"
               (dragstart)="dragStart($event, e)"
               (click)="pick(e)"
-              [title]="e.folder ? e.path : t('Click to listen; drag into the playlist')"
+              [title]="
+                e.folder
+                  ? e.path
+                  : isMidi(e)
+                    ? t('Click to make a pattern of it')
+                    : t('Click to listen; drag into the playlist')
+              "
             >
               <s-icon
-                [name]="e.folder ? 'folder' : listening() === e.path ? 'play' : 'sound'"
+                [name]="
+                  e.folder
+                    ? 'folder'
+                    : isMidi(e)
+                      ? 'piano'
+                      : listening() === e.path
+                        ? 'play'
+                        : 'sound'
+                "
                 [filled]="listening() === e.path"
               />
               <span>{{ e.folder ? e.name : label(e) }}</span>
             </button>
-            @if (!e.folder) {
+            @if (!e.folder && !isMidi(e)) {
               <button
                 class="s-bar-btn add"
                 (click)="sampler(e)"
@@ -263,6 +277,10 @@ export class Browser {
     this.entries.set(await api.places());
   }
 
+  protected isMidi(e: Entry): boolean {
+    return /\.midi?$/i.test(e.name);
+  }
+
   protected label(e: Entry): string {
     return sampleLabel(e.name);
   }
@@ -276,6 +294,10 @@ export class Browser {
       } catch (error) {
         this.studio.fail(error);
       }
+      return;
+    }
+    if (this.isMidi(e)) {
+      await this.studio.importMidi(e.path);
       return;
     }
     const again = this.listening() === e.path;

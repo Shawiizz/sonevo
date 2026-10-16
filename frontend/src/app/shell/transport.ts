@@ -10,6 +10,7 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { formatPosition, Pattern } from '../core/models';
 import { Studio } from '../core/studio.service';
+import { Files } from './files.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
 import { Meter } from '../shared/meter';
@@ -316,6 +317,7 @@ export class Transport {
   protected readonly t = inject(I18n).t;
   private readonly menus = inject(Menus);
   private readonly rename = inject(Rename);
+  private readonly files = inject(Files);
 
   protected readonly editingTempo = signal(false);
   private readonly draggingTempo = signal<number | null>(null);
@@ -475,6 +477,13 @@ export class Transport {
         disabled: !current || song.patterns.length < 2,
         danger: true,
         run: () => current && this.studio.edit({ type: 'removePattern', id: current.id }),
+      },
+      { separator: true, label: '' },
+      { label: t('Import a MIDI file…'), run: () => this.files.importMidi() },
+      {
+        label: t('Export the pattern as MIDI…'),
+        disabled: !current,
+        run: () => this.files.exportMidi(),
       },
     ]);
   }
