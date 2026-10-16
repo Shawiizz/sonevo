@@ -253,4 +253,19 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Versions: 'Versions',
+  'Save the song to keep its versions: each save is one, and you can name the ones that matter.':
+    'Enregistre le morceau pour garder ses versions : chaque enregistrement en est une, et tu peux nommer celles qui comptent.',
+  'Name this version…': 'Nomme cette version…',
+  Keep: 'Garder',
+  'You hear an older version.': 'Tu entends une ancienne version.',
+  'Back to now': 'Revenir à maintenant',
+  'Listen to it in place of the song': 'L’écouter à la place du morceau',
+  'Bring the song back to this version': 'Ramener le morceau à cette version',
+  'No version yet: save the song, or name one above.':
+    'Pas encore de version : enregistre le morceau, ou nommes-en une au-dessus.',
+  'Bring the song back to this version? The song as it is now is kept as a version first.':
+    'Ramener le morceau à cette version ? Le morceau tel qu’il est maintenant est d’abord gardé comme version.',
+  'Go back': 'Revenir',
+  'Before going back': 'Avant le retour en arrière',
 };

@@ -19,6 +19,7 @@ sonevo-project.workspace = true
 sonevo-dsp.workspace = true
 sonevo-engine.workspace = true
 sonevo-audio.workspace = true
+sonevo-versions.workspace = true
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde.workspace = true

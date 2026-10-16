@@ -271,17 +271,21 @@ export class PianoRoll implements OnDestroy {
       g.circle(x + 1, height - 4 - h, 3).fill(picked ? 0xffffff : color);
     });
 
-    // the keyboard
-    g.rect(0, RULER, KEYS, bottom - RULER).fill(0x0c0e12);
+    // the keyboard: white keys under, the black ones over their left
+    g.rect(0, RULER, KEYS - 1, bottom - RULER).fill(0xd7dbe3);
     for (let key = this.top; key >= 0; key--) {
       const y = this.y(key);
       if (y > bottom) break;
-      const black = isBlack(key);
       const lit = this.sounding === key;
-      g.rect(black ? 0 : 0, y, black ? KEYS * 0.62 : KEYS - 1, this.rowHeight - 1).fill(
-        lit ? color : black ? 0x0b0c10 : 0xd7dbe3,
-      );
-      if (key % 12 === 0) s.text(keyName(key), KEYS - 6, y + 1, 0x4a5160, 10, 1);
+      if (isBlack(key)) {
+        g.rect(0, y, KEYS * 0.6, this.rowHeight).fill(lit ? color : 0x0b0c10);
+      } else {
+        if (lit) g.rect(0, y, KEYS - 1, this.rowHeight).fill(color);
+        // where two white keys meet without a black one between
+        if (key % 12 === 0 || key % 12 === 5)
+          g.rect(0, y + this.rowHeight - 1, KEYS - 1, 1).fill(0x8d95a5);
+      }
+      if (key % 12 === 0) s.text(keyName(key), KEYS - 5, y + 1, 0x4a5160, 10, 1);
     }
 
     // the ruler
@@ -342,7 +346,7 @@ export class PianoRoll implements OnDestroy {
   protected down(event: PointerEvent): void {
     const { x, y } = this.point(event);
     const host = this.host().nativeElement;
-    host.focus();
+    host.focus({ preventScroll: true });
     host.setPointerCapture(event.pointerId);
     if (event.button === 1) {
       this.drag = { kind: 'scroll', x, y, scrollX: this.scrollX, top: this.top };

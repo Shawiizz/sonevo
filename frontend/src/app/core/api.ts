@@ -8,6 +8,7 @@ import type {
   Id,
   OutputInfo,
   Settings,
+  VersionInfo,
   Status,
   Ticks,
   View,
@@ -48,6 +49,10 @@ export const api = {
     invoke<string[]>('export_wav', { path, depth, sampleRate }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   places: () => invoke<Entry[]>('places'),
+  versions: () => invoke<VersionInfo[]>('versions'),
+  makeVersion: (name: string) => invoke<View>('make_version', { name }),
+  restoreVersion: (id: string) => invoke<View>('restore_version', { id }),
+  compareVersion: (id: string | null) => invoke<View>('compare_version', { id }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

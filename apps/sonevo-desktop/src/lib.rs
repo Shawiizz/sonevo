@@ -109,6 +109,46 @@ fn save_song_as(app: State<App>, folder: PathBuf) -> Answer<serde_json::Value> {
     Ok(view(&app.studio()))
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VersionView {
+    id: String,
+    name: String,
+    automatic: bool,
+    time: i64,
+}
+
+#[tauri::command(async)]
+fn versions(app: State<App>) -> Answer<Vec<VersionView>> {
+    let versions = app.studio().versions()?;
+    Ok(versions
+        .into_iter()
+        .map(|v| VersionView { id: v.id, name: v.name, automatic: v.automatic, time: v.time })
+        .collect())
+}
+
+#[tauri::command(async)]
+fn make_version(app: State<App>, name: String) -> Answer<serde_json::Value> {
+    let mut studio = app.studio();
+    studio.make_version(&name)?;
+    Ok(view(&studio))
+}
+
+#[tauri::command(async)]
+fn restore_version(app: State<App>, id: String) -> Answer<serde_json::Value> {
+    let mut studio = app.studio();
+    studio.restore_version(&id)?;
+    Ok(view(&studio))
+}
+
+/// Plays the version `id` in place of the song, or the song again without one.
+#[tauri::command(async)]
+fn compare_version(app: State<App>, id: Option<String>) -> Answer<serde_json::Value> {
+    let mut studio = app.studio();
+    studio.compare(id.as_deref())?;
+    Ok(view(&studio))
+}
+
 #[tauri::command(async)]
 fn import_sample(app: State<App>, path: PathBuf) -> Answer<String> {
     app.studio().import_sample(&path)
@@ -410,6 +450,10 @@ pub fn run() {
             export_wav,
             browse,
             places,
+            versions,
+            make_version,
+            restore_version,
+            compare_version,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

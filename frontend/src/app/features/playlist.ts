@@ -333,11 +333,23 @@ export class Playlist implements OnDestroy {
     if (h < 6) return;
     if (content.type === 'pattern') {
       const pattern = this.studio.song()?.patterns.find((p) => p.id === content.pattern);
-      const notes = Object.values(this.studio.view()?.notes[content.pattern] ?? {}).flat();
-      if (!pattern || !notes.length) return;
-      const keys = notes.map((n) => n.key);
-      const low = Math.min(...keys);
-      const span = Math.max(12, Math.max(...keys) - low + 1);
+      const byChannel = this.studio.view()?.notes[content.pattern] ?? {};
+      if (!pattern) return;
+      // a row for each key of each channel, the channels in the rack's order: a beat's
+      // drums each on a line, a melody as it goes up and down
+      const rows = new Map<string, number>();
+      const notes: { row: string; start: number; length: number }[] = [];
+      for (const channel of this.studio.song()?.channels ?? []) {
+        const keys = [...new Set((byChannel[channel.id] ?? []).map((n) => n.key))].sort(
+          (a, b) => b - a,
+        );
+        for (const key of keys) rows.set(`${channel.id} ${key}`, rows.size);
+        for (const n of byChannel[channel.id] ?? [])
+          notes.push({ row: `${channel.id} ${n.key}`, ...n });
+      }
+      if (!notes.length) return;
+      const span = Math.max(6, rows.size);
+      const rowHeight = h / span;
       const length = Math.max(1, pattern.length);
       const offset = clip.offset ?? 0;
       for (let from = -offset; from < clip.length; from += length) {
@@ -346,8 +358,8 @@ export class Playlist implements OnDestroy {
           if (at < 0 || at >= clip.length) continue;
           const nx = x + at * this.perTick;
           const nw = Math.max(1.5, Math.min(n.length, clip.length - at) * this.perTick - 1);
-          const ny = y + h - ((n.key - low + 1) / span) * h;
-          g.rect(nx, ny, nw, Math.max(1.5, h / span - 0.5)).fill({ color, alpha: 0.9 });
+          const ny = y + (rows.get(n.row) ?? 0) * rowHeight + (span - rows.size) * rowHeight * 0.5;
+          g.rect(nx, ny, nw, Math.max(1.5, rowHeight - 1)).fill({ color, alpha: 0.9 });
         }
       }
     } else if (content.type === 'automation') {
@@ -397,7 +409,7 @@ export class Playlist implements OnDestroy {
   protected down(event: PointerEvent): void {
     const { x, y } = this.point(event);
     const host = this.host().nativeElement;
-    host.focus();
+    host.focus({ preventScroll: true });
     if (event.button === 1) {
       host.setPointerCapture(event.pointerId);
       this.drag = { kind: 'scroll', x, y, scrollX: this.scrollX, scrollY: this.scrollY };

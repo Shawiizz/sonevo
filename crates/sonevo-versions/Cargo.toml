@@ -1,0 +1,15 @@
+[package]
+name = "sonevo-versions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "The versions of a song, kept in its own folder"
+
+[dependencies]
+gix.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

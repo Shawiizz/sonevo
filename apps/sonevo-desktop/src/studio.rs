@@ -23,6 +23,8 @@ pub struct View<'a> {
     /// The pattern playing over and over, if not the song.
     pub pattern_mode: Option<Id>,
     pub missing: &'a [String],
+    /// The version played in place of the song, to compare by ear.
+    pub comparing: Option<&'a str>,
 }
 
 /// What changes as the song plays, read many times a second.
@@ -60,6 +62,14 @@ pub struct Studio {
     engine: Option<Engine>,
     output: Option<Output>,
     audio_error: Option<String>,
+    comparing: Option<Compared>,
+}
+
+/// A version of the song, written out beside it to be played in its place.
+struct Compared {
+    id: String,
+    song: Song,
+    folder: PathBuf,
 }
 
 impl Studio {
@@ -76,6 +86,7 @@ impl Studio {
             engine: None,
             output: None,
             audio_error: None,
+            comparing: None,
         }
     }
 
@@ -97,6 +108,7 @@ impl Studio {
                 Mode::Song => None,
             },
             missing: &self.missing,
+            comparing: self.comparing.as_ref().map(|c| c.id.as_str()),
         }
     }
 
@@ -108,12 +120,18 @@ impl Studio {
             }
         }
         let folder = self.folder.clone().unwrap_or_else(|| self.draft.clone());
+        let (song, folder) = match &self.comparing {
+            Some(c) => (&c.song, c.folder.clone()),
+            None => (&self.song, folder),
+        };
         if let Some(engine) = &mut self.engine {
-            self.missing = engine.load(&self.song, self.mode, Some(&folder));
+            self.missing = engine.load(song, self.mode, Some(&folder));
         }
     }
 
     pub fn edit(&mut self, edit: Edit) -> Result<(), String> {
+        // a change is heard on the song itself
+        self.comparing = None;
         self.history.apply(&mut self.song, edit).map_err(|e| e.to_string())?;
         self.dirty = true;
         self.sync();
@@ -143,6 +161,7 @@ impl Studio {
         }
         self.song = song;
         self.folder = folder;
+        self.comparing = None;
         self.draft = self.drafts.join(format!("{}.sonevo", Id::new()));
         self.history.clear();
         self.dirty = false;
@@ -161,7 +180,50 @@ impl Studio {
         let Some(folder) = self.folder.clone() else { return Ok(false) };
         sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
         self.dirty = false;
+        // every save is a version, made without asking
+        sonevo_versions::record(&folder, "Saved", true).map_err(|e| e.to_string())?;
         Ok(true)
+    }
+
+    pub fn versions(&self) -> Result<Vec<sonevo_versions::Version>, String> {
+        match &self.folder {
+            Some(folder) => sonevo_versions::list(folder).map_err(|e| e.to_string()),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    /// Saves, then keeps the song as it is as a version named `name`.
+    pub fn make_version(&mut self, name: &str) -> Result<(), String> {
+        let Some(folder) = self.folder.clone() else { return Err("Save the song first".into()) };
+        sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
+        self.dirty = false;
+        sonevo_versions::record(&folder, name, false).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Brings the song back to the version `id`, the song as it was kept as a version first.
+    pub fn restore_version(&mut self, id: &str) -> Result<(), String> {
+        let Some(folder) = self.folder.clone() else { return Err("Save the song first".into()) };
+        sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
+        sonevo_versions::restore(&folder, id).map_err(|e| e.to_string())?;
+        self.open(&folder).map(|_| ())
+    }
+
+    /// Plays the version `id` in place of the song, or the song again.
+    pub fn compare(&mut self, id: Option<&str>) -> Result<(), String> {
+        let Some(id) = id else {
+            self.comparing = None;
+            self.sync();
+            return Ok(());
+        };
+        let Some(folder) = self.folder.clone() else { return Err("Save the song first".into()) };
+        let out = self.drafts.join(format!("version-{id}"));
+        sonevo_versions::extract(&folder, id, &out).map_err(|e| e.to_string())?;
+        // the sounds are the song's, the same in every version
+        let (song, _) = sonevo_project::load(&out).map_err(|e| e.to_string())?;
+        self.comparing = Some(Compared { id: id.to_owned(), song, folder });
+        self.sync();
+        Ok(())
     }
 
     /// Saves into `folder`, the sounds the song plays taken along.

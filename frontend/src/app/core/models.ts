@@ -129,6 +129,17 @@ export interface View {
   canRedo: boolean;
   patternMode: Id | null;
   missing: string[];
+  /** The version played in place of the song, to compare by ear. */
+  comparing: string | null;
+}
+
+export interface VersionInfo {
+  id: string;
+  name: string;
+  /** Made as the song was saved, not named. */
+  automatic: boolean;
+  /** Seconds since 1970. */
+  time: number;
 }
 
 export interface AudioStatus {

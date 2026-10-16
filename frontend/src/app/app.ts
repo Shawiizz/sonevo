@@ -15,6 +15,7 @@ import { DevicePanel } from './features/device-panel';
 import { Mixer } from './features/mixer';
 import { PianoRoll } from './features/piano-roll';
 import { Playlist } from './features/playlist';
+import { VersionsPanel } from './features/versions-panel';
 import { Files } from './shell/files.service';
 import { Command, Palette } from './shell/palette';
 import { SettingsDialog } from './shell/settings-dialog';
@@ -71,6 +72,7 @@ const PIANO: Record<string, number> = {
     SettingsDialog,
     Titlebar,
     Transport,
+    VersionsPanel,
   ],
   template: `
     <app-titlebar (settings)="settingsOpen.set(true)" (palette)="paletteOpen.set(true)" />
@@ -116,7 +118,33 @@ const PIANO: Record<string, number> = {
           </div>
         </section>
       </main>
-      <aside class="side right"><app-device-panel /></aside>
+      <aside class="side right">
+        <div class="side-tabs">
+          <div class="s-seg" role="radiogroup">
+            <button
+              role="radio"
+              [attr.aria-checked]="side() === 'device'"
+              (click)="side.set('device')"
+            >
+              {{ t('Device') }}
+            </button>
+            <button
+              role="radio"
+              [attr.aria-checked]="side() === 'versions'"
+              (click)="side.set('versions')"
+            >
+              {{ t('Versions') }}
+            </button>
+          </div>
+        </div>
+        <div class="side-body">
+          @if (side() === 'device') {
+            <app-device-panel />
+          } @else {
+            <app-versions-panel />
+          }
+        </div>
+      </aside>
     </div>
 
     @if (menus.open(); as menu) {
@@ -180,8 +208,22 @@ const PIANO: Record<string, number> = {
       }
       &.right {
         width: 290px;
+        display: flex;
+        flex-direction: column;
         border-left: 1px solid var(--s-line);
       }
+    }
+    .side-tabs {
+      flex: none;
+      display: flex;
+      align-items: center;
+      height: var(--s-panel-head);
+      padding: 0 8px;
+      border-bottom: 1px solid var(--s-line);
+    }
+    .side-body {
+      flex: 1;
+      min-height: 0;
     }
     .center {
       flex: 1;
@@ -302,6 +344,7 @@ export class App {
     { id: 'roll', label: 'Piano roll', icon: 'piano', key: 'F7' },
     { id: 'mixer', label: 'Mixer', icon: 'mixer', key: 'F9' },
   ];
+  protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
   protected readonly paletteOpen = signal(false);
   protected readonly dockShare = signal(46);
