@@ -256,6 +256,7 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Its volume…': 'Son volume…',
   Loop: 'Boucle',
   'Loop start': 'Début de boucle',
   'Loop end': 'Fin de boucle',

@@ -1173,6 +1173,21 @@ export class Playlist implements OnDestroy {
           label: content.reverse ? t('Play it forwards') : t('Play it backwards'),
           run: change({ reverse: !content.reverse }),
         },
+        {
+          label: t('Its volume…'),
+          run: () =>
+            this.menus.show(
+              event,
+              [6, 3, 0, -3, -6, -12].map((db) => {
+                const gain = 10 ** (db / 20);
+                const now = Math.abs(20 * Math.log10(Math.max(content.gain, 1e-6)) - db) < 0.5;
+                return {
+                  label: `${now ? '✓ ' : ''}${db > 0 ? '+' : ''}${db} dB`,
+                  run: change({ gain }),
+                };
+              }),
+            ),
+        },
         { label: t('Fade in…'), run: fades('fadeIn') },
         {
           label: t('Stretch it to fill the clip, at its own pitch'),
