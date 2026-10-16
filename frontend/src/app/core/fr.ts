@@ -255,6 +255,10 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Right-click the ruler': 'Clic droit sur la règle',
+  'Add a marker, clear the loop': 'Ajouter un repère, enlever la boucle',
+  'Click a marker': 'Clic sur un repère',
+  'Play from there': 'Jouer depuis là',
   'Record the knobs moved while the song plays, as automation':
     'Enregistrer en automation les boutons tournés pendant que le morceau joue',
   Tools: 'Outils',

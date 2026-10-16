@@ -34,6 +34,8 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ['Click', 'Place the pattern chosen'],
       ['Right-click', 'Delete'],
       ['Drag along the ruler', 'Set the loop'],
+      ['Right-click the ruler', 'Add a marker, clear the loop'],
+      ['Click a marker', 'Play from there'],
       ['Ctrl+D', 'Duplicate after'],
       ['Alt+wheel', 'Taller or shorter tracks'],
     ],
