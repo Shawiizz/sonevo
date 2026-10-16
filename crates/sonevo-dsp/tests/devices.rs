@@ -84,6 +84,25 @@ fn a_sampler_in_slices_plays_one_a_key() {
 }
 
 #[test]
+fn a_sampler_looping_plays_on_while_held() {
+    let sampler = builtin("sonevo.sampler").unwrap();
+    let mut device = sampler.make(RATE);
+    // a second of a sound louder and louder
+    let ramp: Vec<f32> = (0..48_000).map(|i| i as f32 / 48_000.0).collect();
+    device.set_sample(Some(Arc::new(Sample { sample_rate: RATE, left: ramp.clone(), right: ramp })));
+    device.set(sampler.param("mode").unwrap(), 1.0);
+    device.set(sampler.param("loop").unwrap(), 1.0);
+    device.set(sampler.param("loopStart").unwrap(), 0.5);
+    device.set(sampler.param("loopEnd").unwrap(), 0.75);
+    play(&mut *device, &[note(0, 60, true)], 300);
+    // three seconds on, it plays the loop still, never what is after it
+    let (mut left, mut right) = (vec![0.0; BLOCK], vec![0.0; BLOCK]);
+    device.process(&CONTEXT, &[], &mut left, &mut right);
+    // at the velocity of 0.8 the loop's half to three quarters are 0.4 to 0.6
+    assert!(left.iter().all(|s| (0.39..0.61).contains(s)), "{:?}", &left[..4]);
+}
+
+#[test]
 fn every_instrument_sounds_then_ends() {
     for b in BUILTINS.iter().filter(|b| b.instrument) {
         let mut device = instrument(b.name);

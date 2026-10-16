@@ -25,6 +25,7 @@ const MODES: &[&str] = &["One shot", "Held"];
 const PITCH: &[&str] = &["Follows the key", "Same on every key"];
 const DIRECTIONS: &[&str] = &["Forward", "Reverse"];
 const SLICES: &[&str] = &["Off", "4", "8", "16", "32"];
+const LOOPING: &[&str] = &["Off", "On"];
 
 pub const PARAMS: &[Param] = &[
     Param::linear("root", "Root key", 0.0, 127.0, 60.0, ""),
@@ -37,6 +38,9 @@ pub const PARAMS: &[Param] = &[
     Param::linear("tune", "Tune", -24.0, 24.0, 0.0, "st"),
     Param::linear("gain", "Gain", -36.0, 12.0, 0.0, "dB"),
     Param::choice("slices", "Slices", SLICES, 0),
+    Param::choice("loop", "Loop", LOOPING, 0),
+    Param::linear("loopStart", "Loop start", 0.0, 1.0, 0.25, ""),
+    Param::linear("loopEnd", "Loop end", 0.0, 1.0, 1.0, ""),
 ];
 
 const VOICES: usize = 16;
@@ -49,9 +53,11 @@ struct Voice {
     /// Where it is in the sound, in its frames; and how far it moves each frame played.
     at: f64,
     step: f64,
-    /// The part of the sound it plays, in frames: all of it, or its slice.
+    /// The part of the sound it plays, in frames: all of it, or its slice; and the part gone
+    /// round and round, if any, until the voice ends.
     from: f64,
     to: f64,
+    looped: Option<(f64, f64)>,
     amp: Adsr,
     age: u32,
 }
@@ -66,6 +72,7 @@ impl Voice {
             step: 1.0,
             from: 0.0,
             to: 0.0,
+            looped: None,
             amp: Adsr::new(),
             age: 0,
         }
@@ -75,14 +82,14 @@ impl Voice {
 pub struct Sampler {
     sample_rate: f32,
     sample: Option<Arc<Sample>>,
-    values: [f64; 10],
+    values: [f64; 13],
     voices: [Voice; VOICES],
     gain: f32,
 }
 
 impl Sampler {
     pub fn new(sample_rate: f32) -> Sampler {
-        let mut values = [0.0; 10];
+        let mut values = [0.0; 13];
         for (v, p) in values.iter_mut().zip(PARAMS) {
             *v = p.default;
         }
@@ -134,6 +141,10 @@ impl Sampler {
             }
         };
         let to = to.min((frames - 1) as f64);
+        // a loop of at least a few milliseconds within the part played; none for slices
+        let (start, end) = (self.values[11] * frames as f64, (self.values[12] * frames as f64).min(to));
+        let looped = (slices == 0 && self.values[10].round() as i32 == 1 && end - start.max(from) >= 64.0)
+            .then(|| (start.max(from), end));
         let rate = f64::from(sample.sample_rate) / f64::from(self.sample_rate) * 2f64.powf(semitones / 12.0);
         let (at, step) = if self.reversed() { (to - 1.0, -rate) } else { (from, rate) };
         let slot = self
@@ -144,8 +155,18 @@ impl Sampler {
         let mut amp = Adsr::new();
         amp.set(self.sample_rate, self.values[3] as f32, 1.0, 1.0, self.values[4] as f32);
         amp.start();
-        self.voices[slot] =
-            Voice { on: true, key, velocity: velocity.clamp(0.0, 1.0), at, step, from, to, amp, age: 0 };
+        self.voices[slot] = Voice {
+            on: true,
+            key,
+            velocity: velocity.clamp(0.0, 1.0),
+            at,
+            step,
+            from,
+            to,
+            looped,
+            amp,
+            age: 0,
+        };
     }
 
     fn release(&mut self, key: u8) {
@@ -162,6 +183,14 @@ impl Sampler {
         let gain = self.gain;
         for voice in self.voices.iter_mut().filter(|v| v.on) {
             for (l, r) in left.iter_mut().zip(right.iter_mut()) {
+                // round the loop again, forwards or backwards
+                if let Some((start, end)) = voice.looped {
+                    if voice.step > 0.0 && voice.at >= end {
+                        voice.at -= end - start;
+                    } else if voice.step < 0.0 && voice.at < start {
+                        voice.at += end - start;
+                    }
+                }
                 if voice.at < voice.from.max(0.0) || voice.at >= voice.to {
                     voice.on = false;
                     break;
