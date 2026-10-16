@@ -1080,6 +1080,10 @@ export class Playlist implements OnDestroy {
           run: change({ reverse: !content.reverse }),
         },
         { label: t('Fade in…'), run: fades('fadeIn') },
+        {
+          label: t('Stretch it to fill the clip, at its own pitch'),
+          run: () => void this.stretch(clip),
+        },
         { label: t('Fade out…'), run: fades('fadeOut') },
         { separator: true, label: '' },
       );
@@ -1100,6 +1104,28 @@ export class Playlist implements OnDestroy {
       },
     );
     this.menus.show(event, items);
+  }
+
+  /** A sound clip's sound made as long as the clip, at its pitch, in place of the sound. */
+  private async stretch(clip: Clip): Promise<void> {
+    const content = clip.content;
+    if (content.type !== 'audio') return;
+    const info = await api.sampleInfo(content.sample).catch(() => null);
+    if (!info) return;
+    const factor = clip.length / this.studio.ticks(info.seconds);
+    if (Math.abs(factor - 1) < 0.005) return;
+    this.files.busy.set(this.t('Stretching…'));
+    try {
+      const sample = await api.stretchSample(content.sample, factor);
+      await this.studio.edit({
+        type: 'putClip',
+        clip: { ...clip, offset: 0, content: { ...content, sample } },
+      });
+    } catch (e) {
+      this.studio.fail(e);
+    } finally {
+      this.files.busy.set(null);
+    }
   }
 
   protected arrangementMenu(event: MouseEvent): void {

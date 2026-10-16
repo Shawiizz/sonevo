@@ -597,6 +597,37 @@ fn delete_preset(app: State<App>, device: String, name: String) -> Answer<()> {
     std::fs::remove_file(preset_folder(&app, &device, Some(&name))?).map_err(|e| e.to_string())
 }
 
+/// The song's sound `sample` played over `factor` times its length at its own pitch, kept in
+/// the song as a sound of its own: its name.
+#[tauri::command(async)]
+fn stretch_sample(app: State<App>, sample: String, factor: f64) -> Answer<String> {
+    if !(0.25..=4.0).contains(&factor) {
+        return Err("A sound is stretched from a quarter to four times its length".into());
+    }
+    if sample.contains(['/', '\\']) || sample.contains("..") {
+        return Err(format!("{sample} is not a sound of the song"));
+    }
+    let folder = app.studio().working_folder().to_owned();
+    let decoded = sonevo_engine::decode(&folder.join("samples").join(&sample)).map_err(|e| e.to_string())?;
+    let (left, right) = sonevo_dsp::stretch(&decoded.left, &decoded.right, factor);
+    let stem = Path::new(&sample).file_stem().map_or_else(|| "sound".into(), |s| s.to_string_lossy());
+    // the hash the name ends with left out: the import gives the new sound its own
+    let stem = stem.rsplit_once(' ').map_or(&*stem, |(name, _)| name);
+    let scratch = tempfile_path(&format!("{stem} stretched.wav"));
+    write_wav(&scratch, decoded.sample_rate as u32, &left, &right, Depth::Float32)
+        .map_err(|e| e.to_string())?;
+    let made = app.studio().import_sample(&scratch);
+    let _ = std::fs::remove_file(&scratch);
+    made
+}
+
+/// A path in a folder of Sonevo's own under the system's temporary one.
+fn tempfile_path(name: &str) -> PathBuf {
+    let folder = std::env::temp_dir().join("sonevo");
+    let _ = std::fs::create_dir_all(&folder);
+    folder.join(name)
+}
+
 /// The MIDI file at `path`, its tracks that play notes.
 #[tauri::command]
 fn midi_file(path: PathBuf) -> Answer<Midi> {
@@ -829,6 +860,7 @@ pub fn run() {
             export_wav,
             midi_file,
             export_midi,
+            stretch_sample,
             presets,
             save_preset,
             delete_preset,

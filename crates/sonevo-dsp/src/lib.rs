@@ -7,12 +7,14 @@ pub mod effects;
 mod param;
 mod presets;
 mod sampler;
+mod stretch;
 mod synth;
 mod util;
 
 pub use param::{Param, Scale};
 pub use presets::{presets, Preset, PRESETS};
 pub use sampler::Sample;
+pub use stretch::stretch;
 
 use std::sync::Arc;
 

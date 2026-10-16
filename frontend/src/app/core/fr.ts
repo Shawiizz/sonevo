@@ -256,6 +256,11 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Stretch it to fill the clip, at its own pitch':
+    "L'étirer pour remplir le clip, sans changer sa hauteur",
+  'Stretching…': 'Étirement…',
+  'A sound is stretched from a quarter to four times its length':
+    "Un son s'étire d'un quart à quatre fois sa longueur",
   'Exported: {lufs} LUFS, peaking at {peak} dB. Streaming services play songs at about -14 LUFS.':
     'Exporté : {lufs} LUFS, crête à {peak} dB. Les services de streaming jouent les morceaux vers -14 LUFS.',
   'Right-click the ruler': 'Clic droit sur la règle',
