@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { builtinName, Channel, COLORS, Edit, Insert, newId, Note, STEP } from '../core/models';
@@ -51,22 +51,6 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
   selector: 'app-channel-rack',
   imports: [Icon, Knob, Meter],
   template: `
-    @if (head() && studio.pattern(); as pattern) {
-      <div class="head">
-        <span class="dot" [style.background]="pattern.color"></span>
-        <span class="title">{{ pattern.name }}</span>
-        <span class="what">{{ t('The pattern edited: its steps below.') }}</span>
-        <span class="grow"></span>
-        <button
-          class="s-bar-btn"
-          [class.on]="studio.view()?.patternMode"
-          (click)="hearAlone()"
-          [title]="t('Play the pattern chosen, over and over')"
-        >
-          {{ studio.view()?.patternMode ? t('Back to the whole song') : t('Hear it alone') }}
-        </button>
-      </div>
-    }
     <div class="rows" (dragover)="dragOver($event)" (drop)="drop($event)">
       @for (row of rows(); track row.channel.id) {
         <div
@@ -105,7 +89,6 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
             class="name"
             [style.--color]="row.channel.color"
             (click)="select(row.channel)"
-            (dblclick)="openRoll(row.channel)"
             (pointerdown)="preview(row.channel, true)"
             (pointerup)="preview(row.channel, false)"
             (pointerleave)="preview(row.channel, false)"
@@ -136,7 +119,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
           } @else {
             <button
               class="roll"
-              (click)="openRoll(row.channel)"
+              (click)="select(row.channel)"
               [title]="t('Open in the piano roll')"
             >
               <svg [attr.viewBox]="'0 0 ' + length() + ' 24'" preserveAspectRatio="none">
@@ -169,9 +152,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
         <s-icon name="dice" /> {{ t('Write a beat for me') }}
       </button>
       <span class="hint">{{
-        head()
-          ? t('Click a step to place a note; double-click a name for the piano roll.')
-          : t('Click a step to place a note; click a name to see its notes below.')
+        t('Click a step to place a note; click a name to see its notes below.')
       }}</span>
       @if (studio.pattern(); as pattern) {
         <div
@@ -196,33 +177,6 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       flex-direction: column;
       min-height: 0;
       height: 100%;
-    }
-    .head {
-      flex: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      height: 36px;
-      padding: 0 12px;
-      border-bottom: 1px solid var(--s-line);
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 3px;
-      }
-      .title {
-        font-weight: 600;
-      }
-      .what {
-        color: var(--s-text-3);
-        font-size: 12px;
-      }
-      .grow {
-        flex: 1;
-      }
-      .on {
-        color: var(--s-accent);
-      }
     }
     .rows {
       flex: 1;
@@ -386,13 +340,6 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
 export class ChannelRack {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
-  /** Whether the pattern edited is named above the steps: not where it already is. */
-  readonly head = input(true);
-
-  protected hearAlone(): void {
-    const view = this.studio.view();
-    void this.studio.setMode(view?.patternMode ? null : (this.studio.pattern()?.id ?? null));
-  }
   private readonly named = inject(I18n).named;
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
@@ -459,11 +406,6 @@ export class ChannelRack {
   protected select(channel: Channel): void {
     this.studio.channelId.set(channel.id);
     this.studio.deviceId.set(null);
-  }
-
-  protected openRoll(channel: Channel): void {
-    this.select(channel);
-    this.studio.dock.set('roll');
   }
 
   private previewing: string | null = null;
@@ -687,7 +629,7 @@ export class ChannelRack {
     const t = this.t;
     const index = song.channels.findIndex((c) => c.id === channel.id);
     this.menus.show(event, [
-      { label: t('Open in the piano roll'), run: () => this.openRoll(channel) },
+      { label: t('Open in the piano roll'), run: () => this.select(channel) },
       {
         label: t('Rename…'),
         run: () => {

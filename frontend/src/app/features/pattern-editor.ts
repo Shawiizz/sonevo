@@ -15,9 +15,6 @@ import { PianoRoll } from './piano-roll';
   template: `
     @if (studio.pattern(); as pattern) {
       <div class="head">
-        <button class="s-bar-btn back" (click)="studio.closePattern()">
-          <s-icon name="back" /> {{ t('Back to the song') }}
-        </button>
         <span class="dot" [style.background]="pattern.color"></span>
         <span class="title">{{ pattern.name }}</span>
         <span class="length">{{
@@ -34,7 +31,7 @@ import { PianoRoll } from './piano-roll';
       </div>
     }
     <section class="steps" [style.flex-basis.%]="share()">
-      <app-channel-rack [head]="false" />
+      <app-channel-rack />
     </section>
     <div class="splitter" (pointerdown)="split($event)"></div>
     <section class="roll">
@@ -55,7 +52,7 @@ import { PianoRoll } from './piano-roll';
       align-items: center;
       gap: 10px;
       height: var(--s-panel-head);
-      padding: 0 8px;
+      padding: 0 8px 0 14px;
       border-bottom: 1px solid var(--s-line);
     }
     .dot {

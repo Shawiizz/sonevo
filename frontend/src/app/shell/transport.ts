@@ -61,25 +61,6 @@ import { Rename } from '../shared/rename';
       }
     </div>
 
-    <div class="s-seg" role="radiogroup">
-      <button
-        role="radio"
-        [attr.aria-checked]="patternMode()"
-        (click)="setMode(true)"
-        [title]="t('Play the pattern chosen, over and over')"
-      >
-        {{ t('Pattern') }}
-      </button>
-      <button
-        role="radio"
-        [attr.aria-checked]="!patternMode()"
-        (click)="setMode(false)"
-        [title]="t('Play the whole song')"
-      >
-        {{ t('Song') }}
-      </button>
-    </div>
-
     <div class="readout">
       <span class="label">{{ t('Tempo') }}</span>
       @if (editingTempo()) {
@@ -335,7 +316,6 @@ export class Transport {
   private readonly draggingTempo = signal<number | null>(null);
   protected readonly tempo = computed(() => this.studio.song()?.tempo ?? 120);
   protected readonly tempoShown = computed(() => (this.draggingTempo() ?? this.tempo()).toFixed(1));
-  protected readonly patternMode = computed(() => !!this.studio.view()?.patternMode);
   protected readonly recording = computed(() => this.studio.status().recording !== null);
   /** Shown as the most of the last second or so, not each block's. */
   protected readonly load = signal(0);
@@ -375,10 +355,6 @@ export class Transport {
   protected stop(): void {
     if (this.recording()) void this.studio.stopRecording().then(() => api.stop());
     else void api.stop();
-  }
-
-  protected setMode(pattern: boolean): void {
-    void this.studio.setMode(pattern ? (this.studio.pattern()?.id ?? null) : null);
   }
 
   protected toggleMetronome(): void {

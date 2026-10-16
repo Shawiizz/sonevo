@@ -26,7 +26,13 @@ import {
   View,
 } from './models';
 
-export type Dock = 'rack' | 'roll' | 'mixer';
+/** A tab of the workspace: the song's playlist, the mixer, or a pattern opened to be composed. */
+export type Tab = 'song' | 'mixer' | `pattern:${string}`;
+
+/** The pattern a tab shows, if it is one's. */
+export function tabPattern(tab: Tab): Id | null {
+  return tab.startsWith('pattern:') ? tab.slice('pattern:'.length) : null;
+}
 
 const SILENT: Status = {
   position: 0,
@@ -62,7 +68,11 @@ export class Studio {
   readonly patternId = signal<Id | null>(null);
   readonly channelId = signal<Id | null>(null);
   readonly deviceId = signal<Id | null>(null);
-  readonly dock = signal<Dock>('rack');
+  /** The tabs open, the song's and the mixer's always first. */
+  readonly tabs = signal<Tab[]>(['song', 'mixer']);
+  readonly tab = signal<Tab>('song');
+  /** The pattern whose tab is shown, played over and over while it is. */
+  readonly editing = computed(() => tabPattern(this.tab()));
   readonly metronome = signal(false);
   /** Keys played are written into the pattern as it goes round. */
   readonly writing = signal(false);
@@ -145,8 +155,14 @@ export class Studio {
     if (!song.patterns.some((p) => p.id === this.patternId())) {
       this.patternId.set(song.patterns[0]?.id ?? null);
     }
-    if (this.editing() && !song.patterns.some((p) => p.id === this.editing())) {
-      this.editing.set(null);
+    // the tabs of patterns gone closed
+    const kept = this.tabs().filter((t) => {
+      const pattern = tabPattern(t);
+      return !pattern || song.patterns.some((p) => p.id === pattern);
+    });
+    if (kept.length !== this.tabs().length) {
+      this.tabs.set(kept);
+      if (!kept.includes(this.tab())) this.tab.set('song');
     }
     if (!song.channels.some((c) => c.id === this.channelId())) {
       this.channelId.set(song.channels[0]?.id ?? null);
@@ -333,9 +349,8 @@ export class Studio {
       ],
     });
     if (done) {
-      this.selectPattern(pattern.id);
       this.channelId.set(channels[0].id);
-      this.dock.set('roll');
+      await this.openPattern(pattern.id);
     }
   }
 
@@ -358,10 +373,7 @@ export class Studio {
         { type: 'setNotes', pattern: pattern.id, channel, notes },
       ],
     });
-    if (done) {
-      this.selectPattern(pattern.id);
-      this.dock.set('roll');
-    }
+    if (done) await this.openPattern(pattern.id);
   }
 
   async addInsert(): Promise<Insert | null> {
@@ -561,26 +573,45 @@ export class Studio {
     return done ? copy : null;
   }
 
-  /** The pattern opened to be composed in the place of the playlist, played over and over
-   * while it is. */
-  readonly editing = signal<Id | null>(null);
-
-  /** The pattern `id` opened to be composed, a channel it plays in the piano roll. */
-  async openPattern(id: Id): Promise<void> {
-    this.patternId.set(id);
-    const playing = this.song()?.channels.find((c) => this.notes(id, c.id).length > 0);
-    if (playing) this.channelId.set(playing.id);
-    this.editing.set(id);
-    await this.setMode(id);
+  /** The pattern `id` opened in a tab of its own, or its tab shown if it has one. */
+  openPattern(id: Id): Promise<void> {
+    const tab: Tab = `pattern:${id}`;
+    if (!this.tabs().includes(tab)) this.tabs.update((tabs) => [...tabs, tab]);
+    return this.showTab(tab);
   }
 
-  /** Back to the playlist, the whole song played again. */
-  async closePattern(): Promise<void> {
-    this.editing.set(null);
-    if (this.view()?.patternMode) await this.setMode(null);
+  /** The tab `tab` shown: a pattern's played over and over, the song otherwise. */
+  async showTab(tab: Tab): Promise<void> {
+    this.tab.set(tab);
+    const pattern = tabPattern(tab);
+    if (pattern) {
+      this.patternId.set(pattern);
+      // the channel chosen kept if it plays there, else one that does, for the piano roll
+      const chosen = this.channelId();
+      if (!chosen || !this.notes(pattern, chosen).length) {
+        const playing = this.song()?.channels.find((c) => this.notes(pattern, c.id).length > 0);
+        if (playing) this.channelId.set(playing.id);
+      }
+    }
+    if (pattern !== (this.view()?.patternMode ?? null)) await this.setMode(pattern);
+  }
+
+  /** The tab `tab` closed, the one before it shown if it was; the song's and the mixer's stay. */
+  async closeTab(tab: Tab): Promise<void> {
+    if (!tabPattern(tab)) return;
+    const tabs = this.tabs();
+    const at = tabs.indexOf(tab);
+    if (at < 0) return;
+    const left = tabs.filter((t) => t !== tab);
+    this.tabs.set(left);
+    if (this.tab() === tab) await this.showTab(left[at - 1] ?? 'song');
   }
 
   selectPattern(id: Id): void {
+    if (this.editing()) {
+      void this.openPattern(id);
+      return;
+    }
     this.patternId.set(id);
     if (this.view()?.patternMode) void this.setMode(id);
   }

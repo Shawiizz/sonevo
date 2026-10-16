@@ -9,13 +9,11 @@ import {
 import { api } from './core/api';
 import { Kept } from './core/models';
 import { I18n } from './core/i18n';
-import { Dock, Studio } from './core/studio.service';
+import { Studio, Tab, tabPattern } from './core/studio.service';
 import { Browser } from './features/browser';
-import { ChannelRack } from './features/channel-rack';
 import { DevicePanel } from './features/device-panel';
 import { Mixer } from './features/mixer';
 import { PatternEditor } from './features/pattern-editor';
-import { PianoRoll } from './features/piano-roll';
 import { Playlist } from './features/playlist';
 import { VersionsPanel } from './features/versions-panel';
 import { Files, TEMPLATES } from './shell/files.service';
@@ -80,7 +78,6 @@ const PIANO: Record<string, number> = {
   selector: 'app-root',
   imports: [
     Browser,
-    ChannelRack,
     DevicePanel,
     ExportDialog,
     Guide,
@@ -88,7 +85,6 @@ const PIANO: Record<string, number> = {
     Mixer,
     PatternEditor,
     Palette,
-    PianoRoll,
     Playlist,
     RecoveryDialog,
     RenameField,
@@ -109,47 +105,56 @@ const PIANO: Record<string, number> = {
     <div class="body">
       <aside class="side left"><app-browser /></aside>
       <main class="center">
-        @if (studio.editing()) {
-          <app-pattern-editor />
-        } @else {
-          <section class="playlist" [style.flex-basis.%]="100 - dockShare()">
-            <app-playlist />
-          </section>
-          <div class="splitter" (pointerdown)="split($event)"></div>
-          <section class="dock" [style.flex-basis.%]="dockShare()">
-            <div class="tabs">
-              @for (tab of tabs; track tab.id) {
-                <button
-                  class="tab"
-                  [class.on]="studio.dock() === tab.id"
-                  (click)="studio.dock.set(tab.id)"
+        <div class="tabs" role="tablist">
+          @for (tab of tabViews(); track tab.id) {
+            <button
+              class="tab"
+              role="tab"
+              [class.on]="studio.tab() === tab.id"
+              [attr.aria-selected]="studio.tab() === tab.id"
+              (click)="studio.showTab(tab.id)"
+              (auxclick)="$event.button === 1 && studio.closeTab(tab.id)"
+            >
+              @if (tab.color) {
+                <span class="dot" [style.background]="tab.color"></span>
+              } @else {
+                <s-icon [name]="tab.icon" />
+              }
+              {{ tab.label }}
+              @if (tab.key) {
+                <span class="s-key">{{ tab.key }}</span>
+              }
+              @if (tab.closable) {
+                <span
+                  class="close"
+                  role="button"
+                  [title]="t('Close') + ' (Ctrl+W)'"
+                  (click)="$event.stopPropagation(); studio.closeTab(tab.id)"
                 >
-                  <s-icon [name]="tab.icon" />
-                  {{ t(tab.label) }}
-                  <span class="s-key">{{ tab.key }}</span>
-                </button>
+                  <s-icon name="close" [size]="10" />
+                </span>
               }
-              <span class="grow"></span>
-              <span class="piano-hint">
-                <s-icon name="keyboard" /> {{ t('Your keyboard plays the channel chosen') }} ·
-                {{ t('octave') }} {{ octave() }}
-              </span>
-            </div>
-            <div class="dock-body">
-              @switch (studio.dock()) {
-                @case ('rack') {
-                  <app-channel-rack />
-                }
-                @case ('roll') {
-                  <app-piano-roll />
-                }
-                @case ('mixer') {
-                  <app-mixer />
-                }
-              }
-            </div>
-          </section>
-        }
+            </button>
+          }
+          <span class="grow"></span>
+          <span class="piano-hint">
+            <s-icon name="keyboard" /> {{ t('Your keyboard plays the channel chosen') }} ·
+            {{ t('octave') }} {{ octave() }}
+          </span>
+        </div>
+        <section class="view">
+          @switch (tabKind()) {
+            @case ('song') {
+              <app-playlist />
+            }
+            @case ('mixer') {
+              <app-mixer />
+            }
+            @case ('pattern') {
+              <app-pattern-editor />
+            }
+          }
+        </section>
       </main>
       <aside class="side right">
         <div class="side-tabs">
@@ -280,29 +285,15 @@ const PIANO: Record<string, number> = {
       display: flex;
       flex-direction: column;
     }
-    .playlist,
-    .dock {
+    .view {
+      flex: 1;
       min-height: 0;
-      flex-grow: 0;
-      flex-shrink: 0;
-      background: var(--s-base);
-    }
-    .playlist {
-      flex-grow: 1;
-    }
-    .dock {
       display: flex;
       flex-direction: column;
-    }
-    .splitter {
-      flex: none;
-      height: 5px;
-      background: var(--s-void);
-      border-top: 1px solid var(--s-line);
-      border-bottom: 1px solid var(--s-line);
-      cursor: row-resize;
-      &:hover {
-        background: var(--s-line-strong);
+      background: var(--s-base);
+      > * {
+        flex: 1;
+        min-height: 0;
       }
     }
     .tabs {
@@ -339,6 +330,27 @@ const PIANO: Record<string, number> = {
         background: var(--s-raised);
         box-shadow: inset 0 -2px 0 var(--s-accent);
       }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 3px;
+      }
+      .close {
+        display: inline-flex;
+        padding: 3px;
+        margin-right: -6px;
+        border-radius: 4px;
+        color: var(--s-text-3);
+        visibility: hidden;
+        &:hover {
+          color: var(--s-text);
+          background: var(--s-hover);
+        }
+      }
+      &:hover .close,
+      &.on .close {
+        visibility: visible;
+      }
     }
     .grow {
       flex: 1;
@@ -350,10 +362,6 @@ const PIANO: Record<string, number> = {
       padding-right: 8px;
       color: var(--s-text-3);
       font-size: 11px;
-    }
-    .dock-body {
-      flex: 1;
-      min-height: 0;
     }
     .menu-catch {
       position: fixed;
@@ -388,11 +396,28 @@ export class App {
   protected readonly t = inject(I18n).t;
   protected readonly files = inject(Files);
 
-  protected readonly tabs: { id: Dock; label: string; icon: string; key: string }[] = [
-    { id: 'rack', label: 'Channel rack', icon: 'rack', key: 'F6' },
-    { id: 'roll', label: 'Piano roll', icon: 'piano', key: 'F7' },
-    { id: 'mixer', label: 'Mixer', icon: 'mixer', key: 'F9' },
-  ];
+  /** The tabs open, as the bar shows them. */
+  protected readonly tabViews = computed(() => {
+    const patterns = this.studio.song()?.patterns ?? [];
+    return this.studio.tabs().map((id) => {
+      const pattern = patterns.find((p) => p.id === tabPattern(id));
+      if (pattern) {
+        return { id, label: pattern.name, icon: '', color: pattern.color, key: '', closable: true };
+      }
+      const mixer = id === 'mixer';
+      return {
+        id,
+        label: this.t(mixer ? 'Mixer' : 'Song'),
+        icon: mixer ? 'mixer' : 'playlist',
+        color: '',
+        key: mixer ? 'F9' : 'F5',
+        closable: false,
+      };
+    });
+  });
+  protected readonly tabKind = computed(() =>
+    this.studio.editing() ? 'pattern' : this.studio.tab(),
+  );
   protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
   protected readonly shortcutsOpen = signal(false);
@@ -416,7 +441,6 @@ export class App {
     this.kept.update((all) => all.filter((x) => x.path !== k.path));
   }
   protected readonly paletteOpen = signal(false);
-  protected readonly dockShare = signal(46);
   protected readonly octave = signal(4);
   private readonly held = new Map<string, { channel: string; key: number }>();
 
@@ -445,18 +469,13 @@ export class App {
       { label: t('Export the song as MIDI…'), run: () => this.files.exportMidi(true) },
       { label: t('Undo'), key: 'Ctrl+Z', run: () => this.studio.undo() },
       { label: t('Redo'), key: 'Ctrl+Y', run: () => this.studio.redo() },
-      { label: t('Show the channel rack'), key: 'F6', run: () => this.studio.dock.set('rack') },
-      { label: t('Show the piano roll'), key: 'F7', run: () => this.studio.dock.set('roll') },
-      { label: t('Show the mixer'), key: 'F9', run: () => this.studio.dock.set('mixer') },
+      { label: t('Show the song'), key: 'F5', run: () => this.studio.showTab('song') },
+      { label: t('Open the pattern chosen'), key: 'F6', run: () => this.openChosen() },
+      { label: t('Show the mixer'), key: 'F9', run: () => this.studio.showTab('mixer') },
       { label: t('New pattern'), run: () => this.studio.addPattern() },
       { label: t('Add a mixer track'), run: () => this.studio.addInsert() },
       { label: t('Add a synth'), run: () => this.studio.addChannel('sonevo.synth', t('Synth')) },
       { label: t('Add drums'), run: () => this.studio.addChannel('sonevo.drums', t('Drums')) },
-      {
-        label: t('Play the pattern alone'),
-        run: () => this.studio.setMode(this.studio.pattern()?.id ?? null),
-      },
-      { label: t('Play the whole song'), run: () => this.studio.setMode(null) },
       { label: t('Cut every sound'), run: () => api.panic() },
       { label: t('Settings'), run: () => this.settingsOpen.set(true) },
       { label: t('Shortcuts'), key: 'F1', run: () => this.shortcutsOpen.set(true) },
@@ -465,7 +484,7 @@ export class App {
     for (const p of this.studio.song()?.patterns ?? []) {
       list.push({
         label: `${t('Edit pattern')} ${p.name}`,
-        run: () => this.studio.selectPattern(p.id),
+        run: () => this.studio.openPattern(p.id),
       });
     }
     for (const c of this.studio.song()?.channels ?? []) {
@@ -473,7 +492,7 @@ export class App {
         label: `${t('Piano roll of')} ${c.name}`,
         run: () => {
           this.studio.channelId.set(c.id);
-          this.studio.dock.set('roll');
+          void this.openChosen();
         },
       });
     }
@@ -488,20 +507,17 @@ export class App {
     return Math.min(y, window.innerHeight - items * 31 - 16);
   }
 
-  protected split(event: PointerEvent): void {
-    const splitter = event.currentTarget as HTMLElement;
-    splitter.setPointerCapture(event.pointerId);
-    const center = splitter.parentElement!.getBoundingClientRect();
-    const move = (e: PointerEvent) => {
-      const share = ((center.bottom - e.clientY) / center.height) * 100;
-      this.dockShare.set(Math.min(85, Math.max(18, share)));
-    };
-    const up = () => {
-      splitter.removeEventListener('pointermove', move as EventListener);
-      splitter.removeEventListener('pointerup', up);
-    };
-    splitter.addEventListener('pointermove', move as EventListener);
-    splitter.addEventListener('pointerup', up);
+  /** The pattern chosen at the top opened in its tab. */
+  private openChosen(): Promise<void> {
+    const pattern = this.studio.pattern();
+    return pattern ? this.studio.openPattern(pattern.id) : Promise.resolve();
+  }
+
+  /** The tab `by` after the one shown, round the bar. */
+  private nextTab(by: number): Promise<void> {
+    const tabs: Tab[] = this.studio.tabs();
+    const at = tabs.indexOf(this.studio.tab());
+    return this.studio.showTab(tabs[(at + by + tabs.length) % tabs.length]);
   }
 
   private typing(event: KeyboardEvent): boolean {
@@ -523,6 +539,8 @@ export class App {
         n: () => this.files.newSong(),
         e: () => this.files.exportWav(),
         k: () => this.paletteOpen.set(true),
+        w: () => this.studio.closeTab(this.studio.tab()),
+        tab: () => this.nextTab(event.shiftKey ? -1 : 1),
       };
       if (run[key]) {
         event.preventDefault();
@@ -537,7 +555,7 @@ export class App {
     }
     if (event.key === 'Escape' && this.studio.editing() && !this.menus.open()) {
       event.preventDefault();
-      void this.studio.closePattern();
+      void this.studio.showTab('song');
       return;
     }
     if (event.key === 'F1') {
@@ -545,11 +563,15 @@ export class App {
       this.shortcutsOpen.set(true);
       return;
     }
-    const docks: Record<string, Dock> = { F6: 'rack', F7: 'roll', F9: 'mixer' };
-    if (docks[event.key]) {
+    const views: Record<string, () => unknown> = {
+      F5: () => this.studio.showTab('song'),
+      F6: () => this.openChosen(),
+      F7: () => this.openChosen(),
+      F9: () => this.studio.showTab('mixer'),
+    };
+    if (views[event.key]) {
       event.preventDefault();
-      if (this.studio.editing()) void this.studio.closePattern();
-      this.studio.dock.set(docks[event.key]);
+      void views[event.key]();
       return;
     }
     if (event.code === 'NumpadAdd' || event.code === 'NumpadSubtract') {

@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { I18n } from '../core/i18n';
-import { Dock, Studio } from '../core/studio.service';
+import { Studio } from '../core/studio.service';
 
 interface Step {
   title: string;
   text: string;
-  show?: { label: string; dock?: Dock; play?: boolean };
+  show?: { label: string; open?: 'pattern' | 'mixer'; play?: boolean };
 }
 
 const STEPS: Step[] = [
@@ -16,22 +16,22 @@ const STEPS: Step[] = [
   },
   {
     title: 'A beat, step by step',
-    text: 'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me, at the bottom, starts one in a style.',
-    show: { label: 'Show the channel rack', dock: 'rack' },
+    text: 'Double-click a block of the playlist: its pattern opens in a tab of its own, played over and over. Its instruments are a row each, and their squares the steps: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me starts one in a style.',
+    show: { label: 'Open the pattern chosen', open: 'pattern' },
   },
   {
     title: 'A melody, note by note',
-    text: 'Double-click an instrument’s name to open its piano roll: time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale at the top, and the notes that go well together light up. Tools writes chord progressions and melodies for you.',
-    show: { label: 'Show the piano roll', dock: 'roll' },
+    text: 'In a pattern’s tab, click an instrument’s name: its notes are below, in the piano roll. Time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale, and the notes that go well together light up. Tools writes chord progressions and melodies for you.',
+    show: { label: 'Open the pattern chosen', open: 'pattern' },
   },
   {
     title: 'The song, part by part',
-    text: 'In the playlist, a click places the pattern chosen; drag a block to move it, its end to make it longer. Choose Pattern at the top to hear only the pattern you are making, Song to hear everything.',
+    text: 'In the Song tab, a click places the pattern chosen at the top; drag a block to move it, its end to make it longer. Space plays the whole song there, and only the pattern in its own tab.',
   },
   {
     title: 'The mix',
     text: 'Each instrument goes to a mixer track: its level, its place from left to right, its effects. A reverb makes a room around the sound, a delay echoes it. Right-click any knob to make it move by itself over the song. Check the mix, under the spectrum, says what to fix.',
-    show: { label: 'Show the mixer', dock: 'mixer' },
+    show: { label: 'Show the mixer', open: 'mixer' },
   },
   {
     title: 'Sounds ready made',
@@ -142,7 +142,9 @@ export class Guide {
   protected readonly step = () => STEPS[this.at()];
 
   protected act(show: NonNullable<Step['show']>): void {
-    if (show.dock) this.studio.dock.set(show.dock);
+    const pattern = this.studio.pattern();
+    if (show.open === 'pattern' && pattern) void this.studio.openPattern(pattern.id);
+    if (show.open === 'mixer') void this.studio.showTab('mixer');
     if (show.play && !this.studio.status().playing) this.studio.togglePlay();
   }
 }

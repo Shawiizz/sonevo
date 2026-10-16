@@ -17,10 +17,7 @@ export const FR: Record<string, string> = {
   Play: 'Lecture',
   Pause: 'Pause',
   Stop: 'Stop',
-  Pattern: 'Pattern',
   Song: 'Morceau',
-  'Play the pattern chosen, over and over': 'Joue le pattern choisi, en boucle',
-  'Play the whole song': 'Joue tout le morceau',
   Tempo: 'Tempo',
   'Drag up or down, or double-click to type':
     'Glisse vers le haut ou le bas, ou double-clique pour taper',
@@ -40,8 +37,6 @@ export const FR: Record<string, string> = {
   'No channel yet: add an instrument below.':
     'Aucune voie pour l’instant : ajoute un instrument en dessous.',
   'Add a channel': 'Ajouter une voie',
-  'Click a step to place a note; double-click a name for the piano roll.':
-    'Clique un pas pour placer une note ; double-clique un nom pour le piano roll.',
   Master: 'Master',
   'A new mixer track': 'Une nouvelle piste de mixage',
   'Name of the channel': 'Nom de la voie',
@@ -231,18 +226,14 @@ export const FR: Record<string, string> = {
   'The sound card stopped: choose it again.': 'La carte son s’est arrêtée : choisis-la à nouveau.',
   'Type a command…': 'Tape une commande…',
   'No command matches.': 'Aucune commande ne correspond.',
-  'Channel rack': 'Rack de voies',
   'Piano roll': 'Piano roll',
   Mixer: 'Mixeur',
   'Your keyboard plays the channel chosen': 'Ton clavier joue la voie choisie',
   octave: 'octave',
   'Play / pause': 'Lecture / pause',
-  'Show the channel rack': 'Afficher le rack de voies',
-  'Show the piano roll': 'Afficher le piano roll',
   'Show the mixer': 'Afficher le mixeur',
   'Add a synth': 'Ajouter un synthé',
   'Add drums': 'Ajouter une batterie',
-  'Play the pattern alone': 'Jouer le pattern seul',
   'Cut every sound': 'Couper tous les sons',
   'Edit pattern': 'Éditer le pattern',
   'Piano roll of': 'Piano roll de',
@@ -257,16 +248,23 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Show the song': 'Afficher le morceau',
+  'Open the pattern chosen': 'Ouvrir le pattern choisi',
+  'The song · the pattern chosen · the mixer': 'Le morceau · le pattern choisi · le mixeur',
+  'Close the tab · the next tab': "Fermer l'onglet · l'onglet suivant",
+  'From a pattern back to the song': "D'un pattern, revenir au morceau",
+  'Double-click a block of the playlist: its pattern opens in a tab of its own, played over and over. Its instruments are a row each, and their squares the steps: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me starts one in a style.':
+    "Double-clique un bloc de la playlist : son pattern s'ouvre dans un onglet à lui, joué en boucle. Ses instruments ont chacun une ligne, et leurs cases sont les pas : seize par mesure. Clique une case, et l'instrument joue à cet endroit. Clique-la encore, et il disparaît. Écrire un rythme pour moi en commence un dans un style.",
+  'In a pattern’s tab, click an instrument’s name: its notes are below, in the piano roll. Time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale, and the notes that go well together light up. Tools writes chord progressions and melodies for you.':
+    "Dans l'onglet d'un pattern, clique le nom d'un instrument : ses notes sont en dessous, dans le piano roll. Le temps va vers la droite, les touches vers le haut. Clique pour dessiner une note, tire sa fin pour l'allonger, clic droit pour l'enlever. Choisis une gamme, et les notes qui vont bien ensemble s'éclairent. Outils écrit pour toi des suites d'accords et des mélodies.",
+  'In the Song tab, a click places the pattern chosen at the top; drag a block to move it, its end to make it longer. Space plays the whole song there, and only the pattern in its own tab.':
+    "Dans l'onglet Morceau, un clic pose le pattern choisi en haut ; tire un bloc pour le déplacer, sa fin pour l'allonger. Espace y joue tout le morceau, et seulement le pattern dans son propre onglet.",
   'Click a step to place a note; click a name to see its notes below.':
     'Clique un pas pour placer une note ; clique un nom pour voir ses notes en bas.',
-  'Back to the song': 'Retour au morceau',
   '{count} bars': '{count} mesures',
   'Space plays it over and over · Esc goes back to the song':
     'Espace le joue en boucle · Échap revient au morceau',
   'Play it over and over': 'Le jouer en boucle',
-  'The pattern edited: its steps below.': 'Le pattern ouvert : ses pas ci-dessous.',
-  'Hear it alone': "L'écouter seul",
-  'Back to the whole song': 'Revenir au morceau entier',
   'Look for a setting by its name': 'Chercher un réglage par son nom',
   '{count} more settings: look for one by its name.':
     '{count} réglages de plus : cherches-en un par son nom.',
@@ -556,7 +554,6 @@ export const FR: Record<string, string> = {
   Space: 'Espace',
   'Z to M, Q to P': 'Z à M, Q à P',
   Everywhere: 'Partout',
-  'Channel rack · piano roll · mixer': 'Rack de voies · piano roll · mixeur',
   'Your keyboard as a piano': 'Ton clavier comme piano',
   'Numpad + / −': 'Pavé numérique + / −',
   'Octave up / down': 'Octave au-dessus / en dessous',
@@ -624,14 +621,8 @@ export const FR: Record<string, string> = {
     'Le morceau ouvert est une démo. Appuie sur Espace, ou sur le bouton lecture en haut à gauche, et regarde la ligne avancer dans la playlist : chaque bloc de couleur est un pattern, une petite boucle de notes, placée dans le temps.',
   'Play the demo': 'Jouer la démo',
   'A beat, step by step': 'Un rythme, pas à pas',
-  'The channel rack holds the instruments, a row each. Its squares are the steps of the pattern chosen at the top: sixteen to a bar. Click one, and the instrument plays there. Click it again, and it is gone. Write a beat for me, at the bottom, starts one in a style.':
-    'Le rack de voies contient les instruments, un par ligne. Ses cases sont les pas du pattern choisi en haut : seize par mesure. Clique une case, et l’instrument joue à cet endroit. Clique-la à nouveau, et il disparaît. Écrire un rythme pour moi, en bas, en lance un dans un style.',
   'A melody, note by note': 'Une mélodie, note par note',
-  'Double-click an instrument’s name to open its piano roll: time goes across, the keys go up. Click to draw a note, drag its end to make it longer, right-click to take it out. Choose a scale at the top, and the notes that go well together light up. Tools writes chord progressions and melodies for you.':
-    'Double-clique le nom d’un instrument pour ouvrir son piano roll : le temps va vers la droite, les notes montent vers le haut. Clique pour dessiner une note, tire sa fin pour l’allonger, clic droit pour l’enlever. Choisis une gamme en haut, et les notes qui vont bien ensemble s’éclairent. Outils écrit pour toi des suites d’accords et des mélodies.',
   'The song, part by part': 'Le morceau, partie par partie',
-  'In the playlist, a click places the pattern chosen; drag a block to move it, its end to make it longer. Choose Pattern at the top to hear only the pattern you are making, Song to hear everything.':
-    'Dans la playlist, un clic place le pattern choisi ; tire un bloc pour le déplacer, sa fin pour l’allonger. Choisis Pattern en haut pour n’entendre que le pattern que tu fais, Morceau pour tout entendre.',
   'The mix': 'Le mixage',
   'Each instrument goes to a mixer track: its level, its place from left to right, its effects. A reverb makes a room around the sound, a delay echoes it. Right-click any knob to make it move by itself over the song. Check the mix, under the spectrum, says what to fix.':
     'Chaque instrument va dans une piste de mixage : son niveau, sa place de gauche à droite, ses effets. Une réverbération met une pièce autour du son, un délai lui fait un écho. Clic droit sur un bouton pour qu’il bouge tout seul au fil du morceau. Contrôler le mix, sous le spectre, dit quoi corriger.',
