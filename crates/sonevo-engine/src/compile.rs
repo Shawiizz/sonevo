@@ -1,7 +1,8 @@
 //! A song turned into a [`Graph`], keeping the processors the graph before already has.
 
 use crate::graph::{
-    AudioClip, AutomationClip, ChannelNode, Gains, Graph, InsertNode, Lane, Lever, NoteEvent, CHUNK, EVENTS,
+    AudioClip, AutomationClip, ChannelNode, Gains, Graph, InsertNode, Lane, Lever, LiveArp, NoteEvent, CHUNK,
+    EVENTS,
 };
 use crate::meters;
 use crate::samples::Samples;
@@ -441,6 +442,7 @@ pub fn compile(
             held: 0,
             release: 0,
             meter: meters::channel(i),
+            live: channel.arp.map(LiveArp::new),
         })
         .collect();
 

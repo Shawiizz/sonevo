@@ -1,7 +1,7 @@
 //! The audio thread's side: it plays the graph it was last given, block after block, never
 //! allocating, never waiting.
 
-use crate::graph::{Gains, Graph, Lever, CHUNK, EVENTS};
+use crate::graph::{Gains, Graph, Lever, LiveArp, CHUNK, EVENTS};
 use crate::meters::{self, Meters};
 use crate::scope::Scope;
 use rtrb::{Consumer, Producer};
@@ -166,6 +166,9 @@ impl Renderer {
                     c.held = channel.held;
                     c.release = channel.release;
                     c.applied = channel.applied;
+                    if let (Some(new), Some(old)) = (&mut c.live, channel.live) {
+                        *new = LiveArp { arp: new.arp, ..old };
+                    }
                 }
             }
             for (new, old) in next.inserts.iter_mut().zip(&old.inserts) {
@@ -429,13 +432,21 @@ impl Renderer {
         for preview in &mut self.previews {
             let Some((channel, event)) = preview.take() else { continue };
             if let Some(c) = graph.channels.get_mut(channel) {
-                push(c, event);
+                match &mut c.live {
+                    Some(live) => live.press(&event),
+                    None => push(c, event),
+                }
             }
+        }
+        let per_frame = ticks_per_frame(graph.tempo, self.sample_rate);
+        for c in &mut graph.channels {
+            let Some(mut live) = c.live else { continue };
+            live.run(frames, live.arp.step as f64 / per_frame, |event| push(c, event));
+            c.live = Some(live);
         }
         if !self.playing {
             return (self.position, false);
         }
-        let per_frame = ticks_per_frame(graph.tempo, self.sample_rate);
         let (mut frame, mut tick) = (0usize, self.position);
         while frame < frames {
             let left = (graph.loop_end as f64 - tick).max(0.0);
@@ -473,6 +484,9 @@ impl Renderer {
             } else {
                 tick = until;
             }
+        }
+        for c in graph.channels.iter_mut().filter(|c| c.live.is_some()) {
+            in_time(&mut c.events);
         }
         (tick, false)
     }
@@ -553,6 +567,18 @@ impl Renderer {
                 *l += s;
                 *r += s;
             }
+        }
+    }
+}
+
+/// `events` in time order, those at the same frame as they came: the live arpeggio's notes
+/// and the song's, made apart, played together.
+fn in_time(events: &mut [Event]) {
+    for i in 1..events.len() {
+        let mut j = i;
+        while j > 0 && events[j - 1].at > events[j].at {
+            events.swap(j - 1, j);
+            j -= 1;
         }
     }
 }

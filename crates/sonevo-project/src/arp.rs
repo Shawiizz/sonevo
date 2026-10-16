@@ -55,7 +55,7 @@ impl Arp {
             }
             keys.sort_by_key(|k| k.0);
             keys.dedup_by_key(|k| k.0);
-            let (key, velocity) = self.pick(&keys, count, at);
+            let (key, velocity) = self.nth(&keys, count, at);
             played.push(Note { start: at, length: lasting.min(length - at), key, velocity });
             count += 1;
             at += step;
@@ -63,8 +63,8 @@ impl Arp {
         played
     }
 
-    /// The `count`th note of the arpeggio over `keys`, held at `at`.
-    fn pick(&self, keys: &[(u8, f32)], count: usize, at: Ticks) -> (u8, f32) {
+    /// The `count`th note of the arpeggio over `keys`, in order of pitch, held at `at`.
+    pub fn nth(&self, keys: &[(u8, f32)], count: usize, at: Ticks) -> (u8, f32) {
         let octaves = usize::from(self.octaves.clamp(1, 4));
         let climb = keys.len() * octaves;
         let index = match self.order {

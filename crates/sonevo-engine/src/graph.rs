@@ -2,7 +2,7 @@
 //! allocated beforehand.
 
 use sonevo_dsp::{Event, Param, Processor, Sample};
-use sonevo_project::Point;
+use sonevo_project::{Arp, Point, Ticks};
 use std::sync::Arc;
 
 /// The most frames played at once; a longer block is played this many at a time.
@@ -48,6 +48,84 @@ pub struct ChannelNode {
     pub held: u128,
     pub release: u128,
     pub meter: usize,
+    /// Its arpeggiator, for the keys played live.
+    pub live: Option<LiveArp>,
+}
+
+/// An arpeggiator for keys played live: their notes made as time goes, a step apart.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LiveArp {
+    pub arp: Arp,
+    /// The keys held, and how hard the last was struck.
+    pub keys: u128,
+    pub velocity: f32,
+    pub count: usize,
+    /// Frames until its next note, and the note sounding with the frames until it is let go of.
+    pub next: f64,
+    pub sounding: Option<(u8, f64)>,
+}
+
+impl LiveArp {
+    pub fn new(arp: Arp) -> LiveArp {
+        LiveArp { arp, keys: 0, velocity: 0.0, count: 0, next: 0.0, sounding: None }
+    }
+
+    pub fn press(&mut self, event: &Event) {
+        let bit = 1u128 << (event.key & 127);
+        if event.on {
+            if self.keys == 0 {
+                self.count = 0;
+                self.next = 0.0;
+            }
+            self.keys |= bit;
+            self.velocity = event.velocity;
+        } else {
+            self.keys &= !bit;
+        }
+    }
+
+    /// Its notes over the next `frames` frames, `step` frames apart, given to `out` in order.
+    pub fn run(&mut self, frames: usize, step: f64, mut out: impl FnMut(Event)) {
+        let frames = frames as f64;
+        let step = step.max(1.0);
+        let lasting = (step * f64::from(self.arp.gate.clamp(0.1, 1.0))).max(1.0);
+        loop {
+            let off = self.sounding.map(|(_, left)| left).filter(|&left| left < frames);
+            let on = Some(self.next).filter(|&next| self.keys != 0 && next < frames);
+            match (off, on) {
+                (Some(left), on) if on.is_none_or(|next| left <= next) => {
+                    if let Some((key, _)) = self.sounding.take() {
+                        out(Event { at: left as u32, key, velocity: 0.0, on: false });
+                    }
+                }
+                (_, Some(next)) => {
+                    if let Some((key, _)) = self.sounding.take() {
+                        out(Event { at: next as u32, key, velocity: 0.0, on: false });
+                    }
+                    let mut held = [(0u8, 0f32); 128];
+                    let mut count = 0;
+                    for key in 0..128u8 {
+                        if self.keys & (1 << key) != 0 {
+                            held[count] = (key, self.velocity);
+                            count += 1;
+                        }
+                    }
+                    let (key, velocity) = self.arp.nth(&held[..count], self.count, self.count as Ticks);
+                    out(Event { at: next as u32, key, velocity, on: true });
+                    self.sounding = Some((key, next + lasting));
+                    self.count += 1;
+                    self.next = next + step;
+                }
+                _ => break,
+            }
+        }
+        if let Some((_, left)) = &mut self.sounding {
+            *left -= frames;
+        }
+        if self.keys != 0 {
+            self.next -= frames;
+        }
+    }
 }
 
 impl ChannelNode {
@@ -199,5 +277,45 @@ impl Graph {
         for c in &mut self.channels {
             c.release |= c.held;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sonevo_project::ArpOrder;
+
+    #[test]
+    fn keys_held_live_are_played_one_after_the_other() {
+        let mut arp = LiveArp::new(Arp { order: ArpOrder::Up, step: 240, octaves: 1, gate: 0.5 });
+        arp.press(&Event { at: 0, key: 64, velocity: 0.9, on: true });
+        arp.press(&Event { at: 0, key: 60, velocity: 0.9, on: true });
+        let mut heard = Vec::new();
+        for _ in 0..2 {
+            let mut chunk = Vec::new();
+            arp.run(256, 100.0, |e| chunk.push((e.at, e.key, e.on)));
+            heard.push(chunk);
+        }
+        assert_eq!(
+            heard[0],
+            [
+                (0, 60, true),
+                (50, 60, false),
+                (100, 64, true),
+                (150, 64, false),
+                (200, 60, true),
+                (250, 60, false)
+            ]
+        );
+        assert_eq!(
+            heard[1],
+            [(44, 64, true), (94, 64, false), (144, 60, true), (194, 60, false), (244, 64, true)]
+        );
+        arp.press(&Event { at: 0, key: 60, velocity: 0.0, on: false });
+        arp.press(&Event { at: 0, key: 64, velocity: 0.0, on: false });
+        let mut last = Vec::new();
+        arp.run(256, 100.0, |e| last.push((e.at, e.key, e.on)));
+        // the note sounding ends; no other starts
+        assert_eq!(last, [(38, 64, false)]);
     }
 }

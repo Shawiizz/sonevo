@@ -203,5 +203,5 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 18. **Thème** : par défaut celui du système.
 19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.
-20. **Arpégiateur** : il joue les notes écrites dans les patterns ; les touches jouées en
-    direct au clavier sonnent encore ensemble, sans arpège.
+20. **Arpégiateur** : il joue les notes écrites et celles jouées en direct au clavier ; en direct
+    il suit le tempo mais pas la mesure (la première note part quand la touche est enfoncée).
