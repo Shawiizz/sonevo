@@ -500,12 +500,21 @@ fn places(app: AppHandle, state: State<App>) -> Vec<Entry> {
 
 /// Sends what changes as the song plays, thirty times a second.
 fn watch(app: AppHandle) {
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_millis(33));
-        let state = app.state::<App>();
-        let status = state.studio().status();
-        if app.emit("status", status).is_err() {
-            break;
+    std::thread::spawn(move || {
+        let mut tried = std::time::Instant::now();
+        loop {
+            std::thread::sleep(Duration::from_millis(33));
+            let state = app.state::<App>();
+            let status = state.studio().status();
+            // a card unplugged or taken by another program: opened again, every few seconds
+            if status.audio.failed && tried.elapsed() > Duration::from_secs(3) {
+                tried = std::time::Instant::now();
+                let audio = state.settings().audio();
+                state.studio().start_audio(&audio);
+            }
+            if app.emit("status", status).is_err() {
+                break;
+            }
         }
     });
 }

@@ -255,6 +255,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Place, move and stretch clips': 'Placer, déplacer et étirer les clips',
+  'Cut a clip in two where clicked': 'Couper un clip en deux là où on clique',
   Export: 'Exporter',
   What: 'Quoi',
   'The whole song': 'Tout le morceau',

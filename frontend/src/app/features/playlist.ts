@@ -57,6 +57,24 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
       <span>{{ t('Playlist') }}</span>
       <span class="hint">{{ t('Click to place') }} « {{ studio.pattern()?.name }} »</span>
       <span class="s-grow"></span>
+      <div class="s-seg" role="radiogroup">
+        <button
+          role="radio"
+          [attr.aria-checked]="tool() === 'draw'"
+          (click)="tool.set('draw')"
+          [title]="t('Place, move and stretch clips')"
+        >
+          <s-icon name="pencil" [size]="12" />
+        </button>
+        <button
+          role="radio"
+          [attr.aria-checked]="tool() === 'cut'"
+          (click)="tool.set('cut')"
+          [title]="t('Cut a clip in two where clicked')"
+        >
+          <s-icon name="cut" [size]="12" />
+        </button>
+      </div>
       <div class="s-seg" role="radiogroup" [title]="t('Clips snap to')">
         @for (s of snaps; track s.label) {
           <button role="radio" [attr.aria-checked]="snap() === s.ticks" (click)="snap.set(s.ticks)">
@@ -122,6 +140,7 @@ export class Playlist implements OnDestroy {
   ];
   /** 0 snaps to bars, whatever the signature. */
   protected readonly snap = signal(0);
+  protected readonly tool = signal<'draw' | 'cut'>('draw');
   protected readonly cursor = signal('default');
 
   private scrollX = 0;
@@ -468,6 +487,10 @@ export class Playlist implements OnDestroy {
       return;
     }
     const hit = this.hit(x, y);
+    if (hit && this.tool() === 'cut') {
+      this.cut(hit.clip, x);
+      return;
+    }
     if (!hit) {
       if (event.ctrlKey) {
         this.drag = { kind: 'select', x0: x, y0: y, x1: x, y1: y };
@@ -502,6 +525,28 @@ export class Playlist implements OnDestroy {
       this.drag = { kind: 'move', x, y, original, moved: event.altKey };
     }
     this.surface?.redraw();
+  }
+
+  /** `clip` cut in two at the step nearest `x`: the second part goes on from where the first ends. */
+  private cut(clip: Clip, x: number): void {
+    const at = Math.round(this.tickAt(x) / this.step()) * this.step();
+    if (at <= clip.start || at >= clip.start + clip.length) return;
+    const first: Clip = { ...clip, length: at - clip.start };
+    const second: Clip = {
+      ...clip,
+      id: newId(),
+      start: at,
+      length: clip.start + clip.length - at,
+      offset: (clip.offset ?? 0) + (at - clip.start),
+    };
+    this.selected = new Set([second.id]);
+    void this.studio.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putClip', clip: first },
+        { type: 'putClip', clip: second },
+      ],
+    });
   }
 
   /** The automation clip whose line is under (x, y), if any. */
@@ -588,7 +633,15 @@ export class Playlist implements OnDestroy {
     if (!drag) {
       const hit = y > RULER && x > HEADERS ? this.hit(x, y) : null;
       this.cursor.set(
-        hit ? (hit.edge ? 'ew-resize' : 'grab') : x > HEADERS && y > RULER ? 'copy' : 'default',
+        hit && this.tool() === 'cut'
+          ? 'col-resize'
+          : hit
+            ? hit.edge
+              ? 'ew-resize'
+              : 'grab'
+            : x > HEADERS && y > RULER
+              ? 'copy'
+              : 'default',
       );
       return;
     }

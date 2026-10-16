@@ -18,6 +18,8 @@ import { Icon } from '../shared/icon';
 import { hex, Surface } from '../shared/surface';
 
 const KEYS = 64;
+/** The notes copied last. */
+let copied: Note[] = [];
 const RULER = 24;
 const VELOCITY = 64;
 const EDGE = 6;
@@ -685,6 +687,22 @@ export class PianoRoll implements OnDestroy {
       this.working = notes.map((n, i) =>
         this.selected.has(i) ? { ...n, key: Math.max(0, Math.min(127, n.key + by)) } : n,
       );
+      this.commit();
+    } else if (
+      event.ctrlKey &&
+      (event.key.toLowerCase() === 'c' || event.key.toLowerCase() === 'x')
+    ) {
+      // copied as they are placed, to be pasted in any pattern, for any channel
+      copied = [...this.selected].map((i) => ({ ...notes[i] }));
+      if (event.key.toLowerCase() === 'x') {
+        this.working = notes.filter((_, i) => !this.selected.has(i));
+        this.selected.clear();
+        this.commit();
+      }
+    } else if (event.ctrlKey && event.key.toLowerCase() === 'v' && copied.length) {
+      // pasted where they were, chosen, to be dragged where wanted
+      this.working = [...notes, ...copied.map((n) => ({ ...n }))];
+      this.selected = new Set(copied.map((_, i) => notes.length + i));
       this.commit();
     } else if (event.key === 'Escape') {
       this.selected.clear();
