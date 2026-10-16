@@ -3,6 +3,7 @@
 //! blocks; old graphs come back to be freed, so that the audio thread never frees nor allocates.
 
 mod compile;
+mod flac;
 mod graph;
 mod loudness;
 mod meters;
@@ -12,6 +13,7 @@ mod scope;
 mod wav;
 
 pub use compile::{played_notes, Mode, Plugins};
+pub use flac::write_flac;
 pub use loudness::loudness;
 pub use renderer::Renderer;
 pub use samples::{decode, DecodeError, Samples};

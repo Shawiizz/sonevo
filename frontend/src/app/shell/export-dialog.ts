@@ -51,6 +51,17 @@ type Part = 'song' | 'loop' | 'stems';
       </section>
       <section class="row">
         <label class="s-field">
+          <span>{{ t('Format') }}</span>
+          <select [value]="format()" (change)="setFormat($any($event.target).value)">
+            <option value="wav" [selected]="format() === 'wav'">
+              WAV · {{ t('read by everything') }}
+            </option>
+            <option value="flac" [selected]="format() === 'flac'">
+              FLAC · {{ t('the same sound, about half the size') }}
+            </option>
+          </select>
+        </label>
+        <label class="s-field">
           <span>{{ t('Quality') }}</span>
           <select [value]="depth()" (change)="depth.set($any($event.target).value)">
             <option value="16" [selected]="depth() === '16'">
@@ -59,9 +70,11 @@ type Part = 'song' | 'loop' | 'stems';
             <option value="24" [selected]="depth() === '24'">
               24 bits · {{ t('for mastering') }}
             </option>
-            <option value="32" [selected]="depth() === '32'">
-              32 bits float · {{ t('every bit kept') }}
-            </option>
+            @if (format() === 'wav') {
+              <option value="32" [selected]="depth() === '32'">
+                32 bits float · {{ t('every bit kept') }}
+              </option>
+            }
           </select>
         </label>
         <label class="s-field">
@@ -164,6 +177,13 @@ export class ExportDialog {
 
   protected readonly part = signal<Part>('song');
   protected readonly depth = signal('24');
+  protected readonly format = signal<'wav' | 'flac'>('wav');
+
+  /** FLAC keeps 24 bits at most. */
+  protected setFormat(format: 'wav' | 'flac'): void {
+    this.format.set(format);
+    if (format === 'flac' && this.depth() === '32') this.depth.set('24');
+  }
   protected readonly rate = signal(48000);
   protected readonly hasLoop = computed(() => !!this.studio.song()?.loopRegion);
   protected readonly hasTracks = computed(() => (this.studio.song()?.inserts.length ?? 0) > 0);
@@ -176,12 +196,12 @@ export class ExportDialog {
         ? ((await open({ directory: true, title: this.t('The folder the tracks go in') })) as
             string | null)
         : await save({
-            title: this.t('Export the song as a WAV file'),
-            defaultPath: `${name}${part === 'loop' ? ' (loop)' : ''}.wav`,
-            filters: [{ name: 'WAV', extensions: ['wav'] }],
+            title: this.t('Export the song as a sound file'),
+            defaultPath: `${name}${part === 'loop' ? ' (loop)' : ''}.${this.format()}`,
+            filters: [{ name: this.format().toUpperCase(), extensions: [this.format()] }],
           });
     if (!path) return;
     this.closed.emit();
-    await this.files.export(path, part, this.depth(), this.rate());
+    await this.files.export(path, part, this.format(), this.depth(), this.rate());
   }
 }

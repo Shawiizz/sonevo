@@ -50,10 +50,17 @@ export const api = {
   outputs: () => invoke<OutputInfo[]>('outputs'),
   settings: () => invoke<Settings>('settings'),
   setSettings: (settings: Settings) => invoke<AudioStatus>('set_settings', { settings }),
-  exportWav: (path: string, part: 'song' | 'loop' | 'stems', depth: string, sampleRate: number) =>
-    invoke<{ missing: string[]; loudness: number | null; peak: number | null }>('export_wav', {
+  exportAudio: (
+    path: string,
+    part: 'song' | 'loop' | 'stems',
+    format: 'wav' | 'flac',
+    depth: string,
+    sampleRate: number,
+  ) =>
+    invoke<{ missing: string[]; loudness: number | null; peak: number | null }>('export_audio', {
       path,
       part,
+      format,
       depth,
       sampleRate,
     }),

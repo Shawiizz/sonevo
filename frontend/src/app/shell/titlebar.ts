@@ -145,7 +145,7 @@ export class Titlebar {
       { label: t('Save'), key: 'Ctrl+S', run: () => this.files.save() },
       { label: t('Save as…'), key: 'Ctrl+Shift+S', run: () => this.files.saveAs() },
       { separator: true, label: '' },
-      { label: t('Export as WAV…'), key: 'Ctrl+E', run: () => this.files.exportWav() },
+      { label: t('Export as WAV or FLAC…'), key: 'Ctrl+E', run: () => this.files.exportWav() },
       { label: t('Export the song as MIDI…'), run: () => this.files.exportMidi(true) },
     ]);
   }

@@ -445,12 +445,13 @@ struct Exported {
     peak: Option<f64>,
 }
 
-/// The song played through into WAV files at `path`.
+/// The song played through into WAV or FLAC files at `path`.
 #[tauri::command(async)]
-fn export_wav(
+fn export_audio(
     app: State<App>,
     path: PathBuf,
     part: Part,
+    format: String,
     depth: String,
     sample_rate: u32,
 ) -> Answer<Exported> {
@@ -458,15 +459,25 @@ fn export_wav(
         let studio = app.studio();
         (studio.song.clone(), studio.working_folder().to_owned())
     };
-    let depth = match depth.as_str() {
-        "16" => Depth::Pcm16,
-        "32" => Depth::Float32,
+    let flac = format == "flac";
+    let bits = match depth.as_str() {
+        "16" => 16,
+        "32" if !flac => 32,
+        _ => 24,
+    };
+    let depth = match bits {
+        16 => Depth::Pcm16,
+        32 => Depth::Float32,
         _ => Depth::Pcm24,
     };
     let rate = sample_rate.clamp(22_050, 192_000);
     let write = |rendered: &sonevo_engine::Rendered, path: &Path| -> Answer<()> {
-        write_wav(path, rendered.sample_rate, &rendered.left, &rendered.right, depth)
-            .map_err(|e| e.to_string())
+        let (rate, left, right) = (rendered.sample_rate, &rendered.left, &rendered.right);
+        if flac {
+            sonevo_engine::write_flac(path, rate, left, right, bits).map_err(|e| e.to_string())
+        } else {
+            write_wav(path, rate, left, right, depth).map_err(|e| e.to_string())
+        }
     };
     // a whole file, how loud it sounds said with it
     let measured = |rendered: sonevo_engine::Rendered| -> Answer<Exported> {
@@ -490,7 +501,7 @@ fn export_wav(
             for (i, insert) in tracks {
                 let name: String = insert.name.chars().filter(|c| !r#"<>:"/\\|?*"#.contains(*c)).collect();
                 let rendered = sonevo_engine::render_stem(&song, Some(&folder), rate, insert.id);
-                write(&rendered, &path.join(format!("{i:02} {name}.wav")))?;
+                write(&rendered, &path.join(format!("{i:02} {name}.{}", if flac { "flac" } else { "wav" })))?;
                 missing.extend(rendered.missing);
             }
             missing.dedup();
@@ -883,7 +894,7 @@ pub fn run() {
             outputs,
             settings,
             set_settings,
-            export_wav,
+            export_audio,
             midi_file,
             export_midi,
             stretch_sample,

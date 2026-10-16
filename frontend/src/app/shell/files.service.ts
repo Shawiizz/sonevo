@@ -125,12 +125,13 @@ export class Files {
   async export(
     path: string,
     part: 'song' | 'loop' | 'stems',
+    format: 'wav' | 'flac',
     depth: string,
     rate: number,
   ): Promise<void> {
     this.busy.set(this.i18n.t('Exporting…'));
     try {
-      const done = await api.exportWav(path, part, depth, rate);
+      const done = await api.exportAudio(path, part, format, depth, rate);
       const t = this.i18n.t;
       if (done.missing.length) this.say(done.missing.join(' · '));
       else if (done.loudness !== null && done.peak !== null)
