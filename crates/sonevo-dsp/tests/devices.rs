@@ -148,6 +148,47 @@ fn the_compressor_brings_loud_sounds_down() {
 }
 
 #[test]
+fn the_chorus_plays_its_copy_late() {
+    let chorus = builtin("sonevo.chorus").unwrap();
+    let mut device = chorus.make(RATE);
+    device.set(chorus.param("depth").unwrap(), 0.0);
+    device.set(chorus.param("mix").unwrap(), 1.0);
+    let mut left = vec![0.0; BLOCK * 2];
+    left[0] = 1.0;
+    let mut right = left.clone();
+    device.process(&CONTEXT, &[], &mut left, &mut right);
+    let loudest =
+        left.iter().enumerate().fold((0, 0.0f32), |a, (i, s)| if s.abs() > a.1 { (i, s.abs()) } else { a });
+    // 12 milliseconds late
+    assert_eq!(loudest.0, 576, "{loudest:?}");
+}
+
+#[test]
+fn the_phaser_cuts_a_notch() {
+    let phaser = builtin("sonevo.phaser").unwrap();
+    let level = |hz: f32| {
+        let mut device = phaser.make(RATE);
+        device.set(phaser.param("depth").unwrap(), 0.0);
+        device.set(phaser.param("feedback").unwrap(), 0.0);
+        device.set(phaser.param("stages").unwrap(), 0.0);
+        let mut last = 0.0f32;
+        for block in 0..40 {
+            let mut left: Vec<f32> = (0..BLOCK)
+                .map(|i| (std::f32::consts::TAU * hz * (i + block * BLOCK) as f32 / RATE).sin())
+                .collect();
+            let mut right = left.clone();
+            device.process(&CONTEXT, &[], &mut left, &mut right);
+            last = left.iter().fold(0.0, |a, s| a.max(s.abs()));
+        }
+        last
+    };
+    // four stages at 900 Hz: each a quarter turn there, an eighth at about 373 Hz, where
+    // the four together are half a turn and cancel what comes in
+    assert!(level(373.0) < 0.05, "{}", level(373.0));
+    assert!(level(900.0) > 0.95, "{}", level(900.0));
+}
+
+#[test]
 fn the_delay_echoes_on_the_beat() {
     let delay = builtin("sonevo.delay").unwrap();
     let mut device = delay.make(RATE);

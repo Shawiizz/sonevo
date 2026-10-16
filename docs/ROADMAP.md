@@ -67,7 +67,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Sampler**, **Drums** (8 sons synthétisés), **Synthé** (2 oscillateurs, filtre résonant
   avec enveloppe, unisson jusqu'à 4).
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
-  filtre, limiteur avec anticipation.
+  filtre, limiteur avec anticipation, chorus (et flanger), phaser.
 - ✅ Tous leurs réglages sont automatisables.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui

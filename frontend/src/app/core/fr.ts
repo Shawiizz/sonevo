@@ -255,6 +255,16 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Chorus: 'Chorus',
+  Phaser: 'Phaser',
+  Speed: 'Vitesse',
+  Depth: 'Profondeur',
+  Center: 'Centre',
+  Stages: 'Étages',
+  'A chorus: copies of the sound a little late, so it sounds wider and thicker. Short and with feedback, a flanger.':
+    'Un chorus : des copies du son un peu en retard, pour un son plus large et plus épais. Court et réinjecté, un flanger.',
+  'A phaser: notches sweeping up and down the sound, for a swirling, moving tone.':
+    'Un phaser : des creux qui balaient le son de haut en bas, pour un timbre qui tourbillonne.',
   Swing: 'Swing',
   'Swing: every second sixteenth played a little late, for groove':
     'Swing : une double-croche sur deux jouée un peu en retard, pour le groove',

@@ -17,6 +17,7 @@ describe('knob', () => {
     expect(formatValue(1.5, 's')).toBe('1.50 s');
     expect(formatValue(440, 'Hz')).toBe('440 Hz');
     expect(formatValue(2500, 'Hz')).toBe('2.50 kHz');
+    expect(formatValue(0.4, 'Hz')).toBe('0.40 Hz');
     expect(formatValue(-6, 'dB')).toBe('-6.00 dB');
     expect(formatValue(0.4, '')).toBe('0.40');
   });

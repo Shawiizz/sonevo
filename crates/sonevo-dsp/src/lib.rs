@@ -146,6 +146,20 @@ pub const BUILTINS: &[Builtin] = &[
         params: effects::limiter::PARAMS,
         make: |rate| Box::new(effects::limiter::Limiter::new(rate)),
     },
+    Builtin {
+        name: "sonevo.chorus",
+        label: "Chorus",
+        instrument: false,
+        params: effects::chorus::PARAMS,
+        make: |rate| Box::new(effects::chorus::Chorus::new(rate)),
+    },
+    Builtin {
+        name: "sonevo.phaser",
+        label: "Phaser",
+        instrument: false,
+        params: effects::phaser::PARAMS,
+        make: |rate| Box::new(effects::phaser::Phaser::new(rate)),
+    },
 ];
 
 pub fn builtin(name: &str) -> Option<&'static Builtin> {

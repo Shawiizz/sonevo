@@ -18,7 +18,7 @@ export function formatValue(value: number, unit: string): string {
   if (unit === 'Hz') {
     return value >= 1000
       ? `${(value / 1000).toFixed(value >= 10000 ? 1 : 2)} kHz`
-      : `${Math.round(value)} Hz`;
+      : `${value < 10 ? value.toFixed(2) : Math.round(value)} Hz`;
   }
   const abs = Math.abs(value);
   const figures = abs >= 100 ? 0 : abs >= 10 ? 1 : 2;

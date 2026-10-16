@@ -22,6 +22,9 @@ const ABOUT: Record<string, string> = {
   'sonevo.distortion': 'A distortion: drives the sound until it grits.',
   'sonevo.filter': 'A filter: lets only the lows (or the highs) through; turn the cutoff to sweep.',
   'sonevo.limiter': 'A limiter, for the master: nothing goes past the ceiling, so nothing clips.',
+  'sonevo.chorus':
+    'A chorus: copies of the sound a little late, so it sounds wider and thicker. Short and with feedback, a flanger.',
+  'sonevo.phaser': 'A phaser: notches sweeping up and down the sound, for a swirling, moving tone.',
 };
 
 /**

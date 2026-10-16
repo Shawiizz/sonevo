@@ -17,9 +17,11 @@ pub mod builtin {
     pub const DISTORTION: &str = "sonevo.distortion";
     pub const FILTER: &str = "sonevo.filter";
     pub const LIMITER: &str = "sonevo.limiter";
+    pub const CHORUS: &str = "sonevo.chorus";
+    pub const PHASER: &str = "sonevo.phaser";
 
-    pub const ALL: [&str; 10] =
-        [SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER];
+    pub const ALL: [&str; 12] =
+        [SYNTH, DRUMS, SAMPLER, EQ, COMPRESSOR, DELAY, REVERB, DISTORTION, FILTER, LIMITER, CHORUS, PHASER];
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
