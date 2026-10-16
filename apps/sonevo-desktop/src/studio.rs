@@ -300,11 +300,9 @@ impl Studio {
     }
 
     fn save_plugin_states(&self, folder: &Path) {
-        let instruments = self.song.channels.iter().map(|c| &c.instrument);
-        let effects = self.song.inserts.iter().chain([&self.song.master]).flat_map(|i| i.effects.iter());
-        for device in instruments.chain(effects).filter(|d| d.builtin_name().is_none()) {
-            if let Some(bytes) = sonevo_plugins::save_state(device.id) {
-                let file = sonevo_plugins::state_file(folder, device.id);
+        for device in plugin_devices(&self.song) {
+            if let Some(bytes) = sonevo_plugins::save_state(device) {
+                let file = sonevo_plugins::state_file(folder, device);
                 if let Some(dir) = file.parent() {
                     let _ = std::fs::create_dir_all(dir);
                 }
@@ -616,6 +614,13 @@ pub fn used_samples(song: &Song) -> Vec<String> {
     names.sort();
     names.dedup();
     names
+}
+
+/// The devices of `song` played by plugins: instruments, then effects.
+pub fn plugin_devices(song: &Song) -> Vec<Id> {
+    let instruments = song.channels.iter().map(|c| &c.instrument);
+    let effects = song.inserts.iter().chain([&song.master]).flat_map(|i| i.effects.iter());
+    instruments.chain(effects).filter(|d| d.builtin_name().is_none()).map(|d| d.id).collect()
 }
 
 #[cfg(test)]

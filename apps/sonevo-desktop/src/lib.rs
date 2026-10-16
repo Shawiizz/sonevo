@@ -14,7 +14,7 @@ use sonevo_engine::{write_wav, Depth, Mode};
 use sonevo_project::{write_midi, Edit, Id, Midi, Note, Song, Ticks};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use studio::{Studio, View};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -403,7 +403,7 @@ struct PluginView {
 #[tauri::command(async)]
 fn listen(app: State<App>, path: Option<PathBuf>) -> Answer<()> {
     let sample = match path {
-        Some(path) => Some(std::sync::Arc::new(sonevo_engine::decode(&path).map_err(|e| e.to_string())?)),
+        Some(path) => Some(Arc::new(sonevo_engine::decode(&path).map_err(|e| e.to_string())?)),
         None => None,
     };
     if let Some(engine) = app.studio().engine() {
@@ -515,6 +515,12 @@ fn level_for_streaming(rendered: &mut sonevo_engine::Rendered) {
     rendered.left.iter_mut().chain(rendered.right.iter_mut()).for_each(|s| *s *= gain);
 }
 
+/// The plugins of `song` for playing it to a file, as they sound now; the states saved in
+/// `folder` for those not playing.
+fn offline_plugins(song: &Song, folder: &Path) -> Arc<dyn sonevo_engine::Plugins> {
+    Arc::new(sonevo_plugins::Offline::new(studio::plugin_devices(song), Some(folder)))
+}
+
 /// The song played through into WAV or FLAC files at `path`.
 #[tauri::command(async)]
 fn export_audio(
@@ -542,6 +548,9 @@ fn export_audio(
         _ => Depth::Pcm24,
     };
     let rate = sample_rate.clamp(22_050, 192_000);
+    let plugins = offline_plugins(&song, &folder);
+    let played =
+        |region, mode| sonevo_engine::bounce(&song, Some(&folder), rate, region, mode, Some(plugins.clone()));
     let write = |rendered: &sonevo_engine::Rendered, path: &Path| -> Answer<()> {
         let (rate, left, right) = (rendered.sample_rate, &rendered.left, &rendered.right);
         if flac {
@@ -564,8 +573,8 @@ fn export_audio(
         })
     };
     match part {
-        Part::Song => measured(sonevo_engine::render_part(&song, Some(&folder), rate, None)),
-        Part::Loop => measured(sonevo_engine::render_part(&song, Some(&folder), rate, song.loop_region)),
+        Part::Song => measured(played(None, Mode::Song)),
+        Part::Loop => measured(played(song.loop_region, Mode::Song)),
         Part::Stems => {
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
             let mut missing = Vec::new();
@@ -574,7 +583,7 @@ fn export_audio(
                 .chain(song.inserts.iter().enumerate().map(|(i, t)| (i + 1, t)));
             for (i, insert) in tracks {
                 let name: String = insert.name.chars().filter(|c| !r#"<>:"/\\|?*"#.contains(*c)).collect();
-                let rendered = sonevo_engine::render_stem(&song, Some(&folder), rate, insert.id);
+                let rendered = played(None, Mode::Stem(insert.id));
                 write(&rendered, &path.join(format!("{i:02} {name}.{}", if flac { "flac" } else { "wav" })))?;
                 missing.extend(rendered.missing);
             }
@@ -758,7 +767,8 @@ fn check_mix(app: State<App>) -> MixCheck {
         let studio = app.studio();
         (studio.song.clone(), studio.working_folder().to_owned())
     };
-    let rendered = sonevo_engine::render(&song, Some(&folder), 48_000);
+    let plugins = offline_plugins(&song, &folder);
+    let rendered = sonevo_engine::bounce(&song, Some(&folder), 48_000, None, Mode::Song, Some(plugins));
     let found = sonevo_engine::analyse(&rendered.left, &rendered.right, rendered.sample_rate);
     let limited = song
         .master

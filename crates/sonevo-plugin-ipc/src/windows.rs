@@ -44,6 +44,8 @@ struct Shared {
     played: AtomicU64,
     /// The engine is closing: the plugin's process ends.
     stop: AtomicBool,
+    /// The plugin's process has the link open: every block asked from then on is played.
+    opened: AtomicBool,
     slots: [Slot; 2],
 }
 
@@ -158,6 +160,17 @@ impl EngineEnd {
         Ok(EngineEnd { mapping: Mapping::make(name, true)?, next: 1 })
     }
 
+    /// Waits for at most `timeout` for the plugin's process to open the link: false if it did
+    /// not, and a block asked before would never be played.
+    pub fn wait_opened(&self, timeout: Duration) -> bool {
+        let start = Instant::now();
+        let opened = || self.mapping.shared().opened.load(Ordering::Acquire);
+        while !opened() && start.elapsed() < timeout {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        opened()
+    }
+
     /// Asks for the next block, `frames` long with `notes` and the settings `changes` in it,
     /// and the sound in `left` and `right` for an effect to change: its number.
     pub fn ask(&mut self, notes: &[Note], changes: &[ParamChange], left: &[f32], right: &[f32]) -> u64 {
@@ -245,6 +258,7 @@ impl PluginEnd {
         let mapping = Mapping::make(name, false)?;
         // a process started again goes on from where the engine is
         let last = mapping.shared().asked.load(Ordering::Acquire);
+        mapping.shared().opened.store(true, Ordering::Release);
         Ok(PluginEnd { mapping, last })
     }
 

@@ -11,6 +11,7 @@ use sonevo_project::Id;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -250,6 +251,68 @@ impl sonevo_engine::Plugins for Clap {
         Remote::start(Path::new(bundle), id, sample_rate, params, Some((&control(device), state.as_deref())))
             .map(|remote| Box::new(remote) as Box<dyn Processor>)
             .map_err(|e| e.to_string())
+    }
+}
+
+/// CLAP plugins for a song played to a file: each started again from the state the one playing
+/// has now (or, if none plays, the state saved with the song), and waited for at each block.
+pub struct Offline {
+    states: HashMap<Id, PathBuf>,
+    folder: PathBuf,
+}
+
+impl Offline {
+    /// The states of the plugins `devices` play, asked of them now; those not playing given
+    /// the states saved in the song's folder `saved`.
+    pub fn new(devices: impl IntoIterator<Item = Id>, saved: Option<&Path>) -> Offline {
+        static RENDERS: AtomicUsize = AtomicUsize::new(0);
+        let folder = std::env::temp_dir().join(format!(
+            "sonevo-render-{}-{}",
+            std::process::id(),
+            RENDERS.fetch_add(1, Ordering::Relaxed)
+        ));
+        let mut states = HashMap::new();
+        for device in devices {
+            let file = folder.join(format!("{device}.state"));
+            let state = match save_state(device) {
+                Some(bytes) => std::fs::create_dir_all(&folder)
+                    .and_then(|()| std::fs::write(&file, bytes))
+                    .ok()
+                    .map(|()| file),
+                None => saved.map(|f| state_file(f, device)).filter(|f| f.is_file()),
+            };
+            if let Some(state) = state {
+                states.insert(device, state);
+            }
+        }
+        Offline { states, folder }
+    }
+}
+
+impl sonevo_engine::Plugins for Offline {
+    fn params(&self, bundle: &str, id: &str) -> &'static [Param] {
+        params(bundle, id)
+    }
+
+    fn start(
+        &self,
+        device: Id,
+        bundle: &str,
+        id: &str,
+        sample_rate: f32,
+    ) -> Result<Box<dyn Processor>, String> {
+        // named apart from the one playing, whose window and state stay its own
+        let control = format!("{}-render", control(device));
+        let state = self.states.get(&device).map(PathBuf::as_path);
+        Remote::start(Path::new(bundle), id, sample_rate, params(bundle, id), Some((&control, state)))
+            .map(|remote| Box::new(remote.patient()) as Box<dyn Processor>)
+            .map_err(|e| e.to_string())
+    }
+}
+
+impl Drop for Offline {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.folder);
     }
 }
 

@@ -246,25 +246,31 @@ pub fn render(song: &Song, folder: Option<&Path>, sample_rate: u32) -> Rendered 
 
 /// Plays `song` as [`render`] does, only from `region`'s start to its end if given.
 pub fn render_part(song: &Song, folder: Option<&Path>, sample_rate: u32, region: Option<Region>) -> Rendered {
-    render_with(song, folder, sample_rate, region, Mode::Song)
+    bounce(song, folder, sample_rate, region, Mode::Song, None)
 }
 
 /// Plays `song` as [`render`] does, as the mixer track `insert` alone sends it to the
 /// master; the master's id gives what goes to the master straight, through no track.
 pub fn render_stem(song: &Song, folder: Option<&Path>, sample_rate: u32, insert: Id) -> Rendered {
-    render_with(song, folder, sample_rate, None, Mode::Stem(insert))
+    bounce(song, folder, sample_rate, None, Mode::Stem(insert), None)
 }
 
-fn render_with(
+/// Plays `song` as [`render`] does, from `region` if given, as `mode` says, its plugins played
+/// by `plugins`.
+pub fn bounce(
     song: &Song,
     folder: Option<&Path>,
     sample_rate: u32,
     region: Option<Region>,
     mode: Mode,
+    plugins: Option<Arc<dyn Plugins>>,
 ) -> Rendered {
     let mut song = song.clone();
     song.loop_region = region.filter(|r| r.end > r.start);
     let (mut engine, mut renderer) = Engine::new(sample_rate as f32);
+    if let Some(plugins) = plugins {
+        engine.set_plugins(plugins);
+    }
     let missing = engine.load(&song, mode, folder);
     if let Some(region) = song.loop_region {
         engine.seek(region.start);

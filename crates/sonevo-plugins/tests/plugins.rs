@@ -151,6 +151,44 @@ fn a_song_plays_a_plugin_through_the_engine() {
 }
 
 #[test]
+fn a_song_played_to_a_file_plays_its_plugins_from_the_first_block() {
+    use sonevo_project::{Clip, ClipContent, Device, DeviceKind, Id, Note, Song, PPQ};
+    let dir = installed();
+    let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
+    let mut song = Song::new("Plugin");
+    song.tempo = 120.0;
+    song.channels[0].instrument = Device {
+        kind: DeviceKind::Clap {
+            bundle: bundle.to_string_lossy().into_owned(),
+            plugin: "dev.sonevo.test-synth".into(),
+        },
+        ..Device::builtin("")
+    };
+    let pattern = song.patterns[0].id;
+    song.patterns[0]
+        .notes
+        .insert(song.channels[0].id, vec![Note { start: 0, length: 2 * PPQ, key: 60, velocity: 0.9 }]);
+    let length = song.patterns[0].length;
+    let track = song.tracks[0].id;
+    song.clips.push(Clip {
+        id: Id::new(),
+        track,
+        start: 0,
+        length,
+        offset: 0,
+        content: ClipContent::Pattern { pattern },
+    });
+    let plugins = std::sync::Arc::new(sonevo_plugins::Offline::new([song.channels[0].instrument.id], None));
+    let start = Instant::now();
+    let rendered = sonevo_engine::bounce(&song, None, 48_000, None, sonevo_engine::Mode::Song, Some(plugins));
+    assert!(rendered.missing.is_empty(), "{:?}", rendered.missing);
+    // the plugin waited for as it loads, not given up on
+    assert!(start.elapsed() < Duration::from_secs(10), "{:?}", start.elapsed());
+    let first = rendered.left[..2400].iter().fold(0.0f32, |a, s| a.max(s.abs()));
+    assert!(first > 0.01, "the first blocks were silent");
+}
+
+#[test]
 fn a_plugins_settings_are_read_and_set_from_the_song() {
     use sonevo_project::{Device, DeviceKind, Song};
     let dir = installed();

@@ -11,6 +11,8 @@ use std::time::{Duration, Instant};
 
 /// The part of a block's time a plugin is given before its block is played as silence.
 const BUDGET: f64 = 0.6;
+/// How long a song played to a file waits for a block, the plugin's loading included.
+const PATIENCE: Duration = Duration::from_secs(30);
 /// The most frames the engine asks for at once.
 const MAX_FRAMES: u32 = 256;
 
@@ -36,6 +38,8 @@ pub struct Remote {
     /// The settings changed since the last block, by index.
     changed: Vec<usize>,
     changes: [ParamChange; MAX_PARAMS],
+    /// Each block waited for, as a song played to a file can be: until the plugin is late once.
+    patient: bool,
     stop: Arc<AtomicBool>,
     watcher: Option<std::thread::JoinHandle<()>>,
 }
@@ -83,9 +87,17 @@ impl Remote {
             values: vec![None; params.len()],
             changed: Vec::with_capacity(params.len()),
             changes: [ParamChange { at: 0, id: 0, value: 0.0 }; MAX_PARAMS],
+            patient: false,
             stop,
             watcher: Some(watcher),
         })
+    }
+
+    /// The plugin waited for at each block, however long it takes, as a song played to a file
+    /// can be; a plugin late even so is no longer waited for.
+    pub fn patient(mut self) -> Remote {
+        self.patient = true;
+        self
     }
 
     pub fn restarts(&self) -> u64 {
@@ -193,7 +205,15 @@ impl Processor for Remote {
                 }
             }
         }
-        let budget = Duration::from_secs_f64(left.len() as f64 / f64::from(self.sample_rate) * BUDGET);
+        // a block asked before the process opens the link is never played: not asked before
+        if self.patient && !end.wait_opened(PATIENCE) {
+            self.patient = false;
+        }
+        let budget = if self.patient {
+            PATIENCE
+        } else {
+            Duration::from_secs_f64(left.len() as f64 / f64::from(self.sample_rate) * BUDGET)
+        };
         let block = end.ask(&self.notes[..count], &self.changes[..changed], left, right);
         if end.take(block, budget, left, right) {
             self.resend = false;
@@ -203,6 +223,7 @@ impl Processor for Remote {
             // a block played late: an effect lets the sound through as it came, an instrument
             // given silence is silent
             self.resend = true;
+            self.patient = false;
         }
     }
 
