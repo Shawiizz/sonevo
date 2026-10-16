@@ -256,6 +256,12 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Keep this song as a template…': 'Garder ce morceau comme modèle…',
+  'Name of the template': 'Nom du modèle',
+  'Kept as a template': 'Gardé comme modèle',
+  'Delete one of mine…': 'Supprimer un des miens…',
+  "A template's name cannot hold signs such as / or :":
+    "Le nom d'un modèle ne peut pas contenir de signes comme / ou :",
   Format: 'Format',
   'read by everything': 'lu partout',
   'the same sound, about half the size': 'le même son, environ deux fois plus léger',

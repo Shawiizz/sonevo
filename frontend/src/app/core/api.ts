@@ -66,6 +66,9 @@ export const api = {
     }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
+  myTemplates: () => invoke<string[]>('my_templates'),
+  saveTemplate: (name: string) => invoke<void>('save_template', { name }),
+  deleteTemplate: (name: string) => invoke<void>('delete_template', { name }),
   stretchSample: (sample: string, factor: number) =>
     invoke<string>('stretch_sample', { sample, factor }),
   transposeSample: (sample: string, semitones: number) =>

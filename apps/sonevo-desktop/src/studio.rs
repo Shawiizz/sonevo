@@ -263,6 +263,12 @@ impl Studio {
 
     /// Another song in place of this one, its history forgotten.
     pub fn replace(&mut self, song: Song, folder: Option<PathBuf>) {
+        self.reset_to(song, folder);
+        self.sync();
+    }
+
+    /// `song` in place of the one open, at `folder`, not played yet.
+    fn reset_to(&mut self, song: Song, folder: Option<PathBuf>) {
         if let Some(engine) = &mut self.engine {
             engine.stop();
             engine.seek(0);
@@ -276,7 +282,6 @@ impl Studio {
         self.dirty = false;
         self.unkept = false;
         self.mode = Mode::Song;
-        self.sync();
     }
 
     pub fn open(&mut self, folder: &Path) -> Result<Vec<String>, String> {
@@ -354,7 +359,8 @@ impl Studio {
     }
 
     /// Saves into `folder`, the sounds the song plays taken along.
-    pub fn save_as(&mut self, folder: &Path) -> Result<(), String> {
+    /// The sounds the song uses copied from where it keeps them into `folder`'s.
+    fn copy_samples(&self, folder: &Path) -> Result<(), String> {
         let from = self.working_folder().join("samples");
         let to = folder.join("samples");
         if from.is_dir() && from != to {
@@ -366,6 +372,39 @@ impl Studio {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// The song kept as a template in `folder`, its sounds and its plugins' states with it; the
+    /// song itself goes on where it was.
+    pub fn save_template(&self, folder: &Path) -> Result<(), String> {
+        self.copy_samples(folder)?;
+        sonevo_project::save(folder, &self.song).map_err(|e| e.to_string())?;
+        self.save_plugin_states(folder);
+        Ok(())
+    }
+
+    /// A new song made from the template in `folder`, not saved yet: a copy of its sounds and
+    /// of its plugins' states its own, the template left as it is.
+    pub fn start_from_template(&mut self, folder: &Path) -> Result<(), String> {
+        let (song, _) = sonevo_project::load(folder).map_err(|e| e.to_string())?;
+        // its sounds copied before it is played, for the engine to find them
+        self.reset_to(song, None);
+        let draft = self.working_folder().to_owned();
+        for part in ["samples", "plugins"] {
+            let Ok(entries) = std::fs::read_dir(folder.join(part)) else { continue };
+            std::fs::create_dir_all(draft.join(part)).map_err(|e| e.to_string())?;
+            for entry in entries.flatten().filter(|e| e.path().is_file()) {
+                std::fs::copy(entry.path(), draft.join(part).join(entry.file_name()))
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        self.sync();
+        Ok(())
+    }
+
+    pub fn save_as(&mut self, folder: &Path) -> Result<(), String> {
+        self.copy_samples(folder)?;
         sonevo_project::save(folder, &self.song).map_err(|e| e.to_string())?;
         self.save_plugin_states(folder);
         self.forget_autosave();

@@ -79,9 +79,15 @@ fn redo(app: State<App>) -> serde_json::Value {
     view(&mut studio)
 }
 
-/// A new song: empty, the demo, or one of the templates.
+/// A new song: empty, the demo, one of Sonevo's templates or one saved (`mine:<name>`).
 #[tauri::command]
-fn new_song(app: State<App>, template: Option<String>) -> serde_json::Value {
+fn new_song(app: State<App>, template: Option<String>) -> Answer<serde_json::Value> {
+    if let Some(name) = template.as_deref().and_then(|t| t.strip_prefix("mine:")) {
+        let folder = template_folder(&app, name)?;
+        let mut studio = app.studio();
+        studio.start_from_template(&folder)?;
+        return Ok(view(&mut studio));
+    }
     let song = match template.as_deref() {
         Some("demo") => demo::song(),
         Some(name) => templates::song(name).unwrap_or_else(|| Song::new("Untitled")),
@@ -89,7 +95,49 @@ fn new_song(app: State<App>, template: Option<String>) -> serde_json::Value {
     };
     let mut studio = app.studio();
     studio.replace(song, None);
-    view(&mut studio)
+    Ok(view(&mut studio))
+}
+
+/// Where the template `name` the user saved is kept.
+fn template_folder(app: &App, name: &str) -> Answer<PathBuf> {
+    let name = name.trim();
+    if name.is_empty()
+        || name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
+        || name.starts_with('.')
+    {
+        return Err("A template's name cannot hold signs such as / or :".into());
+    }
+    Ok(app.settings_path.with_file_name("templates").join(format!("{name}.sonevo")))
+}
+
+/// The templates the user saved, by name.
+#[tauri::command]
+fn my_templates(app: State<App>) -> Vec<String> {
+    let folder = app.settings_path.with_file_name("templates");
+    let mut names: Vec<String> = std::fs::read_dir(folder)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| is_song(&e.path()))
+        .filter_map(|e| e.path().file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .collect();
+    names.sort_by_key(|n| n.to_lowercase());
+    names
+}
+
+/// The song as it is kept as the template `name`, in place of one of that name.
+#[tauri::command(async)]
+fn save_template(app: State<App>, name: String) -> Answer<()> {
+    let folder = template_folder(&app, &name)?;
+    if folder.exists() {
+        std::fs::remove_dir_all(&folder).map_err(|e| e.to_string())?;
+    }
+    app.studio().save_template(&folder)
+}
+
+#[tauri::command]
+fn delete_template(app: State<App>, name: String) -> Answer<()> {
+    std::fs::remove_dir_all(template_folder(&app, &name)?).map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]
@@ -898,6 +946,9 @@ pub fn run() {
             midi_file,
             export_midi,
             stretch_sample,
+            my_templates,
+            save_template,
+            delete_template,
             transpose_sample,
             presets,
             save_preset,

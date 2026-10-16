@@ -170,6 +170,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Modèles** de morceaux : Trap (808 qui glisse, charleys en roulements, cloches
   arpégées), Lo-fi (batterie swinguée, accords de septième) et Techno (basse acid qui pompe
   sous le kick, filtre qui s'ouvre), faits des presets ; dans Fichier.
+- ✅ **Tes modèles** : garder un morceau comme modèle (ses sons et l'état de ses plugins avec
+  lui), en repartir, en supprimer.
 - ✅ Installateur NSIS, avec l'hôte de plugins.
 - ⬜ Mise à jour automatique (comme Ramure : clé de signature à créer).
 

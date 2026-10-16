@@ -42,7 +42,21 @@ export class Files {
   /** A new song: empty, or from the template named (`demo` is the demo's). */
   async newSong(template: string | null = null): Promise<void> {
     if (!(await this.leave())) return;
-    this.studio.show(await api.newSong(template));
+    try {
+      this.studio.show(await api.newSong(template));
+    } catch (e) {
+      this.studio.fail(e);
+    }
+  }
+
+  /** The song kept as a template of the user's, under a name asked for. */
+  async saveTemplate(name: string): Promise<void> {
+    try {
+      await api.saveTemplate(name);
+      this.say(this.i18n.t('Kept as a template'));
+    } catch (e) {
+      this.studio.fail(e);
+    }
   }
 
   async open(folder?: string): Promise<void> {

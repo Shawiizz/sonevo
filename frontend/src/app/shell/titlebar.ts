@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
@@ -135,10 +136,42 @@ export class Titlebar {
       {
         label: t('New song from a template…'),
         run: () =>
-          this.menus.show(
-            event,
-            TEMPLATES.map((s) => ({ label: t(s.label), run: () => this.files.newSong(s.id) })),
+          void api.myTemplates().then((mine) =>
+            this.menus.show(event, [
+              ...TEMPLATES.map((s) => ({ label: t(s.label), run: () => this.files.newSong(s.id) })),
+              ...(mine.length ? [{ separator: true, label: '' }] : []),
+              ...mine.map((name) => ({
+                label: name,
+                run: () => this.files.newSong(`mine:${name}`),
+              })),
+              ...(mine.length
+                ? [
+                    {
+                      label: t('Delete one of mine…'),
+                      run: () =>
+                        this.menus.show(
+                          event,
+                          mine.map((name) => ({
+                            label: name,
+                            danger: true,
+                            run: () =>
+                              void api.deleteTemplate(name).catch((e) => this.studio.fail(e)),
+                          })),
+                        ),
+                    },
+                  ]
+                : []),
+            ]),
           ),
+      },
+      {
+        label: t('Keep this song as a template…'),
+        run: () =>
+          void this.renaming
+            .ask(t('Name of the template'), this.studio.song()?.name ?? '')
+            .then((name) => {
+              if (name) void this.files.saveTemplate(name);
+            }),
       },
       { label: t('Open…'), key: 'Ctrl+O', run: () => this.files.open() },
       { separator: true, label: '' },
