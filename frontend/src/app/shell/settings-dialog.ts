@@ -5,6 +5,7 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { OutputInfo, Settings } from '../core/models';
 import { Studio } from '../core/studio.service';
+import { Updates } from '../core/updates.service';
 import { ACCENTS, Themes } from '../core/theme';
 
 const BUFFERS = [64, 128, 256, 512, 1024, 2048];
@@ -162,6 +163,12 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
         </section>
       }
       <div class="actions">
+        <span class="version">Sonevo {{ updates.version() }}</span>
+        <button class="s-btn" [disabled]="looking()" (click)="look()">
+          {{
+            looked() && !updates.available() ? t('Sonevo is up to date') : t('Look for an update')
+          }}
+        </button>
         <button class="s-btn s-btn--primary" (click)="closed.emit()">{{ t('Done') }}</button>
       </div>
     </div>
@@ -255,8 +262,14 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
     }
     .actions {
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
       padding-top: 12px;
+    }
+    .version {
+      margin-right: auto;
+      color: var(--s-text-3);
+      font-size: 12px;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -267,7 +280,17 @@ export class SettingsDialog {
   private readonly themes = inject(Themes);
   protected readonly studio = inject(Studio);
   protected readonly scanning = signal(false);
+  protected readonly updates = inject(Updates);
+  protected readonly looking = signal(false);
+  protected readonly looked = signal(false);
   readonly closed = output();
+
+  protected async look(): Promise<void> {
+    this.looking.set(true);
+    await this.updates.check();
+    this.looking.set(false);
+    this.looked.set(true);
+  }
 
   protected readonly buffers = BUFFERS;
   protected readonly settings = signal<Settings | null>(null);

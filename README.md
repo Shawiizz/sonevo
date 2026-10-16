@@ -59,6 +59,9 @@ cd apps/sonevo-desktop && ../../frontend/node_modules/.bin/tauri dev
 ASIO needs libclang to build: `pip install --target .tools/libclang libclang==18.1.1`.
 
 The installer: `tauri build --config tauri.release.conf.json` from `apps/sonevo-desktop`.
+It signs the update packages, so it needs `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Releases are made by pushing a tag equal to the version
+(`0.2.0`): the workflow drafts the release, and publishing it offers the update to installed copies.
 
 ## The parts
 

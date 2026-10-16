@@ -927,6 +927,12 @@ fn recover(app: State<App>, path: PathBuf, open: bool) -> Answer<serde_json::Val
     Ok(view(&mut studio))
 }
 
+/// The song's changes kept at once, as every 20 seconds, to be offered back after a restart.
+#[tauri::command]
+fn keep_now(app: State<App>) -> Answer<()> {
+    app.studio().autosave()
+}
+
 /// The song's changes left on purpose: what was kept of them forgotten.
 #[tauri::command]
 fn leave(app: State<App>) {
@@ -940,6 +946,8 @@ fn is_song(path: &Path) -> bool {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let config = app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir().join("sonevo"));
@@ -1030,6 +1038,7 @@ pub fn run() {
             sample_info,
             kept,
             recover,
+            keep_now,
             leave,
             play_with_keyboards,
             keyboards,

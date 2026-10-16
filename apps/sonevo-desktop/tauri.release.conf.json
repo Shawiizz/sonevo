@@ -6,6 +6,7 @@
     }
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "resources": {
       "../../target/release/sonevo-plugin-host.exe": "sonevo-plugin-host.exe"
     }

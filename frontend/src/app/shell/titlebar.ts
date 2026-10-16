@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Studio } from '../core/studio.service';
+import { Updates } from '../core/updates.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
@@ -31,6 +33,19 @@ import { Files, TEMPLATES } from './files.service';
       }
     </div>
     <div class="window">
+      @if (updates.available(); as update) {
+        <button
+          class="s-bar-btn update"
+          [disabled]="updates.progress() !== null"
+          (click)="install()"
+        >
+          @if (updates.progress() !== null) {
+            {{ t('Updating… {done}%', { done: percent(updates.progress()!) }) }}
+          } @else {
+            {{ t('Sonevo {version} is ready', { version: update.version }) }}
+          }
+        </button>
+      }
       <button class="s-bar-btn" (click)="palette.emit()" [title]="t('Commands') + ' (Ctrl+K)'">
         <s-icon name="search" />
       </button>
@@ -96,6 +111,16 @@ import { Files, TEMPLATES } from './files.service';
       align-items: center;
       height: 100%;
     }
+    .update {
+      margin-right: 6px;
+      padding: 0 10px;
+      background: var(--s-accent);
+      color: var(--s-on-accent);
+      font-weight: 600;
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--s-accent) 82%, var(--s-text));
+      }
+    }
     .win {
       width: 46px;
       height: 100%;
@@ -122,6 +147,7 @@ export class Titlebar {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
   protected readonly named = inject(I18n).named;
+  protected readonly updates = inject(Updates);
   private readonly files = inject(Files);
   private readonly menus = inject(Menus);
   private readonly renaming = inject(Rename);
@@ -209,6 +235,28 @@ export class Titlebar {
       { label: t('Undo'), key: 'Ctrl+Z', disabled: !view?.canUndo, run: () => this.studio.undo() },
       { label: t('Redo'), key: 'Ctrl+Y', disabled: !view?.canRedo, run: () => this.studio.redo() },
     ]);
+  }
+
+  protected percent(share: number): number {
+    return Math.round(share * 100);
+  }
+
+  protected async install(): Promise<void> {
+    const update = this.updates.available();
+    if (!update) return;
+    const t = this.t;
+    const now = await ask(
+      t('Sonevo starts again in version {version}. Your changes not saved are offered back.', {
+        version: update.version,
+      }),
+      { title: 'Sonevo', okLabel: t('Update'), cancelLabel: t('Later') },
+    );
+    if (!now) return;
+    try {
+      await this.updates.install();
+    } catch (e) {
+      this.studio.fail(e);
+    }
   }
 
   protected rename(): void {

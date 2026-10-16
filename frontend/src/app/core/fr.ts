@@ -257,6 +257,13 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Sonevo {version} is ready': 'Sonevo {version} est prêt',
+  'Updating… {done}%': 'Mise à jour… {done} %',
+  'Sonevo starts again in version {version}. Your changes not saved are offered back.':
+    'Sonevo redémarre en version {version}. Tes changements non enregistrés te seront reproposés.',
+  Update: 'Mettre à jour',
+  'Look for an update': 'Chercher une mise à jour',
+  'Sonevo is up to date': 'Sonevo est à jour',
   'As loud as it goes, never clipping': 'Au plus fort, sans jamais saturer',
   'As loud as streaming services play songs (-14 LUFS), never clipping':
     'Aussi fort que les services de streaming jouent les morceaux (-14 LUFS), sans jamais saturer',

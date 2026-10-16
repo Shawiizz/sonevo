@@ -23,6 +23,13 @@
     ],
     "security": { "csp": null }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUyRDFENjAzNTk0RkJGODUKUldTRnYwOVpBOWJSVXRNcGlQdUFDOWI3emYvVHNxbTFRZEVDRW93TytZdFRSR0p5bFFMVFpKSGsK",
+      "endpoints": ["https://github.com/Shawiizz/sonevo/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],

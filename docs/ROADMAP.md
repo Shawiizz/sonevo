@@ -19,8 +19,9 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   `plugin-host`, `sonevo-desktop`, `frontend`.
 - ✅ CI GitHub Actions sous Windows : format, clippy, tests Rust (dont un plugin tué en plein
   jeu), tests et build du frontend.
-- ✅ Workflow de release : un tag `X.Y.Z` construit l'installateur et prépare une release en
-  brouillon, à publier à la main.
+- ✅ Workflow de release : un tag `X.Y.Z` construit l'installateur signé et le manifeste de
+  mise à jour dans une release en brouillon ; la publier propose la mise à jour aux copies
+  installées.
 
 ## 1. Le modèle du morceau et son format ouvert
 
@@ -64,7 +65,6 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   qu'il joue (répétitions, swing, arpèges), s'exporte en .mid.
 - ✅ **Écrire** au clavier MIDI (ou d'ordinateur) pendant que le pattern tourne, avec la force
   de frappe de chaque note.
-- ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).
 
 ## 3. Instruments et effets intégrés
 
@@ -188,9 +188,15 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Tes modèles** : garder un morceau comme modèle (ses sons et l'état de ses plugins avec
   lui), en repartir, en supprimer.
 - ✅ Installateur NSIS, avec l'hôte de plugins.
-- ⬜ Mise à jour automatique (comme Ramure : clé de signature à créer).
+- ✅ **Mise à jour automatique** : Sonevo cherche une nouvelle version au lancement puis toutes
+  les 6 heures, un bouton dans la barre de titre l'installe (signature vérifiée), le morceau
+  gardé d'abord et reproposé au redémarrage ; « Chercher une mise à jour » dans les réglages.
+  Clé dans `~/.tauri/sonevo-updater.key` (+ `.password`) et dans les secrets du dépôt.
 
 ## Plus tard
+
+- ASIO à faible latence, mesuré sur une vraie carte son (la plupart des gens composent sur un PC
+  sans carte, en WASAPI).
 
 - Grille de clips à lancer, modulateurs branchables partout.
 - Les boutons d'un contrôleur MIDI liés aux réglages (« MIDI learn ») : rien pour l'essayer

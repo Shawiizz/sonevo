@@ -100,6 +100,7 @@ export const api = {
   kept: () => invoke<Kept[]>('kept'),
   recover: (path: string, open: boolean) => invoke<View>('recover', { path, open }),
   leave: () => invoke<void>('leave'),
+  keepNow: () => invoke<void>('keep_now'),
   playWithKeyboards: (channel: Id | null) => invoke<void>('play_with_keyboards', { channel }),
   keyboards: () => invoke<string[]>('keyboards'),
   pluginParams: (bundle: string, id: string) =>
