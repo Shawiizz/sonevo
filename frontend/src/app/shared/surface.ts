@@ -9,6 +9,8 @@ export function token(name: string): number {
 const DARK = {
   accent: 0xf3f1eb,
   play: 0xf3f1eb,
+  /** What is on: a track heard. */
+  on: 0x52d38e,
   base: 0x111316,
   void: 0x0a0b0d,
   line: 0x23272d,
@@ -43,6 +45,7 @@ const DARK = {
 const LIGHT: typeof DARK = {
   accent: 0x111316,
   play: 0x111316,
+  on: 0x1f8a52,
   base: 0xf6f7f8,
   void: 0xeceef0,
   line: 0xd9dce0,

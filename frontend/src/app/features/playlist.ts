@@ -341,7 +341,8 @@ export class Playlist implements OnDestroy {
         s.text('▾', x + 7, top + 1, palette().text3, 11);
         s.text(this.clipName(clip), Math.max(x + 19, HEADERS + 6), top + 1, palette().text, 11);
       }
-      this.paintContent(s, clip, x, top + 17, w, h - 19, color);
+      // inside the block, clear of the line of its colour along its left
+      this.paintContent(s, clip, x + 5, top + 17, w - 7, h - 19, color);
     }
 
     g.rect(0, RULER, HEADERS, height - RULER).fill(palette().base);
@@ -351,7 +352,7 @@ export class Playlist implements OnDestroy {
       if (y + this.laneHeight < RULER || y > height) return;
       g.rect(0, y + this.laneHeight - 1, HEADERS, 1).fill(palette().laneLine);
       g.circle(16, y + this.laneHeight / 2, 4.5).fill(
-        track.mute ? palette().lineStrong : palette().play,
+        track.mute ? palette().lineStrong : palette().on,
       );
       const into = this.laneHeight >= 40 ? inserts.find((n) => n.id === track.insert) : undefined;
       s.text(
@@ -568,6 +569,8 @@ export class Playlist implements OnDestroy {
     const g = s.shapes;
     const content = clip.content;
     if (h < 6) return;
+    // the clip's time across the width it is drawn in
+    const perTick = w / Math.max(1, clip.length);
     if (content.type === 'pattern') {
       const pattern = this.studio.song()?.patterns.find((p) => p.id === content.pattern);
       const byChannel = this.studio.view()?.notes[content.pattern] ?? {};
@@ -593,8 +596,8 @@ export class Playlist implements OnDestroy {
         for (const n of notes) {
           const at = from + n.start;
           if (at < 0 || at >= clip.length) continue;
-          const nx = x + at * this.perTick;
-          const nw = Math.max(1.5, Math.min(n.length, clip.length - at) * this.perTick - 1);
+          const nx = x + at * perTick;
+          const nw = Math.max(1.5, Math.min(n.length, clip.length - at) * perTick - 1);
           const ny = y + (rows.get(n.row) ?? 0) * rowHeight + (span - rows.size) * rowHeight * 0.5;
           g.rect(nx, ny, nw, Math.max(1.5, rowHeight - 1)).fill({ color, alpha: 0.9 });
         }
@@ -606,13 +609,13 @@ export class Playlist implements OnDestroy {
       const offset = clip.offset ?? 0;
       coords.push(x, y + h - points[0].value * h);
       for (const p of points) {
-        const px = x + (p.at - offset) * this.perTick;
+        const px = x + (p.at - offset) * perTick;
         coords.push(Math.max(x, Math.min(x + w, px)), y + h - p.value * h);
       }
       coords.push(x + w, y + h - points[points.length - 1].value * h);
       g.poly(coords, false).stroke({ width: 1.5, color });
       for (const p of points) {
-        const px = x + (p.at - offset) * this.perTick;
+        const px = x + (p.at - offset) * perTick;
         if (px >= x - 1 && px <= x + w + 1) g.circle(px, y + h - p.value * h, 3.5).fill(color);
       }
     } else {
@@ -621,8 +624,8 @@ export class Playlist implements OnDestroy {
       const length = this.studio.ticks(info.seconds);
       const offset = clip.offset ?? 0;
       const visible = Math.min(clip.length, length - offset);
-      for (let i = 0; i < visible * this.perTick; i += 2) {
-        const along = offset + i / this.perTick;
+      for (let i = 0; i < visible * perTick; i += 2) {
+        const along = offset + i / perTick;
         const at = content.reverse ? length - along : along;
         const peak =
           info.peaks[
@@ -631,8 +634,8 @@ export class Playlist implements OnDestroy {
         const v = Math.max(0.5, peak * h * 0.48);
         g.rect(x + i, y + h / 2 - v, 1.5, v * 2).fill({ color, alpha: 0.75 });
       }
-      const fadeIn = Math.min(w, (content.fadeIn ?? 0) * this.perTick);
-      const fadeOut = Math.min(w, (content.fadeOut ?? 0) * this.perTick);
+      const fadeIn = Math.min(w, (content.fadeIn ?? 0) * perTick);
+      const fadeOut = Math.min(w, (content.fadeOut ?? 0) * perTick);
       if (fadeIn > 0) g.poly([x, y + h, x + fadeIn, y], false).stroke({ width: 1.5, color });
       if (fadeOut > 0)
         g.poly([x + w - fadeOut, y, x + w, y + h], false).stroke({ width: 1.5, color });
