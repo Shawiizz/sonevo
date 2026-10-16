@@ -937,6 +937,20 @@ fn recover(app: State<App>, path: PathBuf, open: bool) -> Answer<serde_json::Val
     Ok(view(&mut studio))
 }
 
+#[derive(Serialize)]
+struct PluginValue {
+    id: String,
+    value: f64,
+    text: String,
+}
+
+/// The settings of the plugin `device` plays as they are now: none if it is not playing.
+#[tauri::command(async)]
+fn plugin_values(device: Id) -> Vec<PluginValue> {
+    let values = sonevo_plugins::values(device).unwrap_or_default();
+    values.into_iter().map(|v| PluginValue { id: v.id, value: v.value, text: v.text }).collect()
+}
+
 /// The song's changes kept at once, as every 20 seconds, to be offered back after a restart.
 #[tauri::command]
 fn keep_now(app: State<App>) -> Answer<()> {
@@ -1045,6 +1059,7 @@ pub fn run() {
             listen,
             plugin_params,
             open_plugin_window,
+            plugin_values,
             sample_info,
             kept,
             recover,

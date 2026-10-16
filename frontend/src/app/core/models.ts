@@ -242,6 +242,13 @@ export interface ParamInfo {
   choices: string[];
 }
 
+/** A plugin's setting as the plugin has it now, written its way ("-3.2 dB"). */
+export interface PluginValue {
+  id: string;
+  value: number;
+  text: string;
+}
+
 export interface DeviceInfo {
   name: string;
   label: string;

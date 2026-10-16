@@ -185,34 +185,66 @@ pub fn open_window(device: Id) -> bool {
     }
 }
 
-/// How long a plugin is given to save its state.
-const SAVE_TIME: u32 = 3000;
+/// How long a plugin's process is given to answer what it is asked besides playing.
+const ANSWER_TIME: u32 = 3000;
 
-/// The state of the plugin `device` plays, as it saves it, asked of its process: none if it
-/// is not playing, has none, or took too long.
+/// What the process of the plugin `device` writes to `<temp>/<its control>.<file>` when the
+/// event `<its control>-<ask>` is set, once it sets `<its control>-<answered>`: none if it is not
+/// playing, or took too long.
 #[cfg(windows)]
-pub fn save_state(device: Id) -> Option<Vec<u8>> {
+fn ask_process(device: Id, ask: &str, answered: &str, file: &str) -> Option<Vec<u8>> {
     use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
     use windows_sys::Win32::System::Threading::{SetEvent, WaitForSingleObject};
     let name = control(device);
-    let save = open_event(&format!("{name}-save"))?;
-    let Some(saved) = open_event(&format!("{name}-saved")) else {
+    let asked = open_event(&format!("{name}-{ask}"))?;
+    let Some(answer) = open_event(&format!("{name}-{answered}")) else {
         // SAFETY: the event is open
-        unsafe { CloseHandle(save) };
+        unsafe { CloseHandle(asked) };
         return None;
     };
     // SAFETY: plain Win32 calls on events open
     let done = unsafe {
-        SetEvent(save);
-        let done = WaitForSingleObject(saved, SAVE_TIME) == WAIT_OBJECT_0;
-        CloseHandle(save);
-        CloseHandle(saved);
+        SetEvent(asked);
+        let done = WaitForSingleObject(answer, ANSWER_TIME) == WAIT_OBJECT_0;
+        CloseHandle(asked);
+        CloseHandle(answer);
         done
     };
     if !done {
         return None;
     }
-    std::fs::read(std::env::temp_dir().join(format!("{name}.state"))).ok()
+    std::fs::read(std::env::temp_dir().join(format!("{name}.{file}"))).ok()
+}
+
+/// The state of the plugin `device` plays, as it saves it, asked of its process: none if it
+/// is not playing, has none, or took too long.
+#[cfg(windows)]
+pub fn save_state(device: Id) -> Option<Vec<u8>> {
+    ask_process(device, "save", "saved", "state")
+}
+
+/// The settings of the plugin `device` plays as they are now, asked of its process: none if it
+/// is not playing, or took too long.
+#[cfg(windows)]
+pub fn values(device: Id) -> Option<Vec<Value>> {
+    let text = String::from_utf8(ask_process(device, "read", "read-done", "values")?).ok()?;
+    let read = text.lines().filter_map(|line| {
+        let mut parts = line.splitn(3, '\t');
+        let id = parts.next()?.to_owned();
+        let value = parts.next()?.parse().ok()?;
+        Some(Value { id, value, text: parts.next().unwrap_or_default().to_owned() })
+    });
+    Some(read.collect())
+}
+
+/// A setting of a plugin as it is now.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Value {
+    /// The setting's id, as [`params`] gives it.
+    pub id: String,
+    pub value: f64,
+    /// The value as the plugin writes it ("-3.2 dB"); empty if it does not say.
+    pub text: String,
 }
 
 /// CLAP plugins, for the engine: each described by its process, played in another, its

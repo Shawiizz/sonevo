@@ -17,7 +17,7 @@ import { Studio } from '../core/studio.service';
       @for (k of kept(); track k.path) {
         <div class="song">
           <div class="text">
-            <span class="name">{{ k.name }}</span>
+            <span class="name">{{ named(k.name) }}</span>
             <span class="when">{{ when(k.time) }} · {{ k.origin ?? t('never saved') }}</span>
           </div>
           <button class="s-btn" (click)="forget(k)">{{ t('Forget') }}</button>
@@ -95,6 +95,7 @@ export class RecoveryDialog {
   private readonly studio = inject(Studio);
   private readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
+  protected readonly named = this.i18n.named;
   readonly kept = input<Kept[]>([]);
   readonly closed = output();
   readonly done = output<Kept>();

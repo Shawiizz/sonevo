@@ -259,6 +259,8 @@ fn a_plugins_state_is_saved_and_given_back_from_the_songs_folder() {
         saved = sonevo_plugins::save_state(device);
     }
     assert_eq!(saved.as_deref(), Some(&0.8f64.to_le_bytes()[..]));
+    let values = sonevo_plugins::values(device).expect("its settings are read");
+    assert_eq!(values, [sonevo_plugins::Value { id: "0".into(), value: 0.8, text: "80 %".into() }]);
 
     // a state where the volume is nothing, in the song's folder: the plugin started again is silent
     drop((engine, renderer));

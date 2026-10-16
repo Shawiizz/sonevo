@@ -11,6 +11,7 @@ import type {
   OutputInfo,
   ParamInfo,
   PluginInfo,
+  PluginValue,
   PresetInfo,
   SampleInfo,
   Settings,
@@ -109,6 +110,7 @@ export const api = {
   stopRecording: () => invoke<View>('stop_recording'),
   inputs: () => invoke<string[]>('inputs'),
   openPluginWindow: (device: Id) => invoke<boolean>('open_plugin_window', { device }),
+  pluginValues: (device: Id) => invoke<PluginValue[]>('plugin_values', { device }),
   listen: (path: string | null) => invoke<void>('listen', { path }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),

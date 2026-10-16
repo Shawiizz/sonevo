@@ -320,31 +320,25 @@ impl Instance {
 
     /// The settings the plugin lets be moved from outside, those hidden or read only left out.
     pub fn params(&self) -> Vec<ParamInfo> {
-        if self.params.is_null() {
-            return Vec::new();
-        }
-        // SAFETY: on the main thread; the extension lives as long as the plugin
-        let params = unsafe { &*self.params };
-        let count = params.count.map_or(0, |count| unsafe { count(self.plugin) });
-        (0..count)
-            .filter_map(|index| {
-                // SAFETY: the info is filled by the plugin before it is read
-                let mut info: clap_param_info = unsafe { std::mem::zeroed() };
-                let got = params.get_info.is_some_and(|get| unsafe { get(self.plugin, index, &mut info) });
-                if !got || info.flags & (CLAP_PARAM_IS_HIDDEN | CLAP_PARAM_IS_READONLY) != 0 {
-                    return None;
-                }
+        movable(self.plugin, self.params)
+            .map(|info| {
+                // SAFETY: the plugin wrote a name ending in a nul
                 let name = unsafe { CStr::from_ptr(info.name.as_ptr()) }.to_string_lossy().into_owned();
-                Some(ParamInfo {
+                ParamInfo {
                     id: info.id,
                     name,
                     min: info.min_value,
                     max: info.max_value,
                     default: info.default_value,
                     stepped: info.flags & CLAP_PARAM_IS_STEPPED != 0,
-                })
+                }
             })
             .collect()
+    }
+
+    /// What reads the settings as they are now, on the main thread while the plugin plays.
+    pub fn reader(&self) -> Option<Reader> {
+        (!self.params.is_null()).then_some(Reader { plugin: self.plugin, params: self.params })
     }
 
     /// Plays one block: the `notes` and the settings `changes` given, each in time order,
@@ -570,6 +564,70 @@ impl Gui {
 
 /// What a plugin keeps of itself, beyond its settings (a sound, a preset made in its window),
 /// saved on the main thread while its instance plays on the audio one.
+/// The settings of `plugin` that may be moved from outside, as `params` describes them.
+fn movable(
+    plugin: *const clap_plugin,
+    params: *const clap_plugin_params,
+) -> impl Iterator<Item = clap_param_info> {
+    // SAFETY: on the main thread; the extension lives as long as the plugin
+    let params = (!params.is_null()).then(|| unsafe { &*params });
+    let count = params.and_then(|p| p.count).map_or(0, |count| unsafe { count(plugin) });
+    (0..count).filter_map(move |index| {
+        // SAFETY: the info is filled by the plugin before it is read
+        let mut info: clap_param_info = unsafe { std::mem::zeroed() };
+        let got = params?.get_info.is_some_and(|get| unsafe { get(plugin, index, &mut info) });
+        (got && info.flags & (CLAP_PARAM_IS_HIDDEN | CLAP_PARAM_IS_READONLY) == 0).then_some(info)
+    })
+}
+
+/// A setting as the plugin has it now.
+pub struct Value {
+    pub id: u32,
+    pub value: f64,
+    /// The value as the plugin writes it ("-3.2 dB"); empty if it does not say.
+    pub text: String,
+}
+
+/// Reads a plugin's settings as they are now.
+pub struct Reader {
+    plugin: *const clap_plugin,
+    params: *const clap_plugin_params,
+}
+
+// Used on the main thread only, as CLAP wants of its settings' values.
+unsafe impl Send for Reader {}
+
+impl Reader {
+    pub fn values(&self) -> Vec<Value> {
+        // SAFETY: the extension is there, or no reader would be
+        let params = unsafe { &*self.params };
+        movable(self.plugin, self.params)
+            .filter_map(|info| {
+                let mut value = 0.0;
+                // SAFETY: on the main thread, the value written before it is read
+                let got =
+                    params.get_value.is_some_and(|get| unsafe { get(self.plugin, info.id, &mut value) });
+                if !got {
+                    return None;
+                }
+                let mut written = [0 as std::ffi::c_char; 64];
+                // SAFETY: the plugin writes at most the room given, a nul at its end
+                let said = params.value_to_text.is_some_and(|text| unsafe {
+                    text(self.plugin, info.id, value, written.as_mut_ptr(), written.len() as u32)
+                });
+                written[written.len() - 1] = 0;
+                let text = if said {
+                    // SAFETY: ended by a nul, as just made sure
+                    unsafe { CStr::from_ptr(written.as_ptr()) }.to_string_lossy().trim().to_owned()
+                } else {
+                    String::new()
+                };
+                Some(Value { id: info.id, value, text })
+            })
+            .collect()
+    }
+}
+
 pub struct Keeper {
     plugin: *const clap_plugin,
     state: *const clap_plugin_state,

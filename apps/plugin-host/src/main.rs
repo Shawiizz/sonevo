@@ -59,8 +59,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     instance.activate(rate, max_frames)?;
     // its window and its state, kept on this thread while the instance plays on the other
-    let mut control =
-        control.and_then(|name| control::Control::new(name, instance.gui(), instance.keeper(), &title));
+    let mut control = control.and_then(|name| {
+        control::Control::new(name, instance.gui(), instance.keeper(), instance.reader(), &title)
+    });
 
     // the plugin made, activated and dropped here, played on a thread of its own
     let engine = Engine::watch(engine)?;

@@ -281,7 +281,7 @@ static PARAMS: clap_plugin_params = clap_plugin_params {
     count: Some(params_count),
     get_info: Some(params_info),
     get_value: Some(params_value),
-    value_to_text: None,
+    value_to_text: Some(params_text),
     text_to_value: None,
     flush: Some(params_flush),
 };
@@ -315,6 +315,30 @@ unsafe extern "C" fn params_value(plugin: *const clap_plugin, id: clap_id, value
         return false;
     }
     unsafe { *value = synth(plugin).volume };
+    true
+}
+
+/// The volume as a share: "80 %".
+unsafe extern "C" fn params_text(
+    _plugin: *const clap_plugin,
+    id: clap_id,
+    value: f64,
+    display: *mut c_char,
+    size: u32,
+) -> bool {
+    if id != VOLUME || display.is_null() {
+        return false;
+    }
+    let Ok(text) = std::ffi::CString::new(format!("{:.0} %", value * 100.0)) else { return false };
+    // SAFETY: the host gave `size` chars of room
+    let room = unsafe { std::slice::from_raw_parts_mut(display, size as usize) };
+    let bytes = text.as_bytes_with_nul();
+    if bytes.len() > room.len() {
+        return false;
+    }
+    for (to, &from) in room.iter_mut().zip(bytes) {
+        *to = from as c_char;
+    }
     true
 }
 

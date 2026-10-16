@@ -5,10 +5,20 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Arp, Channel, Device, ParamInfo, PPQ, PresetInfo, sampleLabel } from '../core/models';
+import {
+  Arp,
+  Channel,
+  Device,
+  ParamInfo,
+  PluginValue,
+  PPQ,
+  PresetInfo,
+  sampleLabel,
+} from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -63,6 +73,20 @@ const ABOUT: Record<string, string> = {
  * The device panel: the settings of the instrument or effect chosen, as knobs; choices as
  * buttons; the sampler's sound.
  */
+/** A plugin's settings shown at first, and the most shown of those looked for. */
+const FIRST = 12;
+const LOOKED = 48;
+/** How often a plugin's settings are read from it, in milliseconds. */
+const READ_EVERY = 1500;
+
+/** `text` in lower case, its accents left out, to be looked in. */
+function folded(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 @Component({
   selector: 'app-device-panel',
   imports: [EqCurve, Icon, Knob],
@@ -101,6 +125,16 @@ const ABOUT: Record<string, string> = {
           <button class="s-btn window" (click)="openWindow(shown.device)">
             <s-icon name="maximize" [size]="12" /> {{ t('Open its window') }}
           </button>
+          @if ((info()?.params?.length ?? 0) > FIRST) {
+            <label class="s-field look">
+              <input
+                type="search"
+                [value]="query()"
+                (input)="query.set($any($event.target).value)"
+                [placeholder]="t('Look for a setting by its name')"
+              />
+            </label>
+          }
         }
         @if (info()?.name === 'sonevo.eq') {
           <s-eq-curve class="curve" [values]="settings(shown.device)" />
@@ -190,6 +224,7 @@ const ABOUT: Record<string, string> = {
                   [default]="p.default"
                   [log]="p.scale === 'log'"
                   [unit]="p.unit"
+                  [format]="written().get(p.id) ?? null"
                   [label]="t(p.name)"
                   [size]="38"
                   (live)="live(shown.device, p, $event)"
@@ -198,6 +233,11 @@ const ABOUT: Record<string, string> = {
               }
             }
           </div>
+        }
+        @if (hidden() > 0) {
+          <p class="more">
+            {{ t('{count} more settings: look for one by its name.', { count: hidden() }) }}
+          </p>
         }
         @if (channel(); as channel) {
           <h4>{{ t('Arpeggiator') }}</h4>
@@ -337,6 +377,14 @@ const ABOUT: Record<string, string> = {
     .window {
       margin-bottom: 12px;
     }
+    .look {
+      margin-bottom: 12px;
+    }
+    .more {
+      margin: 4px 0 12px;
+      color: var(--s-text-3);
+      font-size: 12px;
+    }
     .reduction {
       display: flex;
       align-items: center;
@@ -449,7 +497,45 @@ export class DevicePanel {
     return ABOUT[this.info()?.name ?? ''] ?? null;
   });
 
+  protected readonly FIRST = FIRST;
+  /** What is looked for among a plugin's settings. */
+  protected readonly query = signal('');
+  /** The plugin shown, if one is. */
+  private readonly plugin = computed(() => {
+    const device = this.shown()?.device;
+    return device?.kind.type === 'clap' ? device.id : null;
+  });
+  /** The settings of the plugin shown as it has them now, by id. */
+  private readonly plugged = signal<Map<string, PluginValue>>(new Map());
+  /** How the plugin writes each of its settings, at the value it has now. */
+  protected readonly written = computed(() => {
+    const formats = new Map<string, (value: number) => string>();
+    for (const [id, known] of this.plugged()) {
+      if (!known.text) continue;
+      formats.set(id, (value) =>
+        Math.abs(value - known.value) < 1e-9 ? known.text : value.toFixed(2),
+      );
+    }
+    return formats;
+  });
+  /** A plugin's settings shown: those whose name has what is looked for, else the first ones
+   * and those the song sets. */
+  private readonly pluginParams = computed(() => {
+    const params = this.info()?.params ?? [];
+    const words = folded(this.query().trim());
+    if (words) return params.filter((p) => folded(p.name).includes(words)).slice(0, LOOKED);
+    const set = this.shown()?.device.params ?? {};
+    return params.filter((p, i) => i < FIRST || p.id in set);
+  });
+  /** How many of the plugin's settings are not shown, nothing being looked for. */
+  protected readonly hidden = computed(() =>
+    this.plugin() && !this.query().trim()
+      ? (this.info()?.params.length ?? 0) - this.pluginParams().length
+      : 0,
+  );
+
   protected readonly groups = computed(() => {
+    if (this.plugin()) return [{ name: '', params: this.pluginParams() }];
     const params = this.info()?.params ?? [];
     if (this.info()?.name !== 'sonevo.synth') return [{ name: '', params }];
     const pick = (ids: string[]) => params.filter((p) => ids.includes(p.id));
@@ -477,7 +563,7 @@ export class DevicePanel {
   });
 
   protected value(device: Device, p: ParamInfo): number {
-    return this.studio.value(device, p.id);
+    return this.plugged().get(p.id)?.value ?? this.studio.value(device, p.id);
   }
 
   /** The settings of `device` as they are now, those being turned as far as they are. */
@@ -506,6 +592,9 @@ export class DevicePanel {
 
   protected set(device: Device, p: ParamInfo, value: number): void {
     this.turning.update(({ [p.id]: _, ...rest }) => rest);
+    if (this.plugged().has(p.id)) {
+      this.plugged.update((now) => new Map(now).set(p.id, { id: p.id, value, text: '' }));
+    }
     void api.liveParam(device.id, p.id, value);
     void this.studio.edit({ type: 'setParam', device: device.id, param: p.id, value });
     void this.studio.letGo({ type: 'param', device: device.id, param: p.id });
@@ -574,6 +663,22 @@ export class DevicePanel {
       const now = id ? (this.studio.status().reductions[id] ?? 0) : 0;
       this.reductions = [...this.reductions, now].slice(-15);
       this.reduction.set(Math.max(...this.reductions));
+    });
+    // a plugin shown: its settings read from it, again and again, as its own window may move them
+    effect((onCleanup) => {
+      const device = this.plugin();
+      untracked(() => {
+        this.plugged.set(new Map());
+        this.query.set('');
+      });
+      if (!device) return;
+      const read = async () => {
+        const values = await api.pluginValues(device);
+        if (this.plugin() === device) this.plugged.set(new Map(values.map((v) => [v.id, v])));
+      };
+      void read();
+      const timer = setInterval(() => void read(), READ_EVERY);
+      onCleanup(() => clearInterval(timer));
     });
     // a song changed, or another device shown: what the knobs say is the song's again
     effect(() => {

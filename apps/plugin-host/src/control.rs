@@ -1,8 +1,9 @@
 //! What the engine's process asks of the plugin besides playing, through named events, done
 //! on the main thread as CLAP wants: its window, in a window of this process, closed by its
-//! own close button; its state, saved to a file for the engine's process to take.
+//! own close button; its state, saved to a file for the engine's process to take; its settings
+//! as they are now, written for the engine's process to read.
 
-use sonevo_clap::{Gui, Keeper};
+use sonevo_clap::{Gui, Keeper, Reader};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Once;
@@ -37,14 +38,19 @@ unsafe extern "system" fn handle(window: HWND, message: u32, w: WPARAM, l: LPARA
 }
 
 /// The events the engine's process sets: `<name>-window` for the window, `<name>-save` for
-/// the state, answered by `<name>-saved` once the state is in `<temp>/<name>.state`.
+/// the state, answered by `<name>-saved` once the state is in `<temp>/<name>.state`;
+/// `<name>-read` for the settings, answered by `<name>-read-done` once they are in
+/// `<temp>/<name>.values`, a line each: the id, the value and its text, tab-separated.
 pub struct Control {
-    /// The window and the save asked for, waited on together.
-    asked: [HANDLE; 2],
+    /// The window, the save and the reading asked for, waited on together.
+    asked: [HANDLE; 3],
     saved: HANDLE,
+    read: HANDLE,
     gui: Option<Gui>,
     keeper: Option<Keeper>,
+    reader: Option<Reader>,
     state: PathBuf,
+    values: PathBuf,
     title: String,
     window: HWND,
 }
@@ -56,29 +62,44 @@ fn event(name: &str) -> HANDLE {
 }
 
 impl Control {
-    pub fn new(name: &str, gui: Option<Gui>, keeper: Option<Keeper>, title: &str) -> Option<Control> {
-        let asked = [event(&format!("{name}-window")), event(&format!("{name}-save"))];
+    pub fn new(
+        name: &str,
+        gui: Option<Gui>,
+        keeper: Option<Keeper>,
+        reader: Option<Reader>,
+        title: &str,
+    ) -> Option<Control> {
+        let asked = [
+            event(&format!("{name}-window")),
+            event(&format!("{name}-save")),
+            event(&format!("{name}-read")),
+        ];
         let saved = event(&format!("{name}-saved"));
+        let read = event(&format!("{name}-read-done"));
         let control = Control {
             asked,
             saved,
+            read,
             gui,
             keeper,
+            reader,
             state: std::env::temp_dir().join(format!("{name}.state")),
+            values: std::env::temp_dir().join(format!("{name}.values")),
             title: title.to_owned(),
             window: std::ptr::null_mut(),
         };
         // closed by its drop, should one fail
-        let opened = !asked.iter().chain([&saved]).any(|e| e.is_null());
+        let opened = !asked.iter().chain([&saved, &read]).any(|e| e.is_null());
         opened.then_some(control)
     }
 
     pub fn serve(&mut self, time: Duration) {
         let wait = if self.window.is_null() { time } else { Duration::from_millis(8) };
         // SAFETY: the events are open
-        match unsafe { WaitForMultipleObjects(2, self.asked.as_ptr(), 0, wait.as_millis() as u32) } {
+        match unsafe { WaitForMultipleObjects(3, self.asked.as_ptr(), 0, wait.as_millis() as u32) } {
             w if w == WAIT_OBJECT_0 => self.show(),
             w if w == WAIT_OBJECT_0 + 1 => self.save(),
+            w if w == WAIT_OBJECT_0 + 2 => self.read(),
             _ => {}
         }
         if CLOSED.swap(false, Ordering::AcqRel) {
@@ -105,6 +126,23 @@ impl Control {
         }
         // SAFETY: the event is open
         unsafe { SetEvent(self.saved) };
+    }
+
+    fn read(&mut self) {
+        let lines: String = self
+            .reader
+            .as_ref()
+            .map(Reader::values)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|v| format!("{}\t{}\t{}\n", v.id, v.value, v.text.replace(['\t', '\n', '\r'], " ")))
+            .collect();
+        let part = self.values.with_extension("part");
+        if std::fs::write(&part, lines).and_then(|()| std::fs::rename(&part, &self.values)).is_err() {
+            let _ = std::fs::remove_file(&self.values);
+        }
+        // SAFETY: the event is open
+        unsafe { SetEvent(self.read) };
     }
 
     fn show(&mut self) {
@@ -177,8 +215,9 @@ impl Drop for Control {
     fn drop(&mut self) {
         self.close();
         let _ = std::fs::remove_file(&self.state);
+        let _ = std::fs::remove_file(&self.values);
         // SAFETY: the events are ours
-        for event in self.asked.into_iter().chain([self.saved]).filter(|e| !e.is_null()) {
+        for event in self.asked.into_iter().chain([self.saved, self.read]).filter(|e| !e.is_null()) {
             unsafe { CloseHandle(event) };
         }
     }

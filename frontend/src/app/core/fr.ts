@@ -257,6 +257,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Look for a setting by its name': 'Chercher un réglage par son nom',
+  '{count} more settings: look for one by its name.':
+    '{count} réglages de plus : cherches-en un par son nom.',
   'Sonevo {version} is ready': 'Sonevo {version} est prêt',
   'Updating… {done}%': 'Mise à jour… {done} %',
   'Sonevo starts again in version {version}. Your changes not saved are offered back.':
