@@ -1,7 +1,6 @@
-//! The plugins installed: found by asking `sonevo-plugin-host` what each bundle holds, and
-//! each played in a process of its own by [`Remote`], so that a plugin crashing takes only
-//! its process down. The process is started again at once, and the keys held are pressed
-//! again in it.
+//! The plugins installed, scanned and each played by [`Remote`] in a process of its own, so that
+//! a crash takes only its process down; the process is started again and the keys held pressed
+//! again.
 
 mod remote;
 
@@ -15,7 +14,6 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-/// A plugin a bundle offers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Found {
     pub bundle: PathBuf,

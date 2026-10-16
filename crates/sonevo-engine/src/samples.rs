@@ -99,7 +99,6 @@ impl Samples {
         }
     }
 
-    /// Gives `name` a sound already decoded.
     pub fn insert(&mut self, name: &str, sample: Arc<Sample>) {
         self.loaded.insert(name.to_owned(), Some(sample));
     }

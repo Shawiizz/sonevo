@@ -1,9 +1,6 @@
-//! CLAP plugins hosted: a bundle (`.clap`) loaded, its plugins listed, one of them made,
-//! activated and played, notes and settings in and stereo out.
-//!
-//! The rules of CLAP's threads hold: a bundle is opened, and an instance made, activated
-//! and dropped, on one thread (the main one); [`Instance::process`] runs on the audio
-//! thread, allocating nothing.
+//! CLAP plugins hosted: a bundle loaded, its plugins listed, one made, activated and played.
+//! A bundle is opened, and an instance made, activated and dropped, on the main thread;
+//! [`Instance::process`] runs on the audio thread, allocating nothing.
 
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::entry::clap_plugin_entry;
@@ -72,7 +69,6 @@ pub struct ParamChange {
     pub value: f64,
 }
 
-/// A setting a plugin offers to be moved from outside.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParamInfo {
     pub id: u32,
@@ -84,7 +80,6 @@ pub struct ParamInfo {
     pub stepped: bool,
 }
 
-/// A plugin a bundle offers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Descriptor {
     pub id: String,
@@ -239,7 +234,6 @@ enum State {
 pub struct Instance {
     plugin: *const clap_plugin,
     state: State,
-    /// Its settings, if it lets them be moved from outside.
     params: *const clap_plugin_params,
     /// The notes and the settings of the block being played, made into CLAP's events
     /// without allocating; and every one of them in time order.
@@ -254,7 +248,6 @@ pub struct Instance {
 unsafe impl Send for Instance {}
 
 impl Instance {
-    /// Gets the plugin ready to play at `sample_rate`, in blocks of at most `max_frames`.
     pub fn activate(&mut self, sample_rate: f64, max_frames: u32) -> Result<(), ClapError> {
         if self.state != State::Initialised {
             return Err(fail("the plugin is already active"));
@@ -463,7 +456,6 @@ impl Gui {
         }
     }
 
-    /// Hides and destroys the plugin's window, if open.
     pub fn close(&mut self) {
         if !std::mem::take(&mut self.open) {
             return;
@@ -501,7 +493,6 @@ impl Instance {
         }) as *const clap_plugin_state
     }
 
-    /// What saves the plugin's state, if it has one.
     pub fn keeper(&self) -> Option<Keeper> {
         let state = self.state();
         (!state.is_null()).then_some(Keeper { plugin: self.plugin, state })
@@ -522,7 +513,6 @@ impl Instance {
 }
 
 impl Keeper {
-    /// The plugin's state, as it saves it: none if it would not.
     pub fn save(&self) -> Option<Vec<u8>> {
         let mut bytes: Vec<u8> = Vec::new();
         let stream =

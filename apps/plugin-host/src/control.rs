@@ -23,7 +23,6 @@ fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain([0]).collect()
 }
 
-/// Its close button was pressed.
 static CLOSED: AtomicBool = AtomicBool::new(false);
 static CLASS: Once = Once::new();
 const CLASS_NAME: &str = "SonevoPluginWindow";
@@ -57,7 +56,6 @@ fn event(name: &str) -> HANDLE {
 }
 
 impl Control {
-    /// Listens for the events of `name`, the plugin's window titled `title`.
     pub fn new(name: &str, gui: Option<Gui>, keeper: Option<Keeper>, title: &str) -> Option<Control> {
         let asked = [event(&format!("{name}-window")), event(&format!("{name}-save"))];
         let saved = event(&format!("{name}-saved"));
@@ -75,8 +73,6 @@ impl Control {
         opened.then_some(control)
     }
 
-    /// Waits up to `time` for anything to do, and does it: the window opened or brought to
-    /// the front when asked, closed when its button was pressed, its messages handled.
     pub fn serve(&mut self, time: Duration) {
         let wait = if self.window.is_null() { time } else { Duration::from_millis(8) };
         // SAFETY: the events are open
@@ -98,7 +94,6 @@ impl Control {
         }
     }
 
-    /// The plugin's state written for the engine's process: nothing written if it has none.
     fn save(&mut self) {
         let bytes = self.keeper.as_ref().and_then(Keeper::save);
         let written = bytes.is_some_and(|bytes| {
@@ -150,7 +145,6 @@ impl Control {
             }
             match gui.open(window) {
                 Ok((width, height)) => {
-                    // the window made as large as the plugin's, its frame around it
                     let mut frame = RECT { left: 0, top: 0, right: width as i32, bottom: height as i32 };
                     AdjustWindowRectEx(&mut frame, STYLE, 0, 0);
                     let (w, h) = (frame.right - frame.left, frame.bottom - frame.top);

@@ -9,7 +9,6 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread::JoinHandle;
 
-/// What the inputs there are can be listened to through.
 pub fn inputs(driver: Driver) -> Vec<String> {
     let Ok(host) = driver.host() else { return Vec::new() };
     let Ok(devices) = host.input_devices() else { return Vec::new() };
@@ -60,7 +59,6 @@ impl Input {
         Ok(Input { name, sample_rate, heard, peak, overflowed, stop: Some(stop), thread: Some(thread) })
     }
 
-    /// The frames heard since the last take, as left and right.
     pub fn take(&mut self, left: &mut Vec<f32>, right: &mut Vec<f32>) {
         let count = self.heard.slots() / 2 * 2;
         if let Ok(chunk) = self.heard.read_chunk(count) {
@@ -136,7 +134,6 @@ where
     let listen = move |data: &[T], _: &cpal::InputCallbackInfo| {
         let mut loudest = 0.0f32;
         for frame in data.chunks_exact(channels) {
-            // a mono input heard on both sides
             let left: f32 = frame[0].to_sample();
             let right: f32 = if channels > 1 { frame[1].to_sample() } else { left };
             loudest = loudest.max(left.abs()).max(right.abs());

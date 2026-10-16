@@ -1,10 +1,6 @@
-//! The engine and a plugin's own process playing together, block by block: the notes and
-//! settings of a block and the sound the plugin made of them in memory both see, a signal
-//! each way.
-//!
-//! The engine asks for block `n` and waits for it until its deadline; a block late is
-//! silence, never a wait. Blocks take two slots in turn, so that a plugin late with one
-//! never writes over the next. A plugin that falls behind skips to the last block asked.
+//! The engine and a plugin's process playing together, block by block, through shared memory
+//! and a signal each way. A block late is silence, never a wait; blocks take two slots in turn
+//! so that a plugin late with one never writes over the next.
 
 #[cfg(windows)]
 mod windows;

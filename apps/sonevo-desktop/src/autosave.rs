@@ -1,8 +1,6 @@
-//! The song kept as it is every little while, should Sonevo end without it being saved.
-//!
-//! A song never saved is kept in its draft folder, beside the sounds it plays. A song saved
-//! somewhere is kept in a folder of the application's own, with the path of the song's folder
-//! beside it: its sounds are there.
+//! The song kept every little while, should Sonevo end without it being saved: a song never
+//! saved in its draft folder, beside its sounds; one saved elsewhere in a folder of the
+//! application's own, with the path of the song's folder, where its sounds are.
 
 use serde::Serialize;
 use sonevo_project::Song;
@@ -22,7 +20,6 @@ pub fn place(root: &Path, folder: &Path) -> PathBuf {
     root.join(format!("{hash:016x}.sonevo"))
 }
 
-/// Keeps `song` in `at`, with `origin` the folder it is saved in, if it is.
 pub fn keep(at: &Path, song: &Song, origin: Option<&Path>) -> Result<(), String> {
     sonevo_project::save(at, song).map_err(|e| e.to_string())?;
     if let Some(origin) = origin {
@@ -44,7 +41,6 @@ pub fn forget(at: &Path) {
 pub struct Kept {
     pub path: PathBuf,
     pub name: String,
-    /// The folder it is saved in, if it is.
     pub origin: Option<PathBuf>,
     /// Seconds since 1970.
     pub time: u64,

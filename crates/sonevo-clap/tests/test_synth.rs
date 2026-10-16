@@ -64,7 +64,6 @@ fn a_setting_is_listed_and_moved_from_the_frame_asked() {
     let on = Note { at: 0, key: 69, velocity: 1.0, on: true };
     assert!(synth.process(&[on], &[], &mut left, &mut right));
     let loud = left[200..].iter().fold(0.0f32, |a, s| a.max(s.abs()));
-    // silenced from the block's frame 0
     let silenced = ParamChange { at: 0, id: 0, value: 0.0 };
     assert!(synth.process(&[], &[silenced], &mut left, &mut right));
     assert!(loud > 0.01);

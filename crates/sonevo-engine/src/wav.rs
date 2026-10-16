@@ -13,7 +13,6 @@ pub enum Depth {
     Float32,
 }
 
-/// Writes `left` and `right` as a stereo WAV file.
 pub fn write_wav(
     path: &Path,
     sample_rate: u32,
