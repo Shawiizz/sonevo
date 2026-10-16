@@ -41,6 +41,8 @@ pub struct Status {
     pub recording: Option<f32>,
     /// The most of its time a block took to play: 1 is all of it.
     pub load: f32,
+    /// How loud the master played across the spectrum, from the lows to the highs.
+    pub spectrum: Vec<f32>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -404,6 +406,7 @@ impl Studio {
                 audio,
                 recording,
                 load: 0.0,
+                spectrum: Vec::new(),
             };
         };
         engine.collect();
@@ -419,6 +422,7 @@ impl Studio {
             audio,
             recording,
             load: engine.busy(),
+            spectrum: engine.spectrum().to_vec(),
         }
     }
 }

@@ -35,6 +35,7 @@ const SILENT: Status = {
   audio: { device: null, sampleRate: 0, latencyMs: 0, failed: false, error: null },
   recording: null,
   load: 0,
+  spectrum: [],
 };
 
 /**

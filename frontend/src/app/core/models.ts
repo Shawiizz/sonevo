@@ -199,6 +199,8 @@ export interface Status {
   recording: number | null;
   /** The most of its time a block took to play: 1 is all of it. */
   load: number;
+  /** How loud the master played across the spectrum, from the lows to the highs, 0 to 1. */
+  spectrum: number[];
 }
 
 export interface ParamInfo {

@@ -7,6 +7,7 @@ import { Icon } from '../shared/icon';
 import { Knob } from '../shared/knob';
 import { MenuItem, Menus } from '../shared/menu';
 import { gainToDb, Meter } from '../shared/meter';
+import { Spectrum } from '../shared/spectrum';
 import { Rename } from '../shared/rename';
 
 /** The fader's travel: from silence to +2 dB, unity at 80%. */
@@ -26,7 +27,7 @@ const MAX_FADER = gainToFader(1.25);
  */
 @Component({
   selector: 'app-mixer',
-  imports: [Icon, Knob, Meter],
+  imports: [Icon, Knob, Meter, Spectrum],
   template: `
     <div class="strips">
       @for (insert of strips(); track insert.id) {
@@ -135,6 +136,13 @@ const MAX_FADER = gainToFader(1.25);
           }
         </div>
       }
+      <div
+        class="spectrum"
+        [title]="t('The master across the spectrum: the lows on the left, the highs on the right')"
+      >
+        <span class="title">{{ t('Spectrum') }}</span>
+        <s-spectrum />
+      </div>
       <button class="new" (click)="studio.addInsert()" [title]="t('Add a mixer track')">
         <s-icon name="plus" [size]="18" />
       </button>
@@ -152,6 +160,26 @@ const MAX_FADER = gainToFader(1.25);
       gap: 6px;
       height: 100%;
       padding: 8px;
+    }
+    .spectrum {
+      flex: none;
+      order: -1;
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px;
+      margin-right: 8px;
+      border-radius: var(--s-radius-panel);
+      background: var(--s-raised);
+      .title {
+        color: var(--s-text-2);
+        font-size: 12px;
+      }
+      s-spectrum {
+        flex: 1;
+        min-height: 0;
+      }
     }
     .strip {
       flex: none;

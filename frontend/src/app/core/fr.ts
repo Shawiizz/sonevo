@@ -255,6 +255,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Spectrum: 'Spectre',
+  'The master across the spectrum: the lows on the left, the highs on the right':
+    'Le master sur tout le spectre : les graves à gauche, les aigus à droite',
   'LFO in time': 'LFO au tempo',
   Free: 'Libre',
   '1 bar': '1 mesure',

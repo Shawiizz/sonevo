@@ -76,6 +76,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
+- ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.

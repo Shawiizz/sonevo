@@ -3,6 +3,7 @@
 
 use crate::graph::{Gains, Graph, Lever, CHUNK, EVENTS};
 use crate::meters::{self, Meters};
+use crate::scope::Scope;
 use rtrb::{Consumer, Producer};
 use sonevo_dsp::{Context, Event, Sample};
 use sonevo_project::PPQ;
@@ -54,6 +55,7 @@ pub struct Shared {
     /// float.
     load: AtomicU32,
     pub meters: Meters,
+    pub scope: Scope,
 }
 
 impl Shared {
@@ -63,6 +65,7 @@ impl Shared {
             playing: AtomicBool::new(false),
             load: AtomicU32::new(0),
             meters: Meters::new(),
+            scope: Scope::new(),
         }
     }
 
@@ -403,6 +406,7 @@ impl Renderer {
         for (o, s) in out_right.iter_mut().zip(&master.right[..frames]) {
             *o = safe(*s);
         }
+        self.shared.scope.keep(out_left, out_right);
         if self.metronome && self.playing {
             self.metronome(&graph, out_left, out_right);
         }

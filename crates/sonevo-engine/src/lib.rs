@@ -7,11 +7,13 @@ mod graph;
 mod meters;
 mod renderer;
 mod samples;
+mod scope;
 mod wav;
 
 pub use compile::{Mode, Plugins};
 pub use renderer::Renderer;
 pub use samples::{decode, DecodeError, Samples};
+pub use scope::BANDS;
 pub use wav::{write_wav, Depth};
 
 use compile::{compile, Mirror};
@@ -185,6 +187,12 @@ impl Engine {
     /// The most of its time a block took to play since the last look: 1 is all of it.
     pub fn busy(&self) -> f32 {
         self.shared.load()
+    }
+
+    /// How loud the master played across the spectrum lately: [`BANDS`] bands from the lows
+    /// to the highs, each from 0 to 1.
+    pub fn spectrum(&self) -> [f32; BANDS] {
+        self.shared.scope.spectrum(self.sample_rate)
     }
 
     /// The loudest sample `meter` played since it was last read.
