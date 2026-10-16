@@ -94,8 +94,15 @@ import { SOUND_DRAG } from './playlist';
           <s-icon name="plus" />
         </button>
       </div>
+      <input
+        class="search"
+        type="search"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+        [placeholder]="t('Find in this folder')"
+      />
       <div class="list">
-        @for (e of entries(); track e.path) {
+        @for (e of shown(); track e.path) {
           <div class="row">
             <button
               class="item"
@@ -147,6 +154,21 @@ import { SOUND_DRAG } from './playlist';
       flex-direction: column;
       min-height: 0;
       height: 100%;
+    }
+    .search {
+      margin: 0 8px 6px;
+      height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--s-line);
+      border-radius: var(--s-radius);
+      background: var(--s-void);
+      color: var(--s-text);
+      font: inherit;
+      font-size: 12px;
+      &:focus {
+        outline: none;
+        border-color: var(--s-accent);
+      }
     }
     .list {
       flex: 1;
@@ -258,6 +280,13 @@ export class Browser {
   );
   protected readonly effects = computed(() => this.studio.devices().filter((d) => !d.instrument));
   protected readonly entries = signal<Entry[]>([]);
+  protected readonly search = signal('');
+  /** The entries whose name has every word looked for. */
+  protected readonly shown = computed(() => {
+    const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return this.entries();
+    return this.entries().filter((e) => words.every((w) => e.name.toLowerCase().includes(w)));
+  });
   /** The folders gone into, from a place; none at the places themselves. */
   protected readonly trail = signal<Entry[]>([]);
   protected readonly here = computed(() => this.trail().at(-1) ?? null);
@@ -275,6 +304,7 @@ export class Browser {
   private async showPlaces(): Promise<void> {
     this.trail.set([]);
     this.entries.set(await api.places());
+    this.search.set('');
   }
 
   protected isMidi(e: Entry): boolean {
@@ -291,6 +321,7 @@ export class Browser {
         const entries = await api.browse(e.path);
         this.trail.update((t) => [...t, e]);
         this.entries.set(entries);
+        this.search.set('');
       } catch (error) {
         this.studio.fail(error);
       }
@@ -323,6 +354,7 @@ export class Browser {
       return;
     }
     this.entries.set(await api.browse(back.path));
+    this.search.set('');
     this.trail.set(trail);
   }
 

@@ -256,6 +256,7 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Find in this folder': 'Chercher dans ce dossier',
   'How far it brings the sound down now': 'De combien il baisse le son en ce moment',
   'Brought down': 'Baisse',
   'Mix check': 'Contrôle du mix',
