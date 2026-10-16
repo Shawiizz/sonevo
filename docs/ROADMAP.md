@@ -267,3 +267,6 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     depuis le tout début du morceau).
 28. **Décompte et tempo** : la mesure retirée de la prise est comptée au tempo du morceau, pas à
     celui d'une automation du tempo à cet endroit.
+29. **Noms donnés par Sonevo** : « Track 3 » ou « Untitled » restent en anglais dans le fichier
+    et s'affichent dans la langue de l'interface (« Piste 3 », « Sans titre ») ; un nom que tu
+    tapes reste tel quel.
