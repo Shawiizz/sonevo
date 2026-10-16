@@ -12,7 +12,9 @@ import {
   newId,
   Note,
   Pattern,
+  PPQ,
   PluginInfo,
+  SampleInfo,
   Status,
   View,
 } from './models';
@@ -38,6 +40,8 @@ export class Studio {
   readonly status = signal<Status>(SILENT);
   readonly devices = signal<DeviceInfo[]>([]);
   readonly plugins = signal<PluginInfo[]>([]);
+  /** The sounds of the song read so far, by name; null while being read or unreadable. */
+  readonly samples = signal<Record<string, SampleInfo | null>>({});
   readonly error = signal<string | null>(null);
 
   readonly song = computed(() => this.view()?.song ?? null);
@@ -131,6 +135,24 @@ export class Studio {
     const set = device.params?.[param];
     if (set !== undefined) return set;
     return this.info(device)?.params.find((p) => p.id === param)?.default ?? 0;
+  }
+
+  /** The sound `name`, read once and kept; null until read. */
+  sample(name: string): SampleInfo | null {
+    const known = this.samples();
+    if (!(name in known)) {
+      this.samples.update((s) => ({ ...s, [name]: null }));
+      api
+        .sampleInfo(name)
+        .then((info) => this.samples.update((s) => ({ ...s, [name]: info })))
+        .catch(() => undefined);
+    }
+    return known[name] ?? null;
+  }
+
+  /** Ticks to `seconds` at the song's tempo. */
+  ticks(seconds: number): number {
+    return (seconds * (this.song()?.tempo ?? 120) * PPQ) / 60;
   }
 
   notes(pattern: Id, channel: Id): Note[] {

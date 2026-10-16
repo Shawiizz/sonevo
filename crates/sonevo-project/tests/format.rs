@@ -121,6 +121,11 @@ fn a_sample_imported_twice_is_kept_once_by_what_is_in_it() {
     let first = import_sample(&song_dir, &source).unwrap();
     let again = import_sample(&song_dir, &source).unwrap();
     assert_eq!(first, again);
-    assert!(first.ends_with(".wav") && first.len() == 20);
+    assert!(first.ends_with(".wav") && first.len() == 20 + 1 + source.file_stem().unwrap().len(), "{first}");
+    assert!(first.starts_with(&*source.file_stem().unwrap().to_string_lossy()));
+    // the same sound under another name is the one kept
+    let copy = source.with_file_name("copy.wav");
+    std::fs::copy(&source, &copy).unwrap();
+    assert_eq!(import_sample(&song_dir, &copy).unwrap(), first);
     assert_eq!(std::fs::read_dir(song_dir.join("samples")).unwrap().count(), 1);
 }

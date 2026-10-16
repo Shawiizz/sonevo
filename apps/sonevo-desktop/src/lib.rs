@@ -18,6 +18,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 struct App {
     studio: Mutex<Studio>,
     plugins: Mutex<Vec<sonevo_plugins::Found>>,
+    sample_infos: Mutex<std::collections::HashMap<String, SampleInfo>>,
     settings: Mutex<Settings>,
     settings_path: PathBuf,
 }
@@ -148,6 +149,43 @@ fn compare_version(app: State<App>, id: Option<String>) -> Answer<serde_json::Va
     let mut studio = app.studio();
     studio.compare(id.as_deref())?;
     Ok(view(&studio))
+}
+
+/// A sound of the song, as the playlist draws it.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SampleInfo {
+    seconds: f64,
+    /// The loudest sample of each of its equal parts, from its start to its end.
+    peaks: Vec<f32>,
+}
+
+/// How many parts a sound's outline is drawn from.
+const PEAKS: usize = 1024;
+
+#[tauri::command(async)]
+fn sample_info(app: State<App>, name: String) -> Answer<SampleInfo> {
+    if let Some(info) = app.sample_infos.lock().unwrap_or_else(|e| e.into_inner()).get(&name) {
+        return Ok(info.clone());
+    }
+    if name.contains(['/', '\\']) {
+        return Err(format!("{name} is not a sound of the song"));
+    }
+    let path = app.studio().working_folder().join("samples").join(&name);
+    let sample = sonevo_engine::decode(&path).map_err(|e| e.to_string())?;
+    let frames = sample.frames();
+    let part = frames.div_ceil(PEAKS).max(1);
+    let peaks = (0..frames)
+        .step_by(part)
+        .map(|from| {
+            let to = (from + part).min(frames);
+            let side = |s: &[f32]| s[from..to].iter().fold(0.0f32, |a, v| a.max(v.abs()));
+            side(&sample.left).max(side(&sample.right))
+        })
+        .collect();
+    let info = SampleInfo { seconds: frames as f64 / f64::from(sample.sample_rate), peaks };
+    app.sample_infos.lock().unwrap_or_else(|e| e.into_inner()).insert(name, info.clone());
+    Ok(info)
 }
 
 #[tauri::command(async)]
@@ -465,6 +503,7 @@ pub fn run() {
             let state = App {
                 studio: Mutex::new(studio),
                 plugins: Mutex::new(sonevo_plugins::scan(&folders)),
+                sample_infos: Mutex::new(std::collections::HashMap::new()),
                 settings: Mutex::new(settings),
                 settings_path,
             };
@@ -500,6 +539,7 @@ pub fn run() {
             compare_version,
             plugins,
             scan_plugins,
+            sample_info,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

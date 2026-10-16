@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { open } from '@tauri-apps/plugin-dialog';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Entry } from '../core/models';
+import { Entry, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files, soundName } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -228,7 +228,7 @@ export class Browser {
   }
 
   protected label(e: Entry): string {
-    return e.name.replace(/^[0-9a-f]{16}\./, '');
+    return sampleLabel(e.name);
   }
 
   protected async pick(e: Entry): Promise<void> {

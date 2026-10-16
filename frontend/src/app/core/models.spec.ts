@@ -1,4 +1,4 @@
-import { barLength, formatPosition, isBlack, keyName, newId, PPQ } from './models';
+import { barLength, formatPosition, isBlack, keyName, newId, PPQ, sampleLabel } from './models';
 
 describe('models', () => {
   it('writes positions as bars, beats and steps from 1', () => {
@@ -22,6 +22,11 @@ describe('models', () => {
     expect(keyName(61)).toBe('C#4');
     expect(isBlack(61)).toBe(true);
     expect(isBlack(64)).toBe(false);
+  });
+
+  it('names sounds by their own name', () => {
+    expect(sampleLabel('Kick 808 0123456789abcdef.wav')).toBe('Kick 808');
+    expect(sampleLabel('0123456789abcdef.flac')).toBe('0123456789abcdef.flac');
   });
 
   it('makes ids as the song has them', () => {

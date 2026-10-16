@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Clip, Id, newId, PPQ, STEP, Track } from '../core/models';
+import { Clip, Id, newId, PPQ, sampleLabel, STEP, Track } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -200,7 +200,7 @@ export class Playlist implements OnDestroy {
         return song?.patterns.find((p) => p.id === id)?.name ?? '';
       }
       case 'audio':
-        return clip.content.sample.replace(/^[0-9a-f]{16}\./, '');
+        return sampleLabel(clip.content.sample);
       default: {
         const target = clip.content.target;
         if (target.type === 'tempo') return this.t('Tempo');
@@ -375,9 +375,20 @@ export class Playlist implements OnDestroy {
       coords.push(x + w, y + h - points[points.length - 1].value * h);
       g.poly(coords, false).stroke({ width: 1.5, color });
     } else {
-      for (let i = 0; i < w; i += 3) {
-        const v = Math.abs(Math.sin(i * 0.37) * Math.sin(i * 0.071)) * h * 0.45;
-        g.rect(x + i, y + h / 2 - v, 1.5, v * 2).fill({ color, alpha: 0.6 });
+      const info = this.studio.sample(content.sample);
+      if (!info || !info.peaks.length) return;
+      // the sound's outline, as long as it lasts at the song's tempo
+      const length = this.studio.ticks(info.seconds);
+      const offset = clip.offset ?? 0;
+      const visible = Math.min(clip.length, length - offset);
+      for (let i = 0; i < visible * this.perTick; i += 2) {
+        const at = offset + i / this.perTick;
+        const peak =
+          info.peaks[
+            Math.min(info.peaks.length - 1, Math.floor((at / length) * info.peaks.length))
+          ];
+        const v = Math.max(0.5, peak * h * 0.48);
+        g.rect(x + i, y + h / 2 - v, 1.5, v * 2).fill({ color, alpha: 0.75 });
       }
     }
   }
@@ -754,11 +765,16 @@ export class Playlist implements OnDestroy {
     if (!track || x < HEADERS) return;
     const [sound] = await this.files.import([path]);
     if (!sound) return;
+    // as long as the sound, to the beat after its end
+    const info = await api.sampleInfo(sound.sample).catch(() => null);
+    const length = info
+      ? Math.ceil(this.studio.ticks(info.seconds) / PPQ) * PPQ
+      : this.studio.bar() * 2;
     const clip: Clip = {
       id: newId(),
       track: track.id,
       start: this.snapped(this.tickAt(x)),
-      length: this.studio.bar() * 2,
+      length,
       content: { type: 'audio', sample: sound.sample, gain: 1 },
     };
     void this.studio.edit({ type: 'putClip', clip });

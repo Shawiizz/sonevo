@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Device, ParamInfo } from '../core/models';
+import { Device, ParamInfo, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -288,7 +288,7 @@ export class DevicePanel {
   }
 
   protected sampleName(device: Device): string {
-    return device.sample ? device.sample.replace(/^[0-9a-f]{16}\./, '') : this.t('No sound yet');
+    return device.sample ? sampleLabel(device.sample) : this.t('No sound yet');
   }
 
   protected async chooseSample(device: Device): Promise<void> {

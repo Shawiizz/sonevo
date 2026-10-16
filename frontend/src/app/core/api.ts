@@ -8,6 +8,7 @@ import type {
   Id,
   OutputInfo,
   PluginInfo,
+  SampleInfo,
   Settings,
   VersionInfo,
   Status,
@@ -56,6 +57,7 @@ export const api = {
   compareVersion: (id: string | null) => invoke<View>('compare_version', { id }),
   plugins: () => invoke<PluginInfo[]>('plugins'),
   scanPlugins: () => invoke<PluginInfo[]>('scan_plugins'),
+  sampleInfo: (name: string) => invoke<SampleInfo>('sample_info', { name }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

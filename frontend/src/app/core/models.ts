@@ -194,6 +194,17 @@ export interface Settings {
   welcomed: boolean;
 }
 
+/** A sound of the song by its own name: the file's name without its hash or extension. */
+export function sampleLabel(name: string): string {
+  return name.replace(/ ?[0-9a-f]{16}\.[^.]+$/, '') || name;
+}
+
+/** A sound of the song: how long it lasts, and its outline. */
+export interface SampleInfo {
+  seconds: number;
+  peaks: number[];
+}
+
 /** A plugin installed on this computer. */
 export interface PluginInfo {
   bundle: string;

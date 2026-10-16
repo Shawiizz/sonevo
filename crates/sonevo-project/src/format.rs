@@ -4,7 +4,7 @@
 //! My song.sonevo/
 //!   song.json             everything but the patterns' notes
 //!   patterns/<id>.json    a pattern's notes, one note a line
-//!   samples/<hash>.<ext>  the samples, named by what is in them
+//!   samples/<name> <hash>.<ext>  the samples, named by what is in them
 //! ```
 //!
 //! Written the same way every time, the files of a song changed a little differ a little.
@@ -140,9 +140,28 @@ pub fn import_sample(dir: &Path, source: &Path) -> Result<String, FormatError> {
     let hash = blake3::hash(&bytes).to_hex();
     let extension =
         source.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_else(|| "wav".into());
-    let name = format!("{}.{extension}", &hash[..16]);
+    let tail = format!("{}.{extension}", &hash[..16]);
     let samples = dir.join(SAMPLES);
     std::fs::create_dir_all(&samples).map_err(io_error(&samples))?;
+    // the same sound, whatever it was called, is kept once
+    let kept = std::fs::read_dir(&samples).map_err(io_error(&samples))?.flatten().find_map(|e| {
+        let name = e.file_name().to_string_lossy().into_owned();
+        name.ends_with(&tail).then_some(name)
+    });
+    if let Some(name) = kept {
+        return Ok(name);
+    }
+    // the file's own name first, for the folder to read as it did
+    let stem: String = source
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_'))
+        .take(48)
+        .collect();
+    let stem = stem.trim();
+    let name = if stem.is_empty() { tail } else { format!("{stem} {tail}") };
     let target = samples.join(&name);
     if !target.is_file() {
         std::fs::write(&target, &bytes).map_err(io_error(&target))?;
