@@ -152,10 +152,11 @@ impl Sampler {
             }
         };
         let to = to.min((frames - 1) as f64);
-        // a loop of at least a few milliseconds within the part played; none for slices
+        // a loop of at least a few milliseconds within the part played, while the key is held:
+        // none for slices, nor played to the end, which a loop never reaches
         let (start, end) = (self.values[11] * frames as f64, (self.values[12] * frames as f64).min(to));
-        let looped = (slices == 0 && self.values[10].round() as i32 == 1 && end - start.max(from) >= 64.0)
-            .then(|| (start.max(from), end));
+        let looping = slices == 0 && self.held() && self.values[10].round() as i32 == 1;
+        let looped = (looping && end - start.max(from) >= 64.0).then(|| (start.max(from), end));
         let rate = f64::from(sample.sample_rate) / f64::from(self.sample_rate) * 2f64.powf(semitones / 12.0);
         let (at, step) = if self.reversed() { (to - 1.0, -rate) } else { (from, rate) };
         let slot = self
@@ -196,10 +197,9 @@ impl Sampler {
             for (l, r) in left.iter_mut().zip(right.iter_mut()) {
                 // round the loop again, forwards or backwards
                 if let Some((start, end)) = voice.looped {
-                    if voice.step > 0.0 && voice.at >= end {
-                        voice.at -= end - start;
-                    } else if voice.step < 0.0 && voice.at < start {
-                        voice.at += end - start;
+                    // however far past it a fast step went
+                    if (voice.step > 0.0 && voice.at >= end) || (voice.step < 0.0 && voice.at < start) {
+                        voice.at = start + (voice.at - start).rem_euclid(end - start);
                     }
                 }
                 if voice.at < voice.from.max(0.0) || voice.at >= voice.to {
@@ -250,10 +250,13 @@ impl Processor for Sampler {
             }
         }
         self.render(&mut left[done..], &mut right[done..]);
-        if self.values[13] < 19_000.0 {
-            for (side, filter) in [left, right].into_iter().zip(self.filters.iter_mut()) {
-                for s in side.iter_mut() {
-                    *s = filter.process(*s).low;
+        // the filter always fed, for its state to be ready when it closes; heard below 19 kHz
+        let heard = self.values[13] < 19_000.0;
+        for (side, filter) in [left, right].into_iter().zip(self.filters.iter_mut()) {
+            for s in side.iter_mut() {
+                let low = filter.process(*s).low;
+                if heard {
+                    *s = low;
                 }
             }
         }

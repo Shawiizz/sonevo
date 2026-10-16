@@ -458,11 +458,11 @@ export class Playlist implements OnDestroy {
       if (clip.start >= part.end) {
         edits.push({ type: 'putClip', clip: { ...clip, start: clip.start + length } });
       } else if (clip.start >= part.start) {
-        const kept = Math.min(clip.start + clip.length, part.end) - clip.start;
-        edits.push({
-          type: 'putClip',
-          clip: { ...clip, id: newId(), start: clip.start + length, length: kept },
-        });
+        // the copy goes on as the clip did; the clip itself stops where the repeat begins
+        edits.push({ type: 'putClip', clip: { ...clip, id: newId(), start: clip.start + length } });
+        if (clip.start + clip.length > part.end) {
+          edits.push({ type: 'putClip', clip: { ...clip, length: part.end - clip.start } });
+        }
       } else if (clip.start + clip.length > part.start) {
         // going on through the part: on through its repeat too
         edits.push({ type: 'putClip', clip: { ...clip, length: clip.length + length } });
@@ -500,8 +500,20 @@ export class Playlist implements OnDestroy {
           },
         });
       } else if (end > part.start) {
-        // starting before: cut where the part begins
+        // starting before: cut where the part begins, and what goes on after it brought closer
         edits.push({ type: 'putClip', clip: { ...clip, length: part.start - clip.start } });
+        if (end > part.end) {
+          edits.push({
+            type: 'putClip',
+            clip: {
+              ...clip,
+              id: newId(),
+              start: part.start,
+              length: end - part.end,
+              offset: (clip.offset ?? 0) + (part.end - clip.start),
+            },
+          });
+        }
       }
     }
     if (removed.length) edits.push({ type: 'removeClips', ids: removed });

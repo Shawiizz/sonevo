@@ -192,7 +192,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - Grille de clips à lancer, modulateurs branchables partout.
 - Les boutons d'un contrôleur MIDI liés aux réglages (« MIDI learn ») : rien pour l'essayer
   cette nuit.
-- S'entendre pendant l'enregistrement (retour de l'entrée) et un décompte d'une mesure avant.
+- S'entendre pendant l'enregistrement (le retour de l'entrée vers la sortie).
 - L'encodeur FLAC avec prédiction linéaire (LPC), pour des fichiers plus petits.
 - Séparation de pistes et audio vers MIDI en local.
 - Envoyer à l'interface seulement ce qui a changé : fait pour les notes (seuls les patterns
@@ -262,3 +262,5 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     plutôt qu'un silence.
 27. **Décompte** : activé par défaut ; il remonte d'une mesure si le morceau le permet (pas
     depuis le tout début du morceau).
+28. **Décompte et tempo** : la mesure retirée de la prise est comptée au tempo du morceau, pas à
+    celui d'une automation du tempo à cet endroit.

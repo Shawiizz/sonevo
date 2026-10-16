@@ -115,6 +115,12 @@ fn a_sampler_looping_plays_on_while_held() {
     device.process(&CONTEXT, &[], &mut left, &mut right);
     // at the velocity of 0.8 the loop's half to three quarters are 0.4 to 0.6
     assert!(left.iter().all(|s| (0.39..0.61).contains(s)), "{:?}", &left[..4]);
+    // played to the end, it does not loop, and ends
+    device.set(sampler.param("mode").unwrap(), 0.0);
+    play(&mut *device, &[note(0, 62, true)], 1);
+    device.reset();
+    play(&mut *device, &[note(0, 60, true)], 150);
+    assert_eq!(play(&mut *device, &[], 5), 0.0, "a loop played to the end never ends");
 }
 
 #[test]

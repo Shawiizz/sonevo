@@ -279,12 +279,12 @@ export class PianoRoll implements OnDestroy {
     this.top = Math.min(127, middle + Math.floor(rows / 2));
   }
 
-  /** `key`, or the nearest of the scale's when notes keep to it. */
-  private inKey(key: number): number {
+  /** `key`, or the nearest of the scale's when notes keep to it: the way `towards` goes first. */
+  private inKey(key: number, towards = -1): number {
     const scale = SCALES[this.scale()]?.steps;
     if (!this.keepToScale() || !scale || inScale(key, this.root(), scale)) return key;
     for (let off = 1; off < 12; off++) {
-      for (const k of [key - off, key + off]) {
+      for (const k of towards > 0 ? [key + off, key - off] : [key - off, key + off]) {
         if (k >= 0 && k <= 127 && inScale(k, this.root(), scale)) return k;
       }
     }
@@ -603,7 +603,10 @@ export class PianoRoll implements OnDestroy {
       case 'move': {
         const snap = this.snap();
         const dt = Math.round((this.tickAt(x) - drag.from.tick) / snap) * snap;
-        const dk = this.keyAt(y) - drag.from.key;
+        const anchor = drag.original[drag.picked[drag.picked.length - 1]];
+        let dk = this.keyAt(y) - drag.from.key;
+        // kept to the scale, the notes move together by what puts the last one in it
+        if (anchor) dk = this.inKey(anchor.key + dk, Math.sign(dk)) - anchor.key;
         const lowest = Math.min(...drag.picked.map((i) => drag.original[i].start));
         const shift = Math.max(-lowest, dt);
         for (const i of drag.picked) {
@@ -611,7 +614,7 @@ export class PianoRoll implements OnDestroy {
           this.working![i] = {
             ...o,
             start: o.start + shift,
-            key: this.inKey(Math.max(0, Math.min(127, o.key + dk))),
+            key: Math.max(0, Math.min(127, o.key + dk)),
           };
         }
         const lead = this.working![drag.picked[drag.picked.length - 1]];
