@@ -27,8 +27,10 @@ use std::ffi::{c_char, c_void, CStr, CString};
 use std::path::Path;
 use std::sync::Arc;
 
-/// The sound inputs given to a plugin at most: the first takes the sound, the others silence.
-const MAX_INPUTS: usize = 8;
+/// The sound inputs and outputs given to a plugin at most, and the channels of each: the first
+/// input takes the sound, the first output gives it; the others take silence, give nothing.
+const MAX_PORTS: usize = 8;
+const MAX_CHANNELS: usize = 8;
 
 /// The notes one call to [`Instance::process`] takes at most: more are dropped.
 pub const MAX_NOTES: usize = 256;
@@ -177,8 +179,10 @@ impl Bundle {
             changes: Vec::with_capacity(MAX_PARAMS),
             events: Vec::with_capacity(MAX_NOTES + MAX_PARAMS),
             inputs: Vec::new(),
+            outputs: Vec::new(),
             input: [Vec::new(), Vec::new()],
             silence: Vec::new(),
+            spare: Vec::new(),
             _host: host,
             _bundle: Arc::clone(self),
         };
@@ -247,11 +251,14 @@ pub struct Instance {
     notes: Vec<clap_event_note>,
     changes: Vec<clap_event_param_value>,
     events: Vec<*const clap_event_header>,
-    /// Each sound input's channels, none for an instrument; the sound given to the first, copied
-    /// in before each block, and the silence the others are given.
+    /// Each sound input's and output's channels, none for an instrument's inputs; the sound
+    /// given to the first input, copied in before each block; the silence the other channels
+    /// are given, and where those it gives are let go.
     inputs: Vec<u32>,
+    outputs: Vec<u32>,
     input: [Vec<f32>; 2],
     silence: Vec<f32>,
+    spare: Vec<f32>,
     _host: Box<clap_host>,
     _bundle: Arc<Bundle>,
 }
@@ -264,10 +271,15 @@ impl Instance {
         if self.state != State::Initialised {
             return Err(fail("the plugin is already active"));
         }
-        self.inputs = self.input_ports();
+        self.inputs = self.ports(true);
+        self.outputs = self.ports(false);
+        if self.outputs.is_empty() {
+            self.outputs.push(2);
+        }
         let frames = max_frames as usize;
         self.input = [vec![0.0; frames], vec![0.0; frames]];
         self.silence = vec![0.0; frames];
+        self.spare = vec![0.0; frames];
         // SAFETY: activated once, from the thread that made it
         let activated =
             unsafe { (*self.plugin).activate.is_some_and(|go| go(self.plugin, sample_rate, 1, max_frames)) };
@@ -278,8 +290,9 @@ impl Instance {
         Ok(())
     }
 
-    /// The channels of each of the plugin's sound inputs, one or two: none for an instrument.
-    fn input_ports(&self) -> Vec<u32> {
+    /// The channels of each of the plugin's sound inputs, or outputs: none when it has no
+    /// such ports, as an instrument has no inputs.
+    fn ports(&self, inputs: bool) -> Vec<u32> {
         // SAFETY: on the main thread, inactive; the extension lives as long as the plugin
         let ports = unsafe {
             (*self.plugin)
@@ -290,14 +303,14 @@ impl Instance {
             return Vec::new();
         }
         let ports = unsafe { &*ports };
-        let count = ports.count.map_or(0, |count| unsafe { count(self.plugin, true) }) as usize;
-        (0..count.min(MAX_INPUTS) as u32)
+        let count = ports.count.map_or(0, |count| unsafe { count(self.plugin, inputs) }) as usize;
+        (0..count.min(MAX_PORTS) as u32)
             .map(|index| {
                 // SAFETY: the info is filled by the plugin before it is read
                 let mut info: clap_audio_port_info = unsafe { std::mem::zeroed() };
-                let got = ports.get.is_some_and(|get| unsafe { get(self.plugin, index, true, &mut info) });
+                let got = ports.get.is_some_and(|get| unsafe { get(self.plugin, index, inputs, &mut info) });
                 if got {
-                    info.channel_count.clamp(1, 2)
+                    info.channel_count.clamp(1, MAX_CHANNELS as u32)
                 } else {
                     2
                 }
@@ -411,9 +424,11 @@ impl Instance {
         };
         let output = clap_output_events { ctx: std::ptr::null_mut(), try_push: Some(events_push) };
         let frames = left.len().min(self.silence.len());
-        let mut in_channels = [[std::ptr::null_mut::<f32>(); 2]; MAX_INPUTS];
-        // SAFETY: plain data, every field set below for the inputs given
-        let mut ins: [clap_audio_buffer; MAX_INPUTS] = unsafe { std::mem::zeroed() };
+        let mut in_channels = [[std::ptr::null_mut::<f32>(); MAX_CHANNELS]; MAX_PORTS];
+        let mut out_channels = [[std::ptr::null_mut::<f32>(); MAX_CHANNELS]; MAX_PORTS];
+        // SAFETY: plain data, every field set below for the ports given
+        let mut ins: [clap_audio_buffer; MAX_PORTS] = unsafe { std::mem::zeroed() };
+        let mut outs: [clap_audio_buffer; MAX_PORTS] = unsafe { std::mem::zeroed() };
         if let Some(&first) = self.inputs.first() {
             if first == 1 {
                 for (to, (l, r)) in self.input[0].iter_mut().zip(left.iter().zip(right.iter())).take(frames) {
@@ -424,40 +439,50 @@ impl Instance {
                 self.input[1][..frames].copy_from_slice(&right[..frames]);
             }
         }
-        for (port, &count) in self.inputs.iter().enumerate() {
-            for (channel, to) in in_channels[port].iter_mut().enumerate().take(count as usize) {
-                *to = if port == 0 { self.input[channel].as_mut_ptr() } else { self.silence.as_mut_ptr() };
-            }
-            ins[port] = clap_audio_buffer {
-                data32: in_channels[port].as_mut_ptr(),
-                data64: std::ptr::null_mut(),
-                channel_count: count,
-                latency: 0,
-                constant_mask: 0,
-            };
-        }
-        let mut channels = [left.as_mut_ptr(), right.as_mut_ptr()];
-        let mut out = clap_audio_buffer {
+        let buffer = |channels: &mut [*mut f32; MAX_CHANNELS], count: u32| clap_audio_buffer {
             data32: channels.as_mut_ptr(),
             data64: std::ptr::null_mut(),
-            channel_count: 2,
+            channel_count: count,
             latency: 0,
             constant_mask: 0,
         };
+        for (port, &count) in self.inputs.iter().enumerate() {
+            for (channel, to) in in_channels[port].iter_mut().enumerate().take(count as usize) {
+                *to = match (port, channel) {
+                    (0, 0 | 1) => self.input[channel].as_mut_ptr(),
+                    _ => self.silence.as_mut_ptr(),
+                };
+            }
+            ins[port] = buffer(&mut in_channels[port], count);
+        }
+        for (port, &count) in self.outputs.iter().enumerate() {
+            for (channel, to) in out_channels[port].iter_mut().enumerate().take(count as usize) {
+                *to = match (port, channel) {
+                    (0, 0) => left.as_mut_ptr(),
+                    (0, 1) => right.as_mut_ptr(),
+                    _ => self.spare.as_mut_ptr(),
+                };
+            }
+            outs[port] = buffer(&mut out_channels[port], count);
+        }
         let process = clap_process {
             steady_time: -1,
             frames_count: frames as u32,
             transport: std::ptr::null(),
             audio_inputs: if self.inputs.is_empty() { std::ptr::null() } else { ins.as_ptr() },
-            audio_outputs: &mut out,
+            audio_outputs: outs.as_mut_ptr(),
             audio_inputs_count: self.inputs.len() as u32,
-            audio_outputs_count: 1,
+            audio_outputs_count: self.outputs.len() as u32,
             in_events: &input,
             out_events: &output,
         };
         // SAFETY: on the audio thread, processing; every pointer outlives the call
         let status =
             unsafe { (*self.plugin).process.map_or(CLAP_PROCESS_ERROR, |go| go(self.plugin, &process)) };
+        // a mono output heard on both sides
+        if self.outputs[0] == 1 {
+            right[..frames].copy_from_slice(&left[..frames]);
+        }
         status != CLAP_PROCESS_ERROR
     }
 }

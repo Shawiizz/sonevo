@@ -98,6 +98,22 @@ export type Target =
   | { type: 'param'; device: Id; param: string }
   | { type: 'tempo' };
 
+/** A target as a key: the same whatever order its fields came in. */
+export function targetKey(target: Target): string {
+  switch (target.type) {
+    case 'channelVolume':
+    case 'channelPan':
+      return `${target.type} ${target.channel}`;
+    case 'insertVolume':
+    case 'insertPan':
+      return `${target.type} ${target.insert}`;
+    case 'param':
+      return `param ${target.device} ${target.param}`;
+    case 'tempo':
+      return 'tempo';
+  }
+}
+
 export interface Point {
   at: Ticks;
   value: number;
@@ -178,6 +194,8 @@ export interface View {
   patternMode: Id | null;
   missing: string[];
   comparing: string | null;
+  /** Counted up with each view: one come after a later one is out of date. */
+  revision: number;
 }
 
 export interface VersionInfo {

@@ -22,6 +22,7 @@ import {
   Song,
   Status,
   Target,
+  targetKey,
   View,
 } from './models';
 
@@ -65,6 +66,8 @@ export class Studio {
   /** Keys played are written into the pattern as it goes round. */
   readonly writing = signal(false);
   private statusAt = 0;
+  private revision = 0;
+  private writes = Promise.resolve();
   /** Knobs moved as the song plays are written into automation clips. */
   readonly recordingMoves = signal(false);
   /** The moves of each knob held, by its target, until it is let go of. */
@@ -116,6 +119,12 @@ export class Studio {
   }
 
   show(view: View): void {
+    // a view overtaken by a later one: the whole song asked for again, as notes may be in it
+    if (view.revision < this.revision) {
+      void api.song().then((whole) => this.show(whole));
+      return;
+    }
+    this.revision = view.revision;
     // the notes not sent are those already here
     const before = this.view()?.notes ?? {};
     const notes: View['notes'] = {};
@@ -373,8 +382,13 @@ export class Studio {
   moved(target: Target, value: number, name: string): void {
     const at = this.recordingMoves() ? this.songTick() : null;
     if (at === null) return;
-    const key = JSON.stringify(target);
-    const held = this.moves.get(key) ?? { target, name, points: [] };
+    const key = targetKey(target);
+    let held = this.moves.get(key) ?? { target, name, points: [] };
+    // the loop gone round: what was moved before written, the moves after it apart
+    if (held.points.length && at < held.points[held.points.length - 1].at) {
+      void this.queue(held);
+      held = { target, name, points: [] };
+    }
     const last = held.points.at(-1);
     // one point a thirty-second at most
     if (last && at - last.at < PPQ / 8) last.value = value;
@@ -384,17 +398,30 @@ export class Studio {
 
   /** The knob for `target` let go of: its moves written into its automation clip. */
   async letGo(target: Target): Promise<void> {
-    const key = JSON.stringify(target);
+    const key = targetKey(target);
     const held = this.moves.get(key);
     this.moves.delete(key);
+    if (held) await this.queue(held);
+  }
+
+  /** Moves written one after the other: a clip the first makes is found by the next. */
+  private queue(held: { target: Target; name: string; points: Point[] }): Promise<void> {
+    this.writes = this.writes.then(() => this.write(held));
+    return this.writes;
+  }
+
+  /** Moves into the automation clip of their target: its points over them replaced, or new. */
+  private async write(held: { target: Target; name: string; points: Point[] }): Promise<void> {
     const song = this.song();
-    if (!held || held.points.length < 2 || !song) return;
+    const target = held.target;
+    const key = targetKey(target);
+    if (held.points.length < 2 || !song) return;
     const from = held.points[0].at;
     const to = held.points[held.points.length - 1].at;
     const clip = song.clips.find(
       (c) =>
         c.content.type === 'automation' &&
-        JSON.stringify(c.content.target) === key &&
+        targetKey(c.content.target) === key &&
         c.start <= to &&
         c.start + c.length >= from,
     );
@@ -424,16 +451,20 @@ export class Studio {
     const bar = this.bar();
     const start = Math.floor(from / bar) * bar;
     const end = Math.max(start + bar, Math.ceil(to / bar) * bar);
-    const track = { id: newId(), name: held.name, mute: false };
+    // on the track of the target's other clips, if it has one
+    const beside = song.clips.find(
+      (c) => c.content.type === 'automation' && targetKey(c.content.target) === key,
+    );
+    const track = beside ? null : { id: newId(), name: held.name, mute: false };
     await this.edit({
       type: 'batch',
       edits: [
-        { type: 'putTrack', track, index: null },
+        ...(track ? [{ type: 'putTrack' as const, track, index: null }] : []),
         {
           type: 'putClip',
           clip: {
             id: newId(),
-            track: track.id,
+            track: track?.id ?? beside!.track,
             start,
             length: end - start,
             content: {

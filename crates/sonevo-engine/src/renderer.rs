@@ -166,8 +166,20 @@ impl Renderer {
                     c.held = channel.held;
                     c.release = channel.release;
                     c.applied = channel.applied;
-                    if let (Some(new), Some(old)) = (&mut c.live, channel.live) {
-                        *new = LiveArp { arp: new.arp, ..old };
+                    match (&mut c.live, channel.live) {
+                        (Some(new), Some(old)) => *new = LiveArp { arp: new.arp, ..old },
+                        // an arpeggiator turned on: the keys held go to it, their notes let go of
+                        (Some(new), None) => {
+                            new.keys = channel.held;
+                            c.release |= channel.held;
+                        }
+                        // turned off: its note sounding let go of
+                        (None, Some(old)) => {
+                            if let Some((key, _)) = old.sounding {
+                                c.release |= 1u128 << (key & 127);
+                            }
+                        }
+                        (None, None) => {}
                     }
                 }
             }
@@ -264,6 +276,9 @@ impl Renderer {
                     for c in &mut g.channels {
                         c.held = 0;
                         c.release = 0;
+                        if let Some(live) = &mut c.live {
+                            *live = LiveArp::new(live.arp);
+                        }
                     }
                 }
             }
@@ -479,15 +494,14 @@ impl Renderer {
                 graph.cursor = graph.events.partition_point(|e| e.tick < graph.loop_start);
                 if self.once {
                     // what is left of the chunk plays the tails
+                    arpeggios_in_time(graph);
                     return (tick, true);
                 }
             } else {
                 tick = until;
             }
         }
-        for c in graph.channels.iter_mut().filter(|c| c.live.is_some()) {
-            in_time(&mut c.events);
-        }
+        arpeggios_in_time(graph);
         (tick, false)
     }
 
@@ -568,6 +582,13 @@ impl Renderer {
                 *r += s;
             }
         }
+    }
+}
+
+/// The events of every channel with a live arpeggio in time order.
+fn arpeggios_in_time(graph: &mut Graph) {
+    for c in graph.channels.iter_mut().filter(|c| c.live.is_some()) {
+        in_time(&mut c.events);
     }
 }
 

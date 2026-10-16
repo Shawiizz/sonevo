@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 /// Plays a block on the audio thread: the sound into `left` and `right`, false when there is
 /// none within `budget`.
 pub enum Player {
-    Here(Instance),
+    Here(Box<Instance>),
     Apart(EngineEnd),
 }
 
@@ -52,7 +52,7 @@ impl Plugin {
         let bundle = Bundle::open(&self.bundle)?;
         let mut instance = bundle.instantiate(&self.id)?;
         instance.activate(f64::from(sample_rate), max_frames)?;
-        Ok(Player::Here(instance))
+        Ok(Player::Here(Box::new(instance)))
     }
 }
 

@@ -12,14 +12,12 @@ struct Biquad {
 }
 
 impl Biquad {
-    fn run(&self, samples: &mut [f64]) {
-        let (mut x1, mut x2, mut y1, mut y2) = (0.0, 0.0, 0.0, 0.0);
-        for s in samples {
-            let x = *s;
-            let y = self.b[0] * x + self.b[1] * x1 + self.b[2] * x2 - self.a[0] * y1 - self.a[1] * y2;
-            (x2, x1, y2, y1) = (x1, x, y1, y);
-            *s = y;
-        }
+    /// The next output for `x`, `state` its last inputs and outputs.
+    fn next(&self, x: f64, state: &mut [f64; 4]) -> f64 {
+        let [x1, x2, y1, y2] = *state;
+        let y = self.b[0] * x + self.b[1] * x1 + self.b[2] * x2 - self.a[0] * y1 - self.a[1] * y2;
+        *state = [x, x1, y, y1];
+        y
     }
 }
 
@@ -46,27 +44,27 @@ fn k_weighting(rate: f64) -> [Biquad; 2] {
 /// sound too short or too quiet to be measured.
 pub fn loudness(left: &[f32], right: &[f32], rate: u32) -> Option<f64> {
     let rate = f64::from(rate);
-    let filters = k_weighting(rate);
-    let weighted = |side: &[f32]| {
-        let mut samples: Vec<f64> = side.iter().map(|&s| f64::from(s)).collect();
-        filters.iter().for_each(|f| f.run(&mut samples));
-        samples
-    };
-    let (l, r) = (weighted(left), weighted(right));
-    let block = (0.4 * rate) as usize;
+    let [shelf, high_pass] = k_weighting(rate);
     let hop = (0.1 * rate) as usize;
-    let frames = l.len().min(r.len());
-    if block == 0 || frames < block {
+    if hop == 0 {
         return None;
     }
-    // each block's power: what the two sides heard, squared, on average
-    let powers: Vec<f64> = (0..=(frames - block) / hop)
-        .map(|i| {
-            let range = i * hop..i * hop + block;
-            let sum: f64 = l[range.clone()].iter().chain(&r[range]).map(|s| s * s).sum();
-            sum / block as f64
-        })
-        .collect();
+    // the power of each tenth of a second, weighted; a block is four of them
+    let mut states = [[0.0; 4]; 4];
+    let mut tenths = Vec::with_capacity(left.len() / hop + 1);
+    let mut sum = 0.0;
+    for (i, (&l, &r)) in left.iter().zip(right).enumerate() {
+        for (side, x) in [f64::from(l), f64::from(r)].into_iter().enumerate() {
+            let shelved = shelf.next(x, &mut states[side * 2]);
+            let y = high_pass.next(shelved, &mut states[side * 2 + 1]);
+            sum += y * y;
+        }
+        if (i + 1) % hop == 0 {
+            tenths.push(sum);
+            sum = 0.0;
+        }
+    }
+    let powers: Vec<f64> = tenths.windows(4).map(|w| w.iter().sum::<f64>() / (4 * hop) as f64).collect();
     let lufs = |power: f64| -0.691 + 10.0 * power.log10();
     let mean = |powers: &mut dyn Iterator<Item = f64>| {
         let (sum, count) = powers.fold((0.0, 0usize), |(s, c), p| (s + p, c + 1));

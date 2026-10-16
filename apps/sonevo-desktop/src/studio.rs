@@ -27,6 +27,8 @@ pub struct View<'a> {
     pub missing: &'a [String],
     /// The version played in place of the song, to compare by ear.
     pub comparing: Option<&'a str>,
+    /// Counted up with each view: one come after a later one is out of date.
+    pub revision: u64,
 }
 
 /// What changes as the song plays, read many times a second.
@@ -78,8 +80,10 @@ pub struct Studio {
     recording: Option<Recording>,
     /// The folder plugins take their states back from: the song's.
     plugin_folder: Arc<std::sync::Mutex<Option<PathBuf>>>,
-    /// What each pattern's notes were like when last sent to the interface.
+    /// What each pattern's notes were like when last sent to the interface, and how many
+    /// views were sent.
     sent: HashMap<Id, u64>,
+    revision: u64,
 }
 
 /// What a pattern's notes are like, to tell whether the interface has them already.
@@ -132,6 +136,7 @@ impl Studio {
             recording: None,
             plugin_folder: Arc::default(),
             sent: HashMap::new(),
+            revision: 0,
         }
     }
 
@@ -156,6 +161,7 @@ impl Studio {
             sent.insert(pattern.id, print);
         }
         self.sent = sent;
+        self.revision += 1;
         View {
             song: &self.song,
             notes,
@@ -169,6 +175,7 @@ impl Studio {
             },
             missing: &self.missing,
             comparing: self.comparing.as_ref().map(|c| c.id.as_str()),
+            revision: self.revision,
         }
     }
 

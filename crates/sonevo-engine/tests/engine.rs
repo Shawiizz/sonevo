@@ -412,6 +412,28 @@ fn the_notes_played_follow_the_playlist() {
 }
 
 #[test]
+fn an_arpeggiator_turned_on_or_off_under_a_key_leaves_nothing_sounding() {
+    let (song, channel, _) = song(&[]);
+    let mut arped = song.clone();
+    arped.channels[0].arp = Some(sonevo_project::Arp {
+        order: sonevo_project::ArpOrder::Up,
+        step: PPQ / 4,
+        octaves: 2,
+        gate: 1.0,
+    });
+    for (before, after) in [(&song, &arped), (&arped, &song)] {
+        let (mut engine, mut renderer) = started(before, Mode::Song);
+        engine.note(channel, 60, 0.9, true);
+        play(&mut renderer, beat(0.6));
+        assert!(engine.load(after, Mode::Song, None).is_empty());
+        play(&mut renderer, beat(0.3));
+        engine.note(channel, 60, 0.0, false);
+        play(&mut renderer, beat(2.0));
+        assert_eq!(loudest(&play(&mut renderer, 4800).0), 0.0, "a note stuck on");
+    }
+}
+
+#[test]
 fn a_track_listening_to_one_after_it_is_left_alone() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let a = insert(&mut song, "A");

@@ -68,6 +68,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         raise_priority();
         while !end.stopping() && engine.alive() {
             end.serve(LOOK_UP, |asked| {
+                // an effect changes the sound given, in place
+                asked.left.copy_from_slice(asked.given_left);
+                asked.right.copy_from_slice(asked.given_right);
                 if !instance.process(asked.notes, asked.changes, asked.left, asked.right) {
                     asked.left.fill(0.0);
                     asked.right.fill(0.0);

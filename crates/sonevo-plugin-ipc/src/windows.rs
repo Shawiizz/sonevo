@@ -20,7 +20,9 @@ use windows_sys::Win32::System::Threading::{
 /// answers within it, and waking from a wait costs about as much.
 const SPIN: Duration = Duration::from_micros(30);
 
-/// One block's place: its notes and settings, and the sound made of them.
+/// One block's place: its notes and settings, the sound an effect is given, and the sound
+/// made. What is given has a place of its own: a plugin late with the block two before, in the
+/// same slot, writes only what it makes.
 #[repr(C)]
 struct Slot {
     frames: AtomicU32,
@@ -28,6 +30,8 @@ struct Slot {
     notes: UnsafeCell<[Note; MAX_NOTES]>,
     changed: AtomicU32,
     changes: UnsafeCell<[ParamChange; MAX_PARAMS]>,
+    given_left: UnsafeCell<[f32; MAX_FRAMES]>,
+    given_right: UnsafeCell<[f32; MAX_FRAMES]>,
     left: UnsafeCell<[f32; MAX_FRAMES]>,
     right: UnsafeCell<[f32; MAX_FRAMES]>,
 }
@@ -172,8 +176,8 @@ impl EngineEnd {
         slot.changed.store(changed as u32, Ordering::Relaxed);
         // SAFETY: as the notes
         unsafe {
-            (&mut *slot.left.get())[..frames].copy_from_slice(&left[..frames]);
-            (&mut *slot.right.get())[..frames].copy_from_slice(&right[..frames]);
+            (&mut *slot.given_left.get())[..frames].copy_from_slice(&left[..frames]);
+            (&mut *slot.given_right.get())[..frames].copy_from_slice(&right[..frames]);
         }
         slot.frames.store(frames as u32, Ordering::Relaxed);
         shared.asked.store(block, Ordering::Release);
@@ -218,11 +222,14 @@ impl Drop for EngineEnd {
     }
 }
 
-/// A block asked for, as the plugin's end reads it.
+/// A block asked for, as the plugin's end reads it: the sound given, and where the sound made
+/// goes.
 pub struct Asked<'a> {
     pub block: u64,
     pub notes: &'a [Note],
     pub changes: &'a [ParamChange],
+    pub given_left: &'a [f32],
+    pub given_right: &'a [f32],
     pub left: &'a mut [f32],
     pub right: &'a mut [f32],
 }
@@ -268,6 +275,8 @@ impl PluginEnd {
                 block,
                 notes: &(&*slot.notes.get())[..count],
                 changes: &(&*slot.changes.get())[..changed],
+                given_left: &(&*slot.given_left.get())[..frames],
+                given_right: &(&*slot.given_right.get())[..frames],
                 left: &mut (&mut *slot.left.get())[..frames],
                 right: &mut (&mut *slot.right.get())[..frames],
             }

@@ -464,9 +464,13 @@ fn export_wav(
         _ => Depth::Pcm24,
     };
     let rate = sample_rate.clamp(22_050, 192_000);
-    let write = |rendered: sonevo_engine::Rendered, path: &Path| -> Answer<Exported> {
+    let write = |rendered: &sonevo_engine::Rendered, path: &Path| -> Answer<()> {
         write_wav(path, rendered.sample_rate, &rendered.left, &rendered.right, depth)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())
+    };
+    // a whole file, how loud it sounds said with it
+    let measured = |rendered: sonevo_engine::Rendered| -> Answer<Exported> {
+        write(&rendered, &path)?;
         let loudest = rendered.left.iter().chain(&rendered.right).fold(0.0f32, |a, s| a.max(s.abs()));
         Ok(Exported {
             loudness: sonevo_engine::loudness(&rendered.left, &rendered.right, rendered.sample_rate),
@@ -475,8 +479,8 @@ fn export_wav(
         })
     };
     match part {
-        Part::Song => write(sonevo_engine::render_part(&song, Some(&folder), rate, None), &path),
-        Part::Loop => write(sonevo_engine::render_part(&song, Some(&folder), rate, song.loop_region), &path),
+        Part::Song => measured(sonevo_engine::render_part(&song, Some(&folder), rate, None)),
+        Part::Loop => measured(sonevo_engine::render_part(&song, Some(&folder), rate, song.loop_region)),
         Part::Stems => {
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
             let mut missing = Vec::new();
@@ -486,7 +490,8 @@ fn export_wav(
             for (i, insert) in tracks {
                 let name: String = insert.name.chars().filter(|c| !r#"<>:"/\\|?*"#.contains(*c)).collect();
                 let rendered = sonevo_engine::render_stem(&song, Some(&folder), rate, insert.id);
-                missing.extend(write(rendered, &path.join(format!("{i:02} {name}.wav")))?.missing);
+                write(&rendered, &path.join(format!("{i:02} {name}.wav")))?;
+                missing.extend(rendered.missing);
             }
             missing.dedup();
             Ok(Exported { missing, ..Exported::default() })
