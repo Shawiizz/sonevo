@@ -8,6 +8,7 @@ import type {
   Id,
   Kept,
   OutputInfo,
+  ParamInfo,
   PluginInfo,
   SampleInfo,
   Settings,
@@ -64,6 +65,8 @@ export const api = {
   leave: () => invoke<void>('leave'),
   playWithKeyboards: (channel: Id | null) => invoke<void>('play_with_keyboards', { channel }),
   keyboards: () => invoke<string[]>('keyboards'),
+  pluginParams: (bundle: string, id: string) =>
+    invoke<ParamInfo[]>('plugin_params', { bundle, id }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

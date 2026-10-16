@@ -42,7 +42,7 @@ pub struct Engine {
     sample_rate: f32,
     mirror: Mirror,
     samples: Samples,
-    plugins: Option<Arc<Plugins>>,
+    plugins: Option<Arc<dyn Plugins>>,
 }
 
 impl Engine {
@@ -68,7 +68,7 @@ impl Engine {
     }
 
     /// How the plugins songs name are started.
-    pub fn set_plugins(&mut self, plugins: Arc<Plugins>) {
+    pub fn set_plugins(&mut self, plugins: Arc<dyn Plugins>) {
         self.plugins = Some(plugins);
     }
 

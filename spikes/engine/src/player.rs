@@ -28,9 +28,9 @@ impl Player {
     ) -> bool {
         let start = Instant::now();
         let played = match self {
-            Player::Here(instance) => instance.process(notes, left, right),
+            Player::Here(instance) => instance.process(notes, &[], left, right),
             Player::Apart(end) => {
-                let block = end.ask(left.len(), notes);
+                let block = end.ask(left.len(), notes, &[]);
                 end.take(block, budget, left, right)
             }
         };

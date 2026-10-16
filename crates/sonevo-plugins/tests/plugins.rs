@@ -52,7 +52,7 @@ fn bundles_in_subfolders_are_found_and_what_is_not_a_plugin_is_left_out() {
 fn a_plugin_plays_in_its_own_process_and_plays_on_after_a_crash() {
     let dir = installed();
     let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
-    let mut remote = Remote::start(&bundle, "dev.sonevo.test-synth", RATE).unwrap();
+    let mut remote = Remote::start(&bundle, "dev.sonevo.test-synth", RATE, &[]).unwrap();
     // the process starting: blocks are silent until it answers
     let start = Instant::now();
     let mut heard = play(&mut remote, &[note(true)], 1);
@@ -106,11 +106,7 @@ fn a_song_plays_a_plugin_through_the_engine() {
     };
     let channel = song.channels[0].id;
     let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
-    engine.set_plugins(std::sync::Arc::new(|bundle: &str, id: &str, rate: f32| {
-        Remote::start(Path::new(bundle), id, rate)
-            .map(|r| Box::new(r) as Box<dyn Processor>)
-            .map_err(|e| e.to_string())
-    }));
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap));
     assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
     engine.note(channel, 64, 0.9, true);
     let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
@@ -126,4 +122,48 @@ fn a_song_plays_a_plugin_through_the_engine() {
     let (mut plain, _renderer) = sonevo_engine::Engine::new(RATE);
     let missing = plain.load(&song, sonevo_engine::Mode::Song, None);
     assert_eq!(missing, ["dev.sonevo.test-synth: plugins are not played here"]);
+}
+
+#[test]
+fn a_plugins_settings_are_read_and_set_from_the_song() {
+    use sonevo_project::{Device, DeviceKind, Song};
+    let dir = installed();
+    let bundle = dir.path().join("Sonevo").join("Test Synth.clap");
+    let bundle_text = bundle.to_string_lossy().into_owned();
+    let params = sonevo_plugins::params(&bundle_text, "dev.sonevo.test-synth");
+    assert_eq!(params.len(), 1);
+    assert_eq!((params[0].id, params[0].name, params[0].default), ("0", "Volume", 0.8));
+
+    // the song turns the plugin's volume down to nothing
+    let mut song = Song::new("Plugin");
+    song.channels[0].instrument = Device {
+        kind: DeviceKind::Clap { bundle: bundle_text, plugin: "dev.sonevo.test-synth".into() },
+        ..Device::builtin("")
+    }
+    .with("0", 0.0);
+    let channel = song.channels[0].id;
+    let (mut engine, mut renderer) = sonevo_engine::Engine::new(RATE);
+    engine.set_plugins(std::sync::Arc::new(sonevo_plugins::Clap));
+    assert!(engine.load(&song, sonevo_engine::Mode::Song, None).is_empty());
+    engine.note(channel, 64, 0.9, true);
+    let (mut left, mut right) = (vec![0.0f32; 480], vec![0.0f32; 480]);
+    let start = Instant::now();
+    let mut answered = false;
+    while start.elapsed() < Duration::from_secs(3) {
+        renderer.render(&mut left, &mut right);
+        answered |= left.iter().any(|s| s.abs() > 0.0);
+    }
+    assert!(!answered, "the plugin was heard though its volume is 0");
+    // turned up as a knob would: heard
+    let device = song.channels[0].instrument.id;
+    assert!(engine.set_param(device, "0", 1.0));
+    // the piano's first note has faded away by now: another one
+    engine.note(channel, 64, 0.0, false);
+    engine.note(channel, 67, 0.9, true);
+    let start = Instant::now();
+    while !answered && start.elapsed() < Duration::from_secs(5) {
+        renderer.render(&mut left, &mut right);
+        answered = left.iter().any(|s| s.abs() > 0.01);
+    }
+    assert!(answered, "the plugin was not heard once turned up");
 }

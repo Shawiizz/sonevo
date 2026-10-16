@@ -6,6 +6,9 @@
 //! `sonevo-plugin-host --scan <bundle>` writes the plugins of a bundle, a line each: id,
 //! name, vendor and features, separated by tabs. A bundle that crashes as it is read crashes
 //! only this process.
+//!
+//! `sonevo-plugin-host --params <bundle> <plugin id>` writes the plugin's settings, a line
+//! each: id, name, least, most, default, and `stepped` or not.
 
 use sonevo_clap::Bundle;
 use sonevo_plugin_ipc::PluginEnd;
@@ -33,6 +36,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             return list(Path::new(bundle));
         }
     }
+    if let [params, bundle, id] = args.as_slice() {
+        if params == "--params" {
+            return describe(Path::new(bundle), id);
+        }
+    }
     let [link, bundle, id, rate, max_frames, engine] = args.as_slice() else {
         return Err(
             "usage: sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>"
@@ -51,7 +59,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         raise_priority();
         while !end.stopping() && engine.alive() {
             end.serve(LOOK_UP, |asked| {
-                if !instance.process(asked.notes, asked.left, asked.right) {
+                if !instance.process(asked.notes, asked.changes, asked.left, asked.right) {
                     asked.left.fill(0.0);
                     asked.right.fill(0.0);
                 }
@@ -76,6 +84,16 @@ fn list(bundle: &Path) -> Result<(), Box<dyn std::error::Error>> {
             clean(&plugin.vendor),
             features.join(",")
         );
+    }
+    Ok(())
+}
+
+fn describe(bundle: &Path, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let clean = |text: &str| text.replace(['\t', '\n', '\r'], " ");
+    let instance = Bundle::open(bundle)?.instantiate(id)?;
+    for p in instance.params() {
+        let stepped = if p.stepped { "stepped" } else { "" };
+        println!("{}\t{}\t{}\t{}\t{}\t{stepped}", p.id, clean(&p.name), p.min, p.max, p.default);
     }
     Ok(())
 }

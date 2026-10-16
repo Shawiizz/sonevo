@@ -293,29 +293,33 @@ fn devices() -> Vec<DeviceInfo> {
             name: b.name,
             label: b.label,
             instrument: b.instrument,
-            params: b
-                .params
-                .iter()
-                .map(|p| {
-                    let (scale, choices) = match p.scale {
-                        sonevo_dsp::Scale::Linear => ("linear", &[][..]),
-                        sonevo_dsp::Scale::Log => ("log", &[][..]),
-                        sonevo_dsp::Scale::Choice(choices) => ("choice", choices),
-                    };
-                    ParamInfo {
-                        id: p.id,
-                        name: p.name,
-                        min: p.min,
-                        max: p.max,
-                        default: p.default,
-                        unit: p.unit,
-                        scale,
-                        choices,
-                    }
-                })
-                .collect(),
+            params: b.params.iter().map(param_info).collect(),
         })
         .collect()
+}
+
+fn param_info(p: &sonevo_dsp::Param) -> ParamInfo {
+    let (scale, choices) = match p.scale {
+        sonevo_dsp::Scale::Linear => ("linear", &[][..]),
+        sonevo_dsp::Scale::Log => ("log", &[][..]),
+        sonevo_dsp::Scale::Choice(choices) => ("choice", choices),
+    };
+    ParamInfo {
+        id: p.id,
+        name: p.name,
+        min: p.min,
+        max: p.max,
+        default: p.default,
+        unit: p.unit,
+        scale,
+        choices,
+    }
+}
+
+/// The settings a plugin lets be moved, as its knobs show them.
+#[tauri::command(async)]
+fn plugin_params(bundle: String, id: String) -> Vec<ParamInfo> {
+    sonevo_plugins::params(&bundle, &id).iter().map(param_info).collect()
 }
 
 #[derive(Serialize)]
@@ -658,6 +662,7 @@ pub fn run() {
             compare_version,
             plugins,
             scan_plugins,
+            plugin_params,
             sample_info,
             kept,
             recover,

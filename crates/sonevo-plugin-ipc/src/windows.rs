@@ -1,6 +1,6 @@
 //! The link on Windows: a named file mapping, and two auto-reset events.
 
-use crate::{Note, MAX_FRAMES, MAX_NOTES};
+use crate::{Note, ParamChange, MAX_FRAMES, MAX_NOTES, MAX_PARAMS};
 use std::cell::UnsafeCell;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
@@ -20,12 +20,14 @@ use windows_sys::Win32::System::Threading::{
 /// answers within it, and waking from a wait costs about as much.
 const SPIN: Duration = Duration::from_micros(30);
 
-/// One block's place: its notes, and the sound made of them.
+/// One block's place: its notes and settings, and the sound made of them.
 #[repr(C)]
 struct Slot {
     frames: AtomicU32,
     count: AtomicU32,
     notes: UnsafeCell<[Note; MAX_NOTES]>,
+    changed: AtomicU32,
+    changes: UnsafeCell<[ParamChange; MAX_PARAMS]>,
     left: UnsafeCell<[f32; MAX_FRAMES]>,
     right: UnsafeCell<[f32; MAX_FRAMES]>,
 }
@@ -154,8 +156,9 @@ impl EngineEnd {
         Ok(EngineEnd { mapping: Mapping::make(name, true)?, next: 1 })
     }
 
-    /// Asks for the next block, `frames` long with `notes` in it: its number.
-    pub fn ask(&mut self, frames: usize, notes: &[Note]) -> u64 {
+    /// Asks for the next block, `frames` long with `notes` and the settings `changes` in it:
+    /// its number.
+    pub fn ask(&mut self, frames: usize, notes: &[Note], changes: &[ParamChange]) -> u64 {
         let block = self.next;
         self.next += 1;
         let shared = self.mapping.shared();
@@ -164,6 +167,10 @@ impl EngineEnd {
         // SAFETY: the plugin writes this slot only for the block before last, long given up
         unsafe { (&mut *slot.notes.get())[..count].copy_from_slice(&notes[..count]) };
         slot.count.store(count as u32, Ordering::Relaxed);
+        let changed = changes.len().min(MAX_PARAMS);
+        // SAFETY: as the notes
+        unsafe { (&mut *slot.changes.get())[..changed].copy_from_slice(&changes[..changed]) };
+        slot.changed.store(changed as u32, Ordering::Relaxed);
         slot.frames.store(frames.min(MAX_FRAMES) as u32, Ordering::Relaxed);
         shared.asked.store(block, Ordering::Release);
         // SAFETY: the event is open
@@ -211,6 +218,7 @@ impl Drop for EngineEnd {
 pub struct Asked<'a> {
     pub block: u64,
     pub notes: &'a [Note],
+    pub changes: &'a [ParamChange],
     pub left: &'a mut [f32],
     pub right: &'a mut [f32],
 }
@@ -251,11 +259,13 @@ impl PluginEnd {
         let slot = slot(shared, block);
         let frames = slot.frames.load(Ordering::Relaxed) as usize;
         let count = slot.count.load(Ordering::Relaxed) as usize;
+        let changed = slot.changed.load(Ordering::Relaxed) as usize;
         // SAFETY: the engine is done writing this slot until it asks for the block after next
         let asked = unsafe {
             Asked {
                 block,
                 notes: &(&*slot.notes.get())[..count],
+                changes: &(&*slot.changes.get())[..changed],
                 left: &mut (&mut *slot.left.get())[..frames],
                 right: &mut (&mut *slot.right.get())[..frames],
             }

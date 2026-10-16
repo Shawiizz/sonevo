@@ -214,6 +214,7 @@ export class DevicePanel {
   protected readonly title = computed(() => {
     const info = this.info();
     const device = this.shown()?.device;
+    if (info && device?.kind.type === 'clap') return info.label;
     if (info) return this.t(info.label);
     if (!device || device.kind.type !== 'clap') return '';
     return this.studio.plugin(device)?.name ?? device.kind.plugin;

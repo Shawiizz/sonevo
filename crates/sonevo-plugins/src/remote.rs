@@ -1,8 +1,8 @@
 //! A plugin played in a process of its own, as one of the engine's processors.
 
 use crate::host_program;
-use sonevo_dsp::{Context, Event, Processor};
-use sonevo_plugin_ipc::{EngineEnd, Note, MAX_NOTES};
+use sonevo_dsp::{Context, Event, Param, Processor};
+use sonevo_plugin_ipc::{EngineEnd, Note, ParamChange, MAX_NOTES, MAX_PARAMS};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -29,13 +29,21 @@ pub struct Remote {
     /// The last block went unplayed: its keys are to be pressed or let go of again.
     resend: bool,
     notes: [Note; MAX_NOTES],
+    /// The plugin's settings by index, as the engine knows them: their CLAP ids, and the
+    /// value each was set to.
+    ids: Vec<u32>,
+    values: Vec<Option<f64>>,
+    /// The settings changed since the last block, by index.
+    changed: Vec<usize>,
+    changes: [ParamChange; MAX_PARAMS],
     stop: Arc<AtomicBool>,
     watcher: Option<std::thread::JoinHandle<()>>,
 }
 
 impl Remote {
-    /// Starts the plugin `id` of the bundle at `bundle`, for blocks at `sample_rate`.
-    pub fn start(bundle: &Path, id: &str, sample_rate: f32) -> std::io::Result<Remote> {
+    /// Starts the plugin `id` of the bundle at `bundle`, for blocks at `sample_rate`; its
+    /// settings, as [`crate::params`] gave them, set by index.
+    pub fn start(bundle: &Path, id: &str, sample_rate: f32, params: &[Param]) -> std::io::Result<Remote> {
         let host = host_program()?;
         let name = format!("sonevo-{}-{}", std::process::id(), LINKS.fetch_add(1, Ordering::Relaxed));
         let end = EngineEnd::create(&name)?;
@@ -60,6 +68,10 @@ impl Remote {
             released: 0,
             resend: false,
             notes: [Note { at: 0, key: 0, velocity: 0.0, on: false }; MAX_NOTES],
+            ids: params.iter().map(|p| p.id.parse().unwrap_or(u32::MAX)).collect(),
+            values: vec![None; params.len()],
+            changed: Vec::with_capacity(params.len()),
+            changes: [ParamChange { at: 0, id: 0, value: 0.0 }; MAX_PARAMS],
             stop,
             watcher: Some(watcher),
         })
@@ -110,7 +122,13 @@ fn watch(
 }
 
 impl Processor for Remote {
-    fn set(&mut self, _index: usize, _value: f64) {}
+    fn set(&mut self, index: usize, value: f64) {
+        let Some(known) = self.values.get_mut(index) else { return };
+        *known = Some(value);
+        if !self.changed.contains(&index) && self.changed.len() < self.changed.capacity() {
+            self.changed.push(index);
+        }
+    }
 
     fn process(&mut self, _context: &Context, events: &[Event], left: &mut [f32], right: &mut [f32]) {
         let Some(end) = &mut self.end else { return };
@@ -148,11 +166,29 @@ impl Processor for Remote {
             self.notes[count] = Note { at: e.at, key: e.key, velocity: e.velocity, on: e.on };
             count += 1;
         }
+        // the settings changed, or, the plugin perhaps not knowing them, all those set
+        let mut changed = 0;
+        if self.resend {
+            for (index, value) in self.values.iter().enumerate() {
+                if let (Some(value), true) = (value, changed < MAX_PARAMS) {
+                    self.changes[changed] = ParamChange { at: 0, id: self.ids[index], value: *value };
+                    changed += 1;
+                }
+            }
+        } else {
+            for &index in self.changed.iter().take(MAX_PARAMS) {
+                if let Some(value) = self.values[index] {
+                    self.changes[changed] = ParamChange { at: 0, id: self.ids[index], value };
+                    changed += 1;
+                }
+            }
+        }
         let budget = Duration::from_secs_f64(left.len() as f64 / f64::from(self.sample_rate) * BUDGET);
-        let block = end.ask(left.len(), &self.notes[..count]);
+        let block = end.ask(left.len(), &self.notes[..count], &self.changes[..changed]);
         if end.take(block, budget, left, right) {
             self.resend = false;
             self.released = 0;
+            self.changed.clear();
         } else {
             self.resend = true;
             left.fill(0.0);

@@ -334,11 +334,7 @@ impl Studio {
         });
         match started.map(|output| (output, engine_in.recv())) {
             Ok((output, Ok(mut engine))) => {
-                engine.set_plugins(Arc::new(|bundle: &str, id: &str, rate: f32| {
-                    sonevo_plugins::Remote::start(Path::new(bundle), id, rate)
-                        .map(|remote| Box::new(remote) as Box<dyn sonevo_dsp::Processor>)
-                        .map_err(|e| e.to_string())
-                }));
+                engine.set_plugins(Arc::new(sonevo_plugins::Clap));
                 self.output = Some(output);
                 self.engine = Some(engine);
                 self.audio_error = None;

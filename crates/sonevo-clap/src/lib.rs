@@ -1,5 +1,5 @@
 //! CLAP plugins hosted: a bundle (`.clap`) loaded, its plugins listed, one of them made,
-//! activated and played, notes in and stereo out.
+//! activated and played, notes and settings in and stereo out.
 //!
 //! The rules of CLAP's threads hold: a bundle is opened, and an instance made, activated
 //! and dropped, on one thread (the main one); [`Instance::process`] runs on the audio
@@ -8,8 +8,12 @@
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::entry::clap_plugin_entry;
 use clap_sys::events::{
-    clap_event_header, clap_event_note, clap_input_events, clap_output_events, CLAP_CORE_EVENT_SPACE_ID,
-    CLAP_EVENT_NOTE_OFF, CLAP_EVENT_NOTE_ON,
+    clap_event_header, clap_event_note, clap_event_param_value, clap_input_events, clap_output_events,
+    CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_NOTE_OFF, CLAP_EVENT_NOTE_ON, CLAP_EVENT_PARAM_VALUE,
+};
+use clap_sys::ext::params::{
+    clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS, CLAP_PARAM_IS_HIDDEN, CLAP_PARAM_IS_READONLY,
+    CLAP_PARAM_IS_STEPPED,
 };
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
@@ -22,6 +26,8 @@ use std::sync::Arc;
 
 /// The notes one call to [`Instance::process`] takes at most: more are dropped.
 pub const MAX_NOTES: usize = 256;
+/// The settings changed in one call to [`Instance::process`] at most: more are dropped.
+pub const MAX_PARAMS: usize = 64;
 
 #[derive(Debug)]
 pub struct ClapError(String);
@@ -49,6 +55,28 @@ pub struct Note {
     /// From 0 to 1.
     pub velocity: f32,
     pub on: bool,
+}
+
+/// A setting of the plugin set to `value` from the frame `at` of the block on; laid out as
+/// C does, to be shared with another process.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ParamChange {
+    pub at: u32,
+    pub id: u32,
+    pub value: f64,
+}
+
+/// A setting a plugin offers to be moved from outside.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParamInfo {
+    pub id: u32,
+    pub name: String,
+    pub min: f64,
+    pub max: f64,
+    pub default: f64,
+    /// Whole steps only: a choice, a switch.
+    pub stepped: bool,
 }
 
 /// A plugin a bundle offers.
@@ -140,7 +168,10 @@ impl Bundle {
         let mut instance = Instance {
             plugin,
             state: State::Made,
+            params: std::ptr::null(),
             notes: Vec::with_capacity(MAX_NOTES),
+            changes: Vec::with_capacity(MAX_PARAMS),
+            events: Vec::with_capacity(MAX_NOTES + MAX_PARAMS),
             _host: host,
             _bundle: Arc::clone(self),
         };
@@ -149,6 +180,10 @@ impl Bundle {
             return Err(fail(format!("{id} would not start")));
         }
         instance.state = State::Initialised;
+        // SAFETY: once initialised, the plugin says which of CLAP's extensions it has
+        instance.params = unsafe {
+            (*plugin).get_extension.map_or(std::ptr::null(), |get| get(plugin, CLAP_EXT_PARAMS.as_ptr()))
+        } as *const clap_plugin_params;
         Ok(instance)
     }
 }
@@ -199,8 +234,13 @@ enum State {
 pub struct Instance {
     plugin: *const clap_plugin,
     state: State,
-    /// The notes of the block being played, made into CLAP's events without allocating.
+    /// Its settings, if it lets them be moved from outside.
+    params: *const clap_plugin_params,
+    /// The notes and the settings of the block being played, made into CLAP's events
+    /// without allocating; and every one of them in time order.
     notes: Vec<clap_event_note>,
+    changes: Vec<clap_event_param_value>,
+    events: Vec<*const clap_event_header>,
     _host: Box<clap_host>,
     _bundle: Arc<Bundle>,
 }
@@ -224,9 +264,45 @@ impl Instance {
         Ok(())
     }
 
-    /// Plays one block: the `notes` given, sound into `left` and `right`, as long as each
-    /// other and no longer than the activation said. False when the plugin failed.
-    pub fn process(&mut self, notes: &[Note], left: &mut [f32], right: &mut [f32]) -> bool {
+    /// The settings the plugin lets be moved from outside, those hidden or read only left out.
+    pub fn params(&self) -> Vec<ParamInfo> {
+        if self.params.is_null() {
+            return Vec::new();
+        }
+        // SAFETY: on the main thread; the extension lives as long as the plugin
+        let params = unsafe { &*self.params };
+        let count = params.count.map_or(0, |count| unsafe { count(self.plugin) });
+        (0..count)
+            .filter_map(|index| {
+                // SAFETY: the info is filled by the plugin before it is read
+                let mut info: clap_param_info = unsafe { std::mem::zeroed() };
+                let got = params.get_info.is_some_and(|get| unsafe { get(self.plugin, index, &mut info) });
+                if !got || info.flags & (CLAP_PARAM_IS_HIDDEN | CLAP_PARAM_IS_READONLY) != 0 {
+                    return None;
+                }
+                let name = unsafe { CStr::from_ptr(info.name.as_ptr()) }.to_string_lossy().into_owned();
+                Some(ParamInfo {
+                    id: info.id,
+                    name,
+                    min: info.min_value,
+                    max: info.max_value,
+                    default: info.default_value,
+                    stepped: info.flags & CLAP_PARAM_IS_STEPPED != 0,
+                })
+            })
+            .collect()
+    }
+
+    /// Plays one block: the `notes` and the settings `changes` given, each in time order,
+    /// sound into `left` and `right`, as long as each other and no longer than the
+    /// activation said. False when the plugin failed.
+    pub fn process(
+        &mut self,
+        notes: &[Note],
+        changes: &[ParamChange],
+        left: &mut [f32],
+        right: &mut [f32],
+    ) -> bool {
         debug_assert_eq!(left.len(), right.len());
         if self.state == State::Active {
             // SAFETY: on the audio thread, once active
@@ -254,8 +330,40 @@ impl Instance {
             key: note.key as i16,
             velocity: f64::from(note.velocity),
         }));
+        self.changes.clear();
+        self.changes.extend(changes.iter().take(MAX_PARAMS).map(|change| clap_event_param_value {
+            header: clap_event_header {
+                size: std::mem::size_of::<clap_event_param_value>() as u32,
+                time: change.at,
+                space_id: CLAP_CORE_EVENT_SPACE_ID,
+                type_: CLAP_EVENT_PARAM_VALUE,
+                flags: 0,
+            },
+            param_id: change.id,
+            cookie: std::ptr::null_mut(),
+            note_id: -1,
+            port_index: -1,
+            channel: -1,
+            key: -1,
+            value: change.value,
+        }));
+        // the two lists, each in time order, merged into one as CLAP wants: a setting
+        // before a note of the same frame
+        self.events.clear();
+        let (mut n, mut c) = (0, 0);
+        while n < self.notes.len() || c < self.changes.len() {
+            let change_first = c < self.changes.len()
+                && (n == self.notes.len() || self.changes[c].header.time <= self.notes[n].header.time);
+            if change_first {
+                self.events.push(&self.changes[c].header);
+                c += 1;
+            } else {
+                self.events.push(&self.notes[n].header);
+                n += 1;
+            }
+        }
         let input = clap_input_events {
-            ctx: &self.notes as *const Vec<clap_event_note> as *mut c_void,
+            ctx: &self.events as *const Vec<*const clap_event_header> as *mut c_void,
             size: Some(events_size),
             get: Some(events_get),
         };
@@ -323,13 +431,13 @@ impl Drop for Instance {
 }
 
 unsafe extern "C" fn events_size(list: *const clap_input_events) -> u32 {
-    let notes = unsafe { &*((*list).ctx as *const Vec<clap_event_note>) };
-    notes.len() as u32
+    let events = unsafe { &*((*list).ctx as *const Vec<*const clap_event_header>) };
+    events.len() as u32
 }
 
 unsafe extern "C" fn events_get(list: *const clap_input_events, index: u32) -> *const clap_event_header {
-    let notes = unsafe { &*((*list).ctx as *const Vec<clap_event_note>) };
-    notes.get(index as usize).map_or(std::ptr::null(), |note| &note.header)
+    let events = unsafe { &*((*list).ctx as *const Vec<*const clap_event_header>) };
+    events.get(index as usize).copied().unwrap_or(std::ptr::null())
 }
 
 /// What the plugin sends back (its own notes, its parameters moved) is not listened to yet.

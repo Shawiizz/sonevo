@@ -51,12 +51,17 @@ pub struct Compiled {
     pub missing: Vec<String>,
 }
 
-/// Starts a plugin: its bundle, its id, the sample rate; or says why it could not.
-pub type Plugins = dyn Fn(&str, &str, f32) -> Result<Box<dyn Processor>, String> + Send + Sync;
+/// The plugins songs name, by their bundle and their id.
+pub trait Plugins: Send + Sync {
+    /// The settings the plugin lets be moved, as its knobs show them.
+    fn params(&self, bundle: &str, id: &str) -> &'static [Param];
+    /// Starts the plugin for blocks at `sample_rate`, or says why it could not.
+    fn start(&self, bundle: &str, id: &str, sample_rate: f32) -> Result<Box<dyn Processor>, String>;
+}
 
 struct Slots<'a> {
     before: &'a Mirror,
-    plugins: Option<&'a Plugins>,
+    plugins: Option<&'a dyn Plugins>,
     sample_rate: f32,
     slots: Vec<Option<Box<dyn Processor>>>,
     keep: Vec<(usize, usize)>,
@@ -80,8 +85,7 @@ impl Slots<'_> {
                     return None;
                 }
             },
-            // a plugin's settings are its own, kept by it
-            DeviceKind::Clap { .. } => &[],
+            DeviceKind::Clap { bundle, plugin } => self.plugins.map_or(&[][..], |p| p.params(bundle, plugin)),
         };
         let values: Vec<f64> =
             params.iter().map(|p| device.params.get(p.id).map_or(p.default, |&v| p.clamp(v))).collect();
@@ -115,7 +119,7 @@ impl Slots<'_> {
                 DeviceKind::Builtin { name } => builtin(name).expect("found above").make(self.sample_rate),
                 DeviceKind::Clap { bundle, plugin } => {
                     let started = match self.plugins {
-                        Some(start) => start(bundle, plugin, self.sample_rate),
+                        Some(plugins) => plugins.start(bundle, plugin, self.sample_rate),
                         None => Err("plugins are not played here".into()),
                     };
                     match started {
@@ -246,7 +250,7 @@ pub fn compile(
     before: &Mirror,
     sample_rate: f32,
     samples: &mut Samples,
-    plugins: Option<&Plugins>,
+    plugins: Option<&dyn Plugins>,
 ) -> Compiled {
     let mut slots = Slots {
         before,

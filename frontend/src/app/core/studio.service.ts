@@ -12,6 +12,7 @@ import {
   newId,
   Note,
   Pattern,
+  ParamInfo,
   PPQ,
   PluginInfo,
   SampleInfo,
@@ -41,8 +42,12 @@ export class Studio {
   readonly status = signal<Status>(SILENT);
   readonly devices = signal<DeviceInfo[]>([]);
   readonly plugins = signal<PluginInfo[]>([]);
-  /** The sounds of the song read so far, by name; null while being read or unreadable. */
-  readonly samples = signal<Record<string, SampleInfo | null>>({});
+  /** The settings of the plugins asked about, by bundle and id, once known. */
+  private readonly pluginParams = signal<Record<string, ParamInfo[]>>({});
+  /** The plugins and sounds asked about: asked once, the answer coming later. */
+  private readonly asked = new Set<string>();
+  /** The sounds of the song read so far, by name. */
+  readonly samples = signal<Record<string, SampleInfo>>({});
   readonly error = signal<string | null>(null);
 
   readonly song = computed(() => this.view()?.song ?? null);
@@ -131,7 +136,7 @@ export class Studio {
   }
 
   info(device: Device): DeviceInfo | null {
-    if (device.kind.type !== 'builtin') return null;
+    if (device.kind.type === 'clap') return this.pluginInfo(device);
     const name = device.kind.name;
     return this.devices().find((d) => d.name === name) ?? null;
   }
@@ -145,15 +150,14 @@ export class Studio {
 
   /** The sound `name`, read once and kept; null until read. */
   sample(name: string): SampleInfo | null {
-    const known = this.samples();
-    if (!(name in known)) {
-      this.samples.update((s) => ({ ...s, [name]: null }));
+    if (!this.asked.has(name)) {
+      this.asked.add(name);
       api
         .sampleInfo(name)
         .then((info) => this.samples.update((s) => ({ ...s, [name]: info })))
         .catch(() => undefined);
     }
-    return known[name] ?? null;
+    return this.samples()[name] ?? null;
   }
 
   /** Ticks to `seconds` at the song's tempo. */
@@ -190,6 +194,25 @@ export class Studio {
   async addPlugin(plugin: PluginInfo): Promise<void> {
     const kind = { type: 'clap' as const, bundle: plugin.bundle, plugin: plugin.id };
     await this.addChannelOf({ id: newId(), kind, params: {} }, plugin.name);
+  }
+
+  /** A plugin device described as a built-in one is: its settings asked for once. */
+  private pluginInfo(device: Device): DeviceInfo | null {
+    const kind = device.kind;
+    if (kind.type !== 'clap') return null;
+    const key = `${kind.bundle}\n${kind.plugin}`;
+    // asked once, without a signal written: this is read from computed values
+    if (!this.asked.has(key)) {
+      this.asked.add(key);
+      api
+        .pluginParams(kind.bundle, kind.plugin)
+        .then((params) => this.pluginParams.update((p) => ({ ...p, [key]: params })))
+        .catch(() => undefined);
+    }
+    const params = this.pluginParams()[key];
+    const plugin = this.plugin(device);
+    if (!params || !plugin) return null;
+    return { name: kind.plugin, label: plugin.name, instrument: plugin.instrument, params };
   }
 
   /** The plugin a device plays, if it is one installed. */
