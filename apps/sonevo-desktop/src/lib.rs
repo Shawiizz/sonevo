@@ -47,34 +47,36 @@ impl App {
 
 type Answer<T> = Result<T, String>;
 
-fn view(studio: &Studio) -> serde_json::Value {
-    serde_json::to_value::<View>(studio.view()).unwrap_or_default()
+/// The song for the interface, with the notes it does not have as they are.
+fn view(studio: &mut Studio) -> serde_json::Value {
+    serde_json::to_value::<View>(studio.view(false)).unwrap_or_default()
 }
 
+/// The song for the interface, every pattern's notes with it.
 #[tauri::command]
 fn song(app: State<App>) -> serde_json::Value {
-    view(&app.studio())
+    serde_json::to_value::<View>(app.studio().view(true)).unwrap_or_default()
 }
 
 #[tauri::command]
 fn edit(app: State<App>, edit: Edit) -> Answer<serde_json::Value> {
     let mut studio = app.studio();
     studio.edit(edit)?;
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 #[tauri::command]
 fn undo(app: State<App>) -> serde_json::Value {
     let mut studio = app.studio();
     studio.undo();
-    view(&studio)
+    view(&mut studio)
 }
 
 #[tauri::command]
 fn redo(app: State<App>) -> serde_json::Value {
     let mut studio = app.studio();
     studio.redo();
-    view(&studio)
+    view(&mut studio)
 }
 
 /// A new song: empty, the demo, or one of the templates.
@@ -87,7 +89,7 @@ fn new_song(app: State<App>, template: Option<String>) -> serde_json::Value {
     };
     let mut studio = app.studio();
     studio.replace(song, None);
-    view(&studio)
+    view(&mut studio)
 }
 
 #[derive(Serialize)]
@@ -102,7 +104,7 @@ fn open_song(app: State<App>, folder: PathBuf) -> Answer<Opened> {
     let mended = app.studio().open(&folder)?;
     app.settings().opened(&folder);
     app.save_settings();
-    Ok(Opened { view: view(&app.studio()), mended })
+    Ok(Opened { view: view(&mut app.studio()), mended })
 }
 
 /// Saves where the song was saved last: false if it never was, for a folder to be chosen.
@@ -121,7 +123,7 @@ fn save_song_as(app: State<App>, folder: PathBuf) -> Answer<serde_json::Value> {
     app.studio().save_as(&folder)?;
     app.settings().opened(&folder);
     app.save_settings();
-    Ok(view(&app.studio()))
+    Ok(view(&mut app.studio()))
 }
 
 #[derive(Serialize)]
@@ -146,14 +148,14 @@ fn versions(app: State<App>) -> Answer<Vec<VersionView>> {
 fn make_version(app: State<App>, name: String) -> Answer<serde_json::Value> {
     let mut studio = app.studio();
     studio.make_version(&name)?;
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 #[tauri::command(async)]
 fn restore_version(app: State<App>, id: String) -> Answer<serde_json::Value> {
     let mut studio = app.studio();
     studio.restore_version(&id)?;
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 /// Plays the version `id` in place of the song, or the song again without one.
@@ -161,7 +163,7 @@ fn restore_version(app: State<App>, id: String) -> Answer<serde_json::Value> {
 fn compare_version(app: State<App>, id: Option<String>) -> Answer<serde_json::Value> {
     let mut studio = app.studio();
     studio.compare(id.as_deref())?;
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 /// A sound of the song, as the playlist draws it.
@@ -236,7 +238,7 @@ fn transport(app: State<App>, action: Transport) {
 fn set_mode(app: State<App>, pattern: Option<Id>) -> serde_json::Value {
     let mut studio = app.studio();
     studio.set_mode(pattern.map_or(Mode::Song, Mode::Pattern));
-    view(&studio)
+    view(&mut studio)
 }
 
 #[tauri::command]
@@ -695,7 +697,7 @@ fn record(app: State<App>) -> Answer<()> {
 fn stop_recording(app: State<App>) -> Answer<serde_json::Value> {
     let mut studio = app.studio();
     studio.stop_recording()?;
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 #[tauri::command(async)]
@@ -730,7 +732,7 @@ fn recover(app: State<App>, path: PathBuf, open: bool) -> Answer<serde_json::Val
     } else {
         autosave::forget(&path);
     }
-    Ok(view(&studio))
+    Ok(view(&mut studio))
 }
 
 /// The song's changes left on purpose: what was kept of them forgotten.

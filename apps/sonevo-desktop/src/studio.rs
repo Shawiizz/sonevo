@@ -6,7 +6,8 @@ use serde::Serialize;
 use sonevo_audio::{Output, Settings};
 use sonevo_engine::{Engine, Meter, Mode};
 use sonevo_project::{Clip, ClipContent, Edit, History, Id, Note, Song, Ticks, Track, PPQ};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
 
@@ -15,6 +16,7 @@ use std::sync::{mpsc, Arc};
 #[serde(rename_all = "camelCase")]
 pub struct View<'a> {
     pub song: &'a Song,
+    /// By pattern, the notes of those the interface does not have as they are.
     pub notes: BTreeMap<Id, &'a BTreeMap<Id, Vec<Note>>>,
     pub folder: Option<&'a Path>,
     pub dirty: bool,
@@ -76,6 +78,21 @@ pub struct Studio {
     recording: Option<Recording>,
     /// The folder plugins take their states back from: the song's.
     plugin_folder: Arc<std::sync::Mutex<Option<PathBuf>>>,
+    /// What each pattern's notes were like when last sent to the interface.
+    sent: HashMap<Id, u64>,
+}
+
+/// What a pattern's notes are like, to tell whether the interface has them already.
+fn fingerprint(notes: &BTreeMap<Id, Vec<Note>>) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for (channel, list) in notes {
+        channel.hash(&mut hasher);
+        list.len().hash(&mut hasher);
+        for n in list {
+            (n.start, n.length, n.key, n.velocity.to_bits()).hash(&mut hasher);
+        }
+    }
+    hasher.finish()
 }
 
 /// An input being recorded, from where playing was when it started.
@@ -114,6 +131,7 @@ impl Studio {
             comparing: None,
             recording: None,
             plugin_folder: Arc::default(),
+            sent: HashMap::new(),
         }
     }
 
@@ -122,10 +140,25 @@ impl Studio {
         self.folder.as_deref().unwrap_or(&self.draft)
     }
 
-    pub fn view(&self) -> View<'_> {
+    /// The song for the interface, with the notes it does not have yet: all of them when
+    /// `whole`, as it starts and whenever it asks.
+    pub fn view(&mut self, whole: bool) -> View<'_> {
+        if whole {
+            self.sent.clear();
+        }
+        let mut notes = BTreeMap::new();
+        let mut sent = HashMap::with_capacity(self.song.patterns.len());
+        for pattern in &self.song.patterns {
+            let print = fingerprint(&pattern.notes);
+            if self.sent.get(&pattern.id) != Some(&print) {
+                notes.insert(pattern.id, &pattern.notes);
+            }
+            sent.insert(pattern.id, print);
+        }
+        self.sent = sent;
         View {
             song: &self.song,
-            notes: self.song.patterns.iter().map(|p| (p.id, &p.notes)).collect(),
+            notes,
             folder: self.folder.as_deref(),
             dirty: self.dirty,
             can_undo: self.history.can_undo(),
@@ -497,4 +530,25 @@ pub fn used_samples(song: &Song) -> Vec<String> {
     names.sort();
     names.dedup();
     names
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_notes_changed_are_sent_again() {
+        let data = tempfile::tempdir().unwrap();
+        let mut studio = Studio::new(data.path(), Song::new("A"));
+        let pattern = studio.song.patterns[0].id;
+        let channel = studio.song.channels[0].id;
+        assert_eq!(studio.view(false).notes.len(), 1);
+        assert!(studio.view(false).notes.is_empty());
+        let note = Note { start: 0, length: PPQ, key: 60, velocity: 0.8 };
+        studio.edit(Edit::SetNotes { pattern, channel, notes: vec![note] }).unwrap();
+        assert_eq!(studio.view(false).notes.keys().collect::<Vec<_>>(), [&pattern]);
+        studio.undo();
+        assert_eq!(studio.view(false).notes.len(), 1, "the notes undone are sent");
+        assert_eq!(studio.view(true).notes.len(), 1, "a whole view has every pattern's");
+    }
 }

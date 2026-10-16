@@ -111,7 +111,17 @@ export class Studio {
   }
 
   show(view: View): void {
-    this.view.set(view);
+    // the notes not sent are those already here
+    const before = this.view()?.notes ?? {};
+    const notes: View['notes'] = {};
+    let lost = false;
+    for (const p of view.song.patterns) {
+      const known = view.notes[p.id] ?? before[p.id];
+      if (known) notes[p.id] = known;
+      else lost = true;
+    }
+    this.view.set({ ...view, notes });
+    if (lost) void api.song().then((whole) => this.show(whole));
     const song = view.song;
     if (!song.patterns.some((p) => p.id === this.patternId())) {
       this.patternId.set(song.patterns[0]?.id ?? null);

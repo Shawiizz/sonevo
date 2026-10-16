@@ -163,7 +163,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 - Grille de clips à lancer, modulateurs branchables partout.
 - Séparation de pistes et audio vers MIDI en local.
-- Envoyer à l'interface seulement ce qui a changé (aujourd'hui le morceau entier).
+- Envoyer à l'interface seulement ce qui a changé : fait pour les notes (seuls les patterns
+  changés repartent), le reste du morceau part encore en entier.
 - Collaboration en temps réel (le modèle d'éditions y prépare).
 - macOS et Linux.
 

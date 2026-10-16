@@ -169,7 +169,7 @@ export interface Song {
 
 export interface View {
   song: Song;
-  /** By pattern, by channel. */
+  /** By pattern, by channel: from the engine, only the patterns whose notes changed. */
   notes: Record<Id, Record<Id, Note[]>>;
   folder: string | null;
   dirty: boolean;
