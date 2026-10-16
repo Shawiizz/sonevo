@@ -1,6 +1,7 @@
 //! The Sonevo desktop application: the window, and the commands the interface calls. The
 //! song lives here; the interface sends edits and gets the song back as it now is.
 
+mod autosave;
 mod demo;
 mod settings;
 mod studio;
@@ -19,6 +20,7 @@ struct App {
     studio: Mutex<Studio>,
     plugins: Mutex<Vec<sonevo_plugins::Found>>,
     sample_infos: Mutex<std::collections::HashMap<String, SampleInfo>>,
+    kept: Mutex<Vec<autosave::Kept>>,
     settings: Mutex<Settings>,
     settings_path: PathBuf,
 }
@@ -470,8 +472,45 @@ fn watch(app: AppHandle) {
     });
 }
 
-fn drafts(app: &AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("sonevo")).join("drafts")
+fn data(app: &AppHandle) -> PathBuf {
+    app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("sonevo"))
+}
+
+/// Keeps the song as it changes, every little while.
+fn keep(app: AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(20));
+        let state = app.state::<App>();
+        let kept = state.studio().autosave();
+        if let Err(e) = kept {
+            let _ = app.emit("autosave-failed", e);
+        }
+    });
+}
+
+/// The songs an earlier run kept and never saved, found as Sonevo started.
+#[tauri::command]
+fn kept(app: State<App>) -> Vec<autosave::Kept> {
+    app.kept.lock().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
+/// Opens a song as it was kept, or (`open` false) forgets it.
+#[tauri::command(async)]
+fn recover(app: State<App>, path: PathBuf, open: bool) -> Answer<serde_json::Value> {
+    app.kept.lock().unwrap_or_else(|e| e.into_inner()).retain(|k| k.path != path);
+    let mut studio = app.studio();
+    if open {
+        studio.recover(&path)?;
+    } else {
+        autosave::forget(&path);
+    }
+    Ok(view(&studio))
+}
+
+/// The song's changes left on purpose: what was kept of them forgotten.
+#[tauri::command]
+fn leave(app: State<App>) {
+    app.studio().forget_autosave();
 }
 
 /// Whether `path` is a song's folder.
@@ -490,7 +529,8 @@ pub fn run() {
             let first = !settings.welcomed;
             settings.welcomed = true;
             let song = if first { demo::song() } else { Song::new("Untitled") };
-            let mut studio = Studio::new(&drafts(&handle), song);
+            let mut studio = Studio::new(&data(&handle), song);
+            let kept = studio.kept();
             studio.start_audio(&settings.audio());
             // the song opened last, if there is one
             if !first {
@@ -504,11 +544,13 @@ pub fn run() {
                 studio: Mutex::new(studio),
                 plugins: Mutex::new(sonevo_plugins::scan(&folders)),
                 sample_infos: Mutex::new(std::collections::HashMap::new()),
+                kept: Mutex::new(kept),
                 settings: Mutex::new(settings),
                 settings_path,
             };
             state.save_settings();
             app.manage(state);
+            keep(handle.clone());
             watch(handle);
             Ok(())
         })
@@ -540,6 +582,9 @@ pub fn run() {
             plugins,
             scan_plugins,
             sample_info,
+            kept,
+            recover,
+            leave,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

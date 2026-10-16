@@ -6,6 +6,7 @@ import type {
   Edit,
   Entry,
   Id,
+  Kept,
   OutputInfo,
   PluginInfo,
   SampleInfo,
@@ -58,6 +59,9 @@ export const api = {
   plugins: () => invoke<PluginInfo[]>('plugins'),
   scanPlugins: () => invoke<PluginInfo[]>('scan_plugins'),
   sampleInfo: (name: string) => invoke<SampleInfo>('sample_info', { name }),
+  kept: () => invoke<Kept[]>('kept'),
+  recover: (path: string, open: boolean) => invoke<View>('recover', { path, open }),
+  leave: () => invoke<void>('leave'),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

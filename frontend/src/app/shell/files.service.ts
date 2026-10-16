@@ -18,15 +18,17 @@ export class Files {
   }
 
   /** Whether the song changed since saved may be left: asked if it did. */
-  private async leave(): Promise<boolean> {
+  async leave(): Promise<boolean> {
     if (!this.studio.view()?.dirty) return true;
     const t = this.i18n.t;
-    return ask(t('The song has changes not saved. Leave them?'), {
+    const left = await ask(t('The song has changes not saved. Leave them?'), {
       title: 'Sonevo',
       kind: 'warning',
       okLabel: t('Leave them'),
       cancelLabel: t('Cancel'),
     });
+    if (left) await api.leave();
+    return left;
   }
 
   async newSong(demo = false): Promise<void> {

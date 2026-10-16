@@ -142,7 +142,7 @@ export class Titlebar {
     void getCurrentWindow().toggleMaximize();
   }
 
-  protected close(): void {
-    void getCurrentWindow().close();
+  protected async close(): Promise<void> {
+    if (await this.files.leave()) void getCurrentWindow().close();
   }
 }

@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { api } from './core/api';
+import { Kept } from './core/models';
 import { I18n } from './core/i18n';
 import { Dock, Studio } from './core/studio.service';
 import { Browser } from './features/browser';
@@ -18,6 +19,7 @@ import { Playlist } from './features/playlist';
 import { VersionsPanel } from './features/versions-panel';
 import { Files } from './shell/files.service';
 import { Command, Palette } from './shell/palette';
+import { RecoveryDialog } from './shell/recovery-dialog';
 import { SettingsDialog } from './shell/settings-dialog';
 import { Titlebar } from './shell/titlebar';
 import { Transport } from './shell/transport';
@@ -69,6 +71,7 @@ const PIANO: Record<string, number> = {
     Palette,
     PianoRoll,
     Playlist,
+    RecoveryDialog,
     SettingsDialog,
     Titlebar,
     Transport,
@@ -176,6 +179,9 @@ const PIANO: Record<string, number> = {
           }
         }
       </div>
+    }
+    @if (kept().length) {
+      <app-recovery-dialog [kept]="kept()" (closed)="kept.set([])" (done)="forgot($event)" />
     }
     @if (settingsOpen()) {
       <app-settings-dialog (closed)="settingsOpen.set(false)" />
@@ -346,6 +352,15 @@ export class App {
   ];
   protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
+  protected readonly kept = signal<Kept[]>([]);
+
+  constructor() {
+    void api.kept().then((kept) => this.kept.set(kept));
+  }
+
+  protected forgot(k: Kept): void {
+    this.kept.update((all) => all.filter((x) => x.path !== k.path));
+  }
   protected readonly paletteOpen = signal(false);
   protected readonly dockShare = signal(46);
   protected readonly octave = signal(4);

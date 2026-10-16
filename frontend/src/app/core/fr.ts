@@ -255,6 +255,14 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Sonevo closed before these songs were saved':
+    'Sonevo s’est fermé avant que ces morceaux soient enregistrés',
+  'Their changes were kept as they were made. Open one to pick up where you were.':
+    'Leurs changements ont été gardés au fur et à mesure. Ouvres-en un pour reprendre là où tu en étais.',
+  'never saved': 'jamais enregistré',
+  Forget: 'Oublier',
+  Open: 'Ouvrir',
+  Later: 'Plus tard',
   'The scale lit: its notes stand out': 'La gamme éclairée : ses notes ressortent',
   'No scale': 'Aucune gamme',
   Major: 'Majeure',

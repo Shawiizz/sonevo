@@ -1,6 +1,7 @@
 //! The song open, its history, where it is saved; and the engine playing it out of the
 //! sound card.
 
+use crate::autosave;
 use serde::Serialize;
 use sonevo_audio::{Output, Settings};
 use sonevo_engine::{Engine, Meter, Mode};
@@ -56,7 +57,11 @@ pub struct Studio {
     /// Where a song not saved yet keeps its sounds.
     draft: PathBuf,
     drafts: PathBuf,
+    /// Where songs saved somewhere are kept as they change.
+    autosaves: PathBuf,
     dirty: bool,
+    /// Changed since it was last kept.
+    unkept: bool,
     mode: Mode,
     missing: Vec<String>,
     engine: Option<Engine>,
@@ -73,14 +78,18 @@ struct Compared {
 }
 
 impl Studio {
-    pub fn new(drafts: &Path, song: Song) -> Studio {
+    /// A studio keeping its drafts and its songs as they change under `data`.
+    pub fn new(data: &Path, song: Song) -> Studio {
+        let drafts = data.join("drafts");
         Studio {
             song,
             history: History::default(),
             folder: None,
             draft: drafts.join(format!("{}.sonevo", Id::new())),
-            drafts: drafts.to_owned(),
+            autosaves: data.join("autosave"),
+            drafts,
             dirty: false,
+            unkept: false,
             mode: Mode::Song,
             missing: Vec::new(),
             engine: None,
@@ -134,6 +143,7 @@ impl Studio {
         self.comparing = None;
         self.history.apply(&mut self.song, edit).map_err(|e| e.to_string())?;
         self.dirty = true;
+        self.unkept = true;
         self.sync();
         Ok(())
     }
@@ -141,6 +151,7 @@ impl Studio {
     pub fn undo(&mut self) {
         if self.history.undo(&mut self.song) {
             self.dirty = true;
+            self.unkept = true;
             self.sync();
         }
     }
@@ -148,8 +159,50 @@ impl Studio {
     pub fn redo(&mut self) {
         if self.history.redo(&mut self.song) {
             self.dirty = true;
+            self.unkept = true;
             self.sync();
         }
+    }
+
+    /// Where the song is kept as it changes.
+    fn kept_at(&self) -> PathBuf {
+        match &self.folder {
+            Some(folder) => autosave::place(&self.autosaves, folder),
+            None => self.draft.clone(),
+        }
+    }
+
+    /// Keeps the song as it is, if it changed since: should Sonevo end, it is not lost.
+    pub fn autosave(&mut self) -> Result<(), String> {
+        if !self.unkept || !self.dirty {
+            return Ok(());
+        }
+        autosave::keep(&self.kept_at(), &self.song, self.folder.as_deref())?;
+        self.unkept = false;
+        Ok(())
+    }
+
+    /// Forgets the song as it was kept: its changes saved, or left on purpose.
+    pub fn forget_autosave(&self) {
+        autosave::forget(&self.kept_at());
+    }
+
+    /// The songs kept and never saved after, by an earlier time Sonevo ran.
+    pub fn kept(&self) -> Vec<autosave::Kept> {
+        autosave::kept(&[&self.drafts, &self.autosaves])
+    }
+
+    /// Opens a song as it was kept: in its own folder if it was saved, else as the draft it is.
+    pub fn recover(&mut self, path: &Path) -> Result<(), String> {
+        let found = self.kept().into_iter().find(|k| k.path == path).ok_or("This song is no longer kept")?;
+        let (song, _) = sonevo_project::load(path).map_err(|e| e.to_string())?;
+        self.replace(song, found.origin.clone());
+        if found.origin.is_none() {
+            self.draft = path.to_owned();
+        }
+        self.dirty = true;
+        self.unkept = true;
+        Ok(())
     }
 
     /// Another song in place of this one, its history forgotten.
@@ -165,6 +218,7 @@ impl Studio {
         self.draft = self.drafts.join(format!("{}.sonevo", Id::new()));
         self.history.clear();
         self.dirty = false;
+        self.unkept = false;
         self.mode = Mode::Song;
         self.sync();
     }
@@ -180,6 +234,7 @@ impl Studio {
         let Some(folder) = self.folder.clone() else { return Ok(false) };
         sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
         self.dirty = false;
+        self.forget_autosave();
         // every save is a version, made without asking
         sonevo_versions::record(&folder, "Saved", true).map_err(|e| e.to_string())?;
         Ok(true)
@@ -217,7 +272,7 @@ impl Studio {
             return Ok(());
         };
         let Some(folder) = self.folder.clone() else { return Err("Save the song first".into()) };
-        let out = self.drafts.join(format!("version-{id}"));
+        let out = self.autosaves.with_file_name("compare").join(id);
         sonevo_versions::extract(&folder, id, &out).map_err(|e| e.to_string())?;
         // the sounds are the song's, the same in every version
         let (song, _) = sonevo_project::load(&out).map_err(|e| e.to_string())?;
@@ -240,6 +295,7 @@ impl Studio {
             }
         }
         sonevo_project::save(folder, &self.song).map_err(|e| e.to_string())?;
+        self.forget_autosave();
         self.folder = Some(folder.to_owned());
         self.dirty = false;
         self.sync();

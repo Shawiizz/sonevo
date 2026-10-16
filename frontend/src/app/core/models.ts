@@ -205,6 +205,16 @@ export interface SampleInfo {
   peaks: number[];
 }
 
+/** A song an earlier run kept and never saved. */
+export interface Kept {
+  path: string;
+  name: string;
+  /** The folder it is saved in, if it ever was. */
+  origin: string | null;
+  /** Seconds since 1970. */
+  time: number;
+}
+
 /** A plugin installed on this computer. */
 export interface PluginInfo {
   bundle: string;
