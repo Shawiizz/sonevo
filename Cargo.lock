@@ -4212,6 +4212,7 @@ name = "sonevo-engine"
 version = "0.1.0"
 dependencies = [
  "rtrb",
+ "serde_json",
  "sonevo-dsp",
  "sonevo-project",
  "symphonia",

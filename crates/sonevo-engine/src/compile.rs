@@ -439,7 +439,8 @@ pub fn compile(
             }
         }
     };
-    events.sort_by(|a, b| a.tick.cmp(&b.tick).then(a.on.cmp(&b.on)).then(a.channel.cmp(&b.channel)));
+    // a key let go of before one pressed on the same tick: a note repeated plays again
+    events.sort_unstable_by_key(|e| (e.tick, e.on, e.channel, e.key));
 
     let mirror = Mirror {
         devices: slots.devices,
