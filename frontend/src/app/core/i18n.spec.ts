@@ -15,8 +15,12 @@ const read = (paths: string[]) => paths.map((p) => readFileSync(p, 'utf8')).join
 
 describe('French', () => {
   const code = read(sources(join(__dirname, '..'), '.ts'));
-  // the names of the devices and their settings, as the engine gives them
-  const engine = read(sources(join(__dirname, '../../../../crates/sonevo-dsp/src'), '.rs'));
+  // the names the Rust side gives: devices and their settings, versions made by themselves
+  const engine = read(
+    ['crates/sonevo-dsp/src', 'crates/sonevo-versions/src', 'apps/sonevo-desktop/src'].flatMap(
+      (dir) => sources(join(__dirname, '../../../..', dir), '.rs'),
+    ),
+  );
   const said = [...code.matchAll(/\bt\(\s*'((?:[^'\\]|\\.)*)'/g)].map((m) =>
     m[1].replace(/\\'/g, "'"),
   );
