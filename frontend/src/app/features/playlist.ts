@@ -153,6 +153,7 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
 export class Playlist implements OnDestroy {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  private readonly named = inject(I18n).named;
   private readonly themes = inject(Themes);
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
@@ -354,7 +355,7 @@ export class Playlist implements OnDestroy {
       );
       const into = this.laneHeight >= 40 ? inserts.find((n) => n.id === track.insert) : undefined;
       s.text(
-        track.name,
+        this.named(track.name),
         30,
         y + this.laneHeight / 2 - (into ? 15 : 8),
         track.mute ? palette().text3 : palette().text,
@@ -1030,7 +1031,7 @@ export class Playlist implements OnDestroy {
       {
         label: t('Rename…'),
         run: () => {
-          void this.rename.ask(t('Name of the track'), track.name).then((name) => {
+          void this.rename.ask(t('Name of the track'), this.named(track.name)).then((name) => {
             if (name)
               void this.studio.edit({ type: 'putTrack', track: { ...track, name }, index: null });
           });

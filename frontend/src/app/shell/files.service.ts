@@ -89,7 +89,7 @@ export class Files {
   }
 
   async saveAs(): Promise<void> {
-    const name = this.studio.song()?.name ?? 'Song';
+    const name = this.i18n.named(this.studio.song()?.name ?? 'Song');
     const chosen = await save({
       title: this.i18n.t('Save the song as'),
       defaultPath: `${name}.sonevo`,

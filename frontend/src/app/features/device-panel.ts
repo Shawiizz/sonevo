@@ -119,7 +119,7 @@ const ABOUT: Record<string, string> = {
               <option value="" [selected]="!shown.device.key">{{ t('Its own sound') }}</option>
               @for (insert of keys(); track insert.id) {
                 <option [value]="insert.id" [selected]="shown.device.key === insert.id">
-                  {{ insert.name }}
+                  {{ named(insert.name) }}
                 </option>
               }
             </select>
@@ -414,6 +414,7 @@ const ABOUT: Record<string, string> = {
 export class DevicePanel {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  protected readonly named = inject(I18n).named;
   private readonly files = inject(Files);
   private readonly menus = inject(Menus);
   private readonly rename = inject(Rename);

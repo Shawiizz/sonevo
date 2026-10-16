@@ -40,9 +40,9 @@ let copied: Device | null = null;
           [style.--color]="insert.color"
           (contextmenu)="stripMenu($event, insert)"
         >
-          <div class="name" [title]="insert.name">
+          <div class="name" [title]="named(insert.name)">
             <span class="num s-mono">{{ number(insert) }}</span>
-            <span class="label">{{ insert.name }}</span>
+            <span class="label">{{ named(insert.name) }}</span>
           </div>
           <div class="effects">
             @for (effect of insert.effects ?? []; track effect.id) {
@@ -397,6 +397,7 @@ let copied: Device | null = null;
 export class Mixer {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  protected readonly named = inject(I18n).named;
   private readonly menus = inject(Menus);
   private readonly rename = inject(Rename);
   protected readonly gainToFader = gainToFader;
@@ -617,9 +618,11 @@ export class Mixer {
       {
         label: t('Rename…'),
         run: () => {
-          void this.rename.ask(t('Name of the mixer track'), insert.name).then((name) => {
-            if (name) void this.studio.putInsert({ ...insert, name });
-          });
+          void this.rename
+            .ask(t('Name of the mixer track'), this.named(insert.name))
+            .then((name) => {
+              if (name) void this.studio.putInsert({ ...insert, name });
+            });
         },
       },
       {
@@ -636,7 +639,7 @@ export class Mixer {
           this.studio.automate(
             { type: 'insertVolume', insert: insert.id },
             insert.volume / 1.25,
-            `${insert.name} · ${t('Volume')}`,
+            `${this.named(insert.name)} · ${t('Volume')}`,
           ),
       },
       { separator: true, label: '' },

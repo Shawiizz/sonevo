@@ -191,6 +191,7 @@ type Part = 'song' | 'loop' | 'stems';
 })
 export class ExportDialog {
   protected readonly t = inject(I18n).t;
+  private readonly named = inject(I18n).named;
   private readonly studio = inject(Studio);
   private readonly files = inject(Files);
   readonly closed = output();
@@ -210,7 +211,7 @@ export class ExportDialog {
   protected readonly hasTracks = computed(() => (this.studio.song()?.inserts.length ?? 0) > 0);
 
   protected async run(): Promise<void> {
-    const name = this.studio.song()?.name ?? 'Song';
+    const name = this.named(this.studio.song()?.name ?? 'Song');
     const part = this.part();
     const path =
       part === 'stems'

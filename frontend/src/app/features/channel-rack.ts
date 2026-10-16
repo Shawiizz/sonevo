@@ -341,6 +341,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
 export class ChannelRack {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  private readonly named = inject(I18n).named;
   private readonly menus = inject(Menus);
   private readonly files = inject(Files);
   private readonly rename = inject(Rename);
@@ -601,7 +602,7 @@ export class ChannelRack {
     const items: MenuItem[] = [
       { label: t('Master'), run: () => this.studio.putChannel({ ...channel, insert: undefined }) },
       ...song.inserts.map((insert, i) => ({
-        label: `${i + 1} · ${insert.name}`,
+        label: `${i + 1} · ${this.named(insert.name)}`,
         run: () => this.studio.putChannel({ ...channel, insert: insert.id }),
       })),
       { separator: true, label: '' },

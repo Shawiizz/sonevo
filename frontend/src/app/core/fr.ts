@@ -77,6 +77,7 @@ export const FR: Record<string, string> = {
   'Clips snap to': 'Les clips s’alignent sur',
   'Add a track': 'Ajouter une piste',
   Track: 'Piste',
+  Untitled: 'Sans titre',
   Tracks: 'Pistes',
   Automation: 'Automation',
   'Name of the track': 'Nom de la piste',

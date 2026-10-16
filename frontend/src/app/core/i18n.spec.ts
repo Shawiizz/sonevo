@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { FR } from './fr';
+import { I18n } from './i18n';
 
 /** Every source file under `dir` ending in `extension`, but the tests. */
 function sources(dir: string, extension: string): string[] {
@@ -35,5 +36,17 @@ describe('French', () => {
       (text) => !code.includes(`'${text.replace(/'/g, "\\'")}'`) && !engine.includes(`"${text}"`),
     );
     expect(unused).toEqual([]);
+  });
+});
+
+describe('Names Sonevo gives', () => {
+  it('read in the language of the interface, and only those', () => {
+    const i18n = new I18n();
+    i18n.set('fr');
+    expect(i18n.named('Track 12')).toBe('Piste 12');
+    expect(i18n.named('Untitled')).toBe('Sans titre');
+    expect(i18n.named('Track of my life')).toBe('Track of my life');
+    i18n.set('en');
+    expect(i18n.named('Track 12')).toBe('Track 12');
   });
 });

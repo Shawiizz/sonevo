@@ -21,7 +21,7 @@ import { Files, TEMPLATES } from './files.service';
     </div>
     <div class="title" data-tauri-drag-region>
       <button class="name" (click)="rename()" [title]="t('Rename the song')">
-        {{ studio.song()?.name }}
+        {{ named(studio.song()?.name ?? '') }}
       </button>
       @if (studio.view()?.dirty) {
         <span class="dirty" [title]="t('Changes not saved')"></span>
@@ -121,6 +121,7 @@ import { Files, TEMPLATES } from './files.service';
 export class Titlebar {
   protected readonly studio = inject(Studio);
   protected readonly t = inject(I18n).t;
+  protected readonly named = inject(I18n).named;
   private readonly files = inject(Files);
   private readonly menus = inject(Menus);
   private readonly renaming = inject(Rename);
@@ -213,7 +214,7 @@ export class Titlebar {
   protected rename(): void {
     const song = this.studio.song();
     if (!song) return;
-    void this.renaming.ask(this.t('Name of the song'), song.name).then((name) => {
+    void this.renaming.ask(this.t('Name of the song'), this.named(song.name)).then((name) => {
       if (name) void this.studio.setSong({ name });
     });
   }
