@@ -609,16 +609,37 @@ fn stretch_sample(app: State<App>, sample: String, factor: f64) -> Answer<String
     if !(0.25..=4.0).contains(&factor) {
         return Err("A sound is stretched from a quarter to four times its length".into());
     }
+    remake(&app, &sample, "stretched", |l, r| sonevo_dsp::stretch(l, r, factor))
+}
+
+/// The song's sound `sample` `semitones` higher or lower, as long as it was, kept in the song
+/// as a sound of its own: its name.
+#[tauri::command(async)]
+fn transpose_sample(app: State<App>, sample: String, semitones: f64) -> Answer<String> {
+    if !(-24.0..=24.0).contains(&semitones) {
+        return Err("A sound is transposed by two octaves at most".into());
+    }
+    let named = if semitones > 0.0 { format!("up {semitones}") } else { format!("down {}", -semitones) };
+    remake(&app, &sample, &named, |l, r| sonevo_dsp::transpose(l, r, semitones))
+}
+
+/// The song's sound `sample` made into another by `change`, named after it with `named`.
+fn remake(
+    app: &App,
+    sample: &str,
+    named: &str,
+    change: impl FnOnce(&[f32], &[f32]) -> (Vec<f32>, Vec<f32>),
+) -> Answer<String> {
     if sample.contains(['/', '\\']) || sample.contains("..") {
         return Err(format!("{sample} is not a sound of the song"));
     }
     let folder = app.studio().working_folder().to_owned();
-    let decoded = sonevo_engine::decode(&folder.join("samples").join(&sample)).map_err(|e| e.to_string())?;
-    let (left, right) = sonevo_dsp::stretch(&decoded.left, &decoded.right, factor);
-    let stem = Path::new(&sample).file_stem().map_or_else(|| "sound".into(), |s| s.to_string_lossy());
+    let decoded = sonevo_engine::decode(&folder.join("samples").join(sample)).map_err(|e| e.to_string())?;
+    let (left, right) = change(&decoded.left, &decoded.right);
+    let stem = Path::new(sample).file_stem().map_or_else(|| "sound".into(), |s| s.to_string_lossy());
     // the hash the name ends with left out: the import gives the new sound its own
     let stem = stem.rsplit_once(' ').map_or(&*stem, |(name, _)| name);
-    let scratch = tempfile_path(&format!("{stem} stretched.wav"));
+    let scratch = tempfile_path(&format!("{stem} {named}.wav"));
     write_wav(&scratch, decoded.sample_rate as u32, &left, &right, Depth::Float32)
         .map_err(|e| e.to_string())?;
     let made = app.studio().import_sample(&scratch);
@@ -866,6 +887,7 @@ pub fn run() {
             midi_file,
             export_midi,
             stretch_sample,
+            transpose_sample,
             presets,
             save_preset,
             delete_preset,

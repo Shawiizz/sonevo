@@ -1084,6 +1084,19 @@ export class Playlist implements OnDestroy {
           label: t('Stretch it to fill the clip, at its own pitch'),
           run: () => void this.stretch(clip),
         },
+        {
+          label: t('Transpose it…'),
+          run: () =>
+            this.menus.show(
+              event,
+              [12, 7, 5, 2, 1, -1, -2, -5, -7, -12].map((semitones) => ({
+                label: t(semitones > 0 ? '{n} semitones up' : '{n} semitones down', {
+                  n: Math.abs(semitones),
+                }),
+                run: () => void this.transpose(clip, semitones),
+              })),
+            ),
+        },
         { label: t('Fade out…'), run: fades('fadeOut') },
         { separator: true, label: '' },
       );
@@ -1104,6 +1117,24 @@ export class Playlist implements OnDestroy {
       },
     );
     this.menus.show(event, items);
+  }
+
+  /** A sound clip's sound `semitones` higher or lower, as long as it was, in its place. */
+  private async transpose(clip: Clip, semitones: number): Promise<void> {
+    const content = clip.content;
+    if (content.type !== 'audio') return;
+    this.files.busy.set(this.t('Transposing…'));
+    try {
+      const sample = await api.transposeSample(content.sample, semitones);
+      await this.studio.edit({
+        type: 'putClip',
+        clip: { ...clip, content: { ...content, sample } },
+      });
+    } catch (e) {
+      this.studio.fail(e);
+    } finally {
+      this.files.busy.set(null);
+    }
   }
 
   /** A sound clip's sound made as long as the clip, at its pitch, in place of the sound. */

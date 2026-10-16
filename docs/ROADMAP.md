@@ -57,6 +57,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   ajoute, renomme ou enlève.
 - ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
   boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
+- ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.
 - ✅ **Clips audio** : chaque piste de la playlist joue ses sons dans la piste de mixage
   choisie (pour leur mettre des effets) ; fondus en entrée et en sortie, lecture à l'envers.
 - ✅ **Enregistrement audio** : le micro (ou toute entrée) enregistré pendant que le morceau

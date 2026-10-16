@@ -61,6 +61,8 @@ export const api = {
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),
   stretchSample: (sample: string, factor: number) =>
     invoke<string>('stretch_sample', { sample, factor }),
+  transposeSample: (sample: string, semitones: number) =>
+    invoke<string>('transpose_sample', { sample, semitones }),
   presets: (device: string) => invoke<PresetInfo[]>('presets', { device }),
   savePreset: (device: string, name: string, values: Record<string, number>) =>
     invoke<void>('save_preset', { device, name, values }),

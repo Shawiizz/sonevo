@@ -16,7 +16,7 @@ mod util;
 pub use param::{Param, Scale};
 pub use presets::{presets, Preset, PRESETS};
 pub use sampler::Sample;
-pub use stretch::stretch;
+pub use stretch::{stretch, transpose};
 
 use std::sync::Arc;
 

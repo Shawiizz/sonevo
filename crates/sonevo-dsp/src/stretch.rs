@@ -67,6 +67,26 @@ pub fn stretch(left: &[f32], right: &[f32], factor: f64) -> (Vec<f32>, Vec<f32>)
     (out_left, out_right)
 }
 
+/// `left` and `right` `semitones` higher or lower, as long as they were: stretched by the
+/// change of pitch, then played that much faster or slower.
+pub fn transpose(left: &[f32], right: &[f32], semitones: f64) -> (Vec<f32>, Vec<f32>) {
+    let ratio = 2f64.powf(semitones / 12.0);
+    let frames = left.len().min(right.len());
+    let (long_left, long_right) = stretch(left, right, ratio);
+    let last = long_left.len().saturating_sub(1);
+    let read = |side: &[f32], i: usize| -> f32 {
+        let at = i as f64 * ratio;
+        let whole = (at as usize).min(last);
+        let part = (at - whole as f64) as f32;
+        let next = (whole + 1).min(last);
+        side[whole] + (side[next] - side[whole]) * part
+    };
+    if long_left.is_empty() {
+        return (vec![0.0; frames], vec![0.0; frames]);
+    }
+    ((0..frames).map(|i| read(&long_left, i)).collect(), (0..frames).map(|i| read(&long_right, i)).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,6 +109,18 @@ mod tests {
             let loudest = middle.iter().fold(0.0f32, |a, s| a.max(s.abs()));
             assert!(loudest > 0.45 && loudest < 0.55, "{factor}: {loudest}");
         }
+    }
+
+    #[test]
+    fn a_tone_transposed_an_octave_up_keeps_its_length() {
+        let tone: Vec<f32> =
+            (0..48_000).map(|i| (std::f32::consts::TAU * 220.0 * i as f32 / 48_000.0).sin() * 0.5).collect();
+        let (left, _) = transpose(&tone, &tone, 12.0);
+        assert_eq!(left.len(), tone.len());
+        let middle = &left[12_000..36_000];
+        assert!((pitch(middle, 48_000.0) - 440.0).abs() < 6.0, "{}", pitch(middle, 48_000.0));
+        let (down, _) = transpose(&tone, &tone, -12.0);
+        assert!((pitch(&down[12_000..36_000], 48_000.0) - 110.0).abs() < 4.0);
     }
 
     #[test]
