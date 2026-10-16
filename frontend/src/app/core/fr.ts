@@ -256,6 +256,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'As loud as streaming services play songs (-14 LUFS), never clipping':
+    'Aussi fort que les services de streaming jouent les morceaux (-14 LUFS), sans jamais saturer',
   'Write a bass under the other channels': 'Écrire une basse sous les autres voies',
   'Write chords on another channel of the pattern first.':
     "Écris d'abord des accords sur une autre voie du pattern.",

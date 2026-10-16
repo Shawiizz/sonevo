@@ -56,6 +56,7 @@ export const api = {
     format: 'wav' | 'flac',
     depth: string,
     sampleRate: number,
+    streaming: boolean,
   ) =>
     invoke<{ missing: string[]; loudness: number | null; peak: number | null }>('export_audio', {
       path,
@@ -63,6 +64,7 @@ export const api = {
       format,
       depth,
       sampleRate,
+      streaming,
     }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   midiFile: (path: string) => invoke<Midi>('midi_file', { path }),

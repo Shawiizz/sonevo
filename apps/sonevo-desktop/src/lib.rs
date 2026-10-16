@@ -499,6 +499,22 @@ struct Exported {
     peak: Option<f64>,
 }
 
+/// `rendered` made as loud as streaming services play songs, -14 LUFS, as far as its peak
+/// stays a decibel under the top.
+fn level_for_streaming(rendered: &mut sonevo_engine::Rendered) {
+    let Some(lufs) = sonevo_engine::loudness(&rendered.left, &rendered.right, rendered.sample_rate) else {
+        return;
+    };
+    let loudest = rendered.left.iter().chain(&rendered.right).fold(0.0f32, |a, s| a.max(s.abs()));
+    if loudest <= 0.0 {
+        return;
+    }
+    let wanted = 10f64.powf((-14.0 - lufs) / 20.0);
+    let ceiling = 10f64.powf(-1.0 / 20.0) / f64::from(loudest);
+    let gain = wanted.min(ceiling) as f32;
+    rendered.left.iter_mut().chain(rendered.right.iter_mut()).for_each(|s| *s *= gain);
+}
+
 /// The song played through into WAV or FLAC files at `path`.
 #[tauri::command(async)]
 fn export_audio(
@@ -508,6 +524,7 @@ fn export_audio(
     format: String,
     depth: String,
     sample_rate: u32,
+    streaming: bool,
 ) -> Answer<Exported> {
     let (song, folder) = {
         let studio = app.studio();
@@ -534,7 +551,10 @@ fn export_audio(
         }
     };
     // a whole file, how loud it sounds said with it
-    let measured = |rendered: sonevo_engine::Rendered| -> Answer<Exported> {
+    let measured = |mut rendered: sonevo_engine::Rendered| -> Answer<Exported> {
+        if streaming {
+            level_for_streaming(&mut rendered);
+        }
         write(&rendered, &path)?;
         let loudest = rendered.left.iter().chain(&rendered.right).fold(0.0f32, |a, s| a.max(s.abs()));
         Ok(Exported {

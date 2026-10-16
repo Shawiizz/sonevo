@@ -142,10 +142,11 @@ export class Files {
     format: 'wav' | 'flac',
     depth: string,
     rate: number,
+    streaming = false,
   ): Promise<void> {
     this.busy.set(this.i18n.t('Exporting…'));
     try {
-      const done = await api.exportAudio(path, part, format, depth, rate);
+      const done = await api.exportAudio(path, part, format, depth, rate, streaming);
       const t = this.i18n.t;
       if (done.missing.length) this.say(done.missing.join(' · '));
       else if (done.loudness !== null && done.peak !== null)

@@ -179,7 +179,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   entier, des conseils en mots simples (saturation, sonie, grondement sous 40 Hz, son terne ou
   criard, côtés qui s'annulent en mono, pas de limiteur).
 - ✅ **Sonie** mesurée à l'export (LUFS intégrés selon l'UIT-R BS.1770, et la crête), avec ce
-  que les services de streaming en font.
+  que les services de streaming en font ; une case pour mettre le morceau à -14 LUFS, la crête
+  gardée sous -1 dB.
 - ✅ Un morceau de démonstration au premier lancement (16 mesures de house).
 - ✅ **Modèles** de morceaux : Trap (808 qui glisse, charleys en roulements, cloches
   arpégées), Lo-fi (batterie swinguée, accords de septième) et Techno (basse acid qui pompe

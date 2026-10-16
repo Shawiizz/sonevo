@@ -86,6 +86,18 @@ type Part = 'song' | 'loop' | 'stems';
           </select>
         </label>
       </section>
+      @if (part() !== 'stems') {
+        <label class="streaming">
+          <input
+            type="checkbox"
+            [checked]="streaming()"
+            (change)="streaming.set($any($event.target).checked)"
+          />
+          <span>{{
+            t('As loud as streaming services play songs (-14 LUFS), never clipping')
+          }}</span>
+        </label>
+      }
       <div class="actions">
         <button class="s-btn" (click)="closed.emit()">{{ t('Cancel') }}</button>
         <button class="s-btn s-btn--primary" (click)="run()">{{ t('Export…') }}</button>
@@ -126,6 +138,14 @@ type Part = 'song' | 'loop' | 'stems';
     section {
       padding: 12px 0;
       border-top: 1px solid var(--s-line);
+    }
+    .streaming {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      color: var(--s-text-2);
+      font-size: 12px;
     }
     .row {
       display: grid;
@@ -178,6 +198,7 @@ export class ExportDialog {
   protected readonly part = signal<Part>('song');
   protected readonly depth = signal('24');
   protected readonly format = signal<'wav' | 'flac'>('wav');
+  protected readonly streaming = signal(false);
 
   /** FLAC keeps 24 bits at most. */
   protected setFormat(format: 'wav' | 'flac'): void {
@@ -202,6 +223,6 @@ export class ExportDialog {
           });
     if (!path) return;
     this.closed.emit();
-    await this.files.export(path, part, this.format(), this.depth(), this.rate());
+    await this.files.export(path, part, this.format(), this.depth(), this.rate(), this.streaming());
   }
 }
