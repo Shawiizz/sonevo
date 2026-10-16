@@ -427,11 +427,15 @@ export class DevicePanel {
 
   protected live(device: Device, p: ParamInfo, value: number): void {
     void api.liveParam(device.id, p.id, value);
+    const normal = toNormal(value, p.min, p.max, p.scale === 'log');
+    const name = `${this.shown()?.owner ?? ''} · ${this.t(p.name)}`;
+    this.studio.moved({ type: 'param', device: device.id, param: p.id }, normal, name);
   }
 
   protected set(device: Device, p: ParamInfo, value: number): void {
     void api.liveParam(device.id, p.id, value);
     void this.studio.edit({ type: 'setParam', device: device.id, param: p.id, value });
+    void this.studio.letGo({ type: 'param', device: device.id, param: p.id });
   }
 
   protected knobMenu(event: MouseEvent, device: Device, p: ParamInfo): void {

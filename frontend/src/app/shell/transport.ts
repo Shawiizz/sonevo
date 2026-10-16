@@ -48,6 +48,14 @@ import { Rename } from '../shared/rename';
       >
         <s-icon name="record" [filled]="true" [size]="12" />
       </button>
+      <button
+        class="s-bar-btn moves"
+        [class.on]="studio.recordingMoves()"
+        (click)="studio.recordingMoves.set(!studio.recordingMoves())"
+        [title]="t('Record the knobs moved while the song plays, as automation')"
+      >
+        <s-icon name="automation" [size]="14" />
+      </button>
       @if (recording()) {
         <s-meter class="input" [peak]="studio.status().recording ?? 0" />
       }
@@ -174,6 +182,10 @@ import { Rename } from '../shared/rename';
       display: flex;
       align-items: center;
       gap: 4px;
+    }
+    .moves.on {
+      color: var(--s-record);
+      background: color-mix(in srgb, var(--s-record) 14%, transparent);
     }
     .record {
       width: 30px;

@@ -255,6 +255,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Record the knobs moved while the song plays, as automation':
+    'Enregistrer en automation les boutons tournés pendant que le morceau joue',
   Tools: 'Outils',
   'Change the notes chosen, or all of them': 'Changer les notes choisies, ou toutes',
   'Humanize: a little off the grid and in strength': 'Humaniser : un peu hors grille et en force',

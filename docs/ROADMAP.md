@@ -74,6 +74,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation, chorus (et flanger), phaser.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons
+  tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).
 - ✅ **Tranches** : le sampler coupe son son en 4 à 32 parts, une par touche depuis la note de
   base, sa forme d'onde montre les coupes, et un clic en fait un pattern à remanier.
 - ✅ **Presets** : une cinquantaine de sons et réglages tout faits (basse 808, lead supersaw,
@@ -211,3 +213,6 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.
 20. **Arpégiateur** : il joue les notes écrites et celles jouées en direct au clavier ; en direct
     il suit le tempo mais pas la mesure (la première note part quand la touche est enfoncée).
+21. **Automation enregistrée** : seuls les boutons des appareils s'enregistrent (pas encore les
+    volumes et panoramiques du rack et du mixeur) ; pendant l'enregistrement, une automation
+    déjà là sur ce réglage continue de s'entendre.

@@ -13,6 +13,7 @@ import {
   newId,
   Note,
   Pattern,
+  Point,
   ParamInfo,
   PPQ,
   PluginInfo,
@@ -64,6 +65,10 @@ export class Studio {
   /** Keys played are written into the pattern as it goes round. */
   readonly writing = signal(false);
   private statusAt = 0;
+  /** Knobs moved as the song plays are written into automation clips. */
+  readonly recordingMoves = signal(false);
+  /** The moves of each knob held, by its target, until it is let go of. */
+  private moves = new Map<string, { target: Target; name: string; points: Point[] }>();
   /** The keys down being written, and where in the pattern each went down. */
   private readonly down = new Map<number, { at: number; velocity: number }>();
 
@@ -356,6 +361,92 @@ export class Studio {
   }
 
   /** A new track holding an automation of `target`, flat at `value` (0 to 1) over the song. */
+  /** Where the song is now, between two statuses; none when it is not playing as a song. */
+  private songTick(): number | null {
+    const status = this.status();
+    if (!status.playing || this.view()?.patternMode) return null;
+    const since = (performance.now() - this.statusAt) / 60000;
+    return status.position + since * (this.song()?.tempo ?? 120) * PPQ;
+  }
+
+  /** A knob for `target` moved to `value`, from 0 to 1: kept, when moves are recorded. */
+  moved(target: Target, value: number, name: string): void {
+    const at = this.recordingMoves() ? this.songTick() : null;
+    if (at === null) return;
+    const key = JSON.stringify(target);
+    const held = this.moves.get(key) ?? { target, name, points: [] };
+    const last = held.points.at(-1);
+    // one point a thirty-second at most
+    if (last && at - last.at < PPQ / 8) last.value = value;
+    else held.points.push({ at: Math.round(at), value });
+    this.moves.set(key, held);
+  }
+
+  /** The knob for `target` let go of: its moves written into its automation clip. */
+  async letGo(target: Target): Promise<void> {
+    const key = JSON.stringify(target);
+    const held = this.moves.get(key);
+    this.moves.delete(key);
+    const song = this.song();
+    if (!held || held.points.length < 2 || !song) return;
+    const from = held.points[0].at;
+    const to = held.points[held.points.length - 1].at;
+    const clip = song.clips.find(
+      (c) =>
+        c.content.type === 'automation' &&
+        JSON.stringify(c.content.target) === key &&
+        c.start <= to &&
+        c.start + c.length >= from,
+    );
+    if (clip && clip.content.type === 'automation') {
+      // the clip's points in the song's time, those moved over replaced
+      const base = clip.start - (clip.offset ?? 0);
+      const kept = clip.content.points
+        .map((p) => ({ ...p, at: p.at + base }))
+        .filter((p) => p.at < from || p.at > to);
+      const start = Math.min(clip.start, from);
+      const end = Math.max(clip.start + clip.length, to);
+      const points = [...kept, ...held.points]
+        .sort((a, b) => a.at - b.at)
+        .map((p) => ({ ...p, at: p.at - start }));
+      await this.edit({
+        type: 'putClip',
+        clip: {
+          ...clip,
+          start,
+          length: end - start,
+          offset: 0,
+          content: { ...clip.content, points },
+        },
+      });
+      return;
+    }
+    const bar = this.bar();
+    const start = Math.floor(from / bar) * bar;
+    const end = Math.max(start + bar, Math.ceil(to / bar) * bar);
+    const track = { id: newId(), name: held.name, mute: false };
+    await this.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putTrack', track, index: null },
+        {
+          type: 'putClip',
+          clip: {
+            id: newId(),
+            track: track.id,
+            start,
+            length: end - start,
+            content: {
+              type: 'automation',
+              target,
+              points: held.points.map((p) => ({ ...p, at: p.at - start })),
+            },
+          },
+        },
+      ],
+    });
+  }
+
   async automate(target: Target, value: number, name: string): Promise<void> {
     const song = this.song();
     if (!song) return;
