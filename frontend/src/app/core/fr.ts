@@ -306,8 +306,8 @@ export const FR: Record<string, string> = {
   'Save these settings as a preset…': 'Enregistrer ces réglages comme preset…',
   'Delete a saved preset…': 'Supprimer un preset enregistré…',
   'Name of the preset': 'Nom du preset',
-  'A preset\'s name cannot hold / \\ : * ? " < > |':
-    'Le nom d\'un preset ne peut pas contenir / \\ : * ? " < > |',
+  "A preset's name cannot hold signs such as / or :":
+    "Le nom d'un preset ne peut pas contenir de signes comme / ou :",
   Voices: 'Voix',
   Many: 'Plusieurs',
   One: 'Une',

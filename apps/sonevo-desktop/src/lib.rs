@@ -520,7 +520,7 @@ fn preset_folder(app: &App, device: &str, name: Option<&str>) -> Answer<PathBuf>
     match name.map(str::trim) {
         None => Ok(folder),
         Some(name) if name.is_empty() || name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) => {
-            Err("A preset's name cannot hold / \\ : * ? \" < > |".into())
+            Err("A preset's name cannot hold signs such as / or :".into())
         }
         Some(name) => Ok(folder.join(format!("{name}.json"))),
     }
