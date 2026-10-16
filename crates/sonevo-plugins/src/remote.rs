@@ -88,7 +88,6 @@ impl Remote {
         })
     }
 
-    /// How many times the process was started again.
     pub fn restarts(&self) -> u64 {
         self.restarts.load(Ordering::Relaxed)
     }

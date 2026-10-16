@@ -1,7 +1,5 @@
-//! A song as Sonevo holds it: its channels and their instruments, its patterns of notes, the
-//! playlist that arranges them, the mixer they play through; and the open folder it is
-//! saved as, plain files written the same way every time, so that a change shows as a
-//! small diff.
+//! A song as Sonevo holds it, and the folder it is saved as: plain files written the same way
+//! every time, so that a change shows as a small diff.
 
 mod device;
 mod edit;

@@ -1,9 +1,6 @@
-//! Sonevo's own instruments and effects: they play with nothing installed, and as fast as
-//! the engine itself, being part of it.
-//!
-//! Every one is a [`Processor`]: settings described by [`Param`]s, set by index, and blocks
-//! played without allocating. An instrument writes its sound; an effect changes the sound
-//! in place.
+//! Sonevo's own instruments and effects, each a [`Processor`]: settings described by
+//! [`Param`]s and set by index, blocks played without allocating. An instrument writes its
+//! sound; an effect changes the sound in place.
 
 mod drums;
 pub mod effects;
@@ -27,7 +24,6 @@ pub struct Event {
     pub on: bool,
 }
 
-/// What a block is played in.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Context {
     pub sample_rate: f32,
@@ -51,7 +47,6 @@ pub trait Processor: Send {
     }
 }
 
-/// A device built into Sonevo.
 pub struct Builtin {
     /// The name songs know it by (`sonevo.synth`).
     pub name: &'static str,
@@ -150,7 +145,6 @@ pub const BUILTINS: &[Builtin] = &[
     },
 ];
 
-/// The built-in device songs know as `name`.
 pub fn builtin(name: &str) -> Option<&'static Builtin> {
     BUILTINS.iter().find(|b| b.name == name)
 }

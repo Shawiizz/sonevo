@@ -1,16 +1,8 @@
-//! One plugin played in a process of its own, for the engine that started it: should the
-//! plugin crash, only this process goes, and the engine plays on.
+//! One plugin played in a process of its own: should it crash, only this process goes.
 //!
-//! `sonevo-plugin-host <link> <bundle> <plugin id> <sample rate> <max frames> <engine pid>
-//! [<control> [<state file>]]`: the events named after `control` open the plugin's window
-//! and save its state; the state file, if given, is loaded before the plugin plays.
-//!
-//! `sonevo-plugin-host --scan <bundle>` writes the plugins of a bundle, a line each: id,
-//! name, vendor and features, separated by tabs. A bundle that crashes as it is read crashes
-//! only this process.
-//!
-//! `sonevo-plugin-host --params <bundle> <plugin id>` writes the plugin's settings, a line
-//! each: id, name, least, most, default, and `stepped` or not.
+//! Played: `<link> <bundle> <plugin id> <sample rate> <max frames> <engine pid> [<control>
+//! [<state file>]]`. `--scan <bundle>` writes a bundle's plugins, `--params <bundle> <plugin id>`
+//! a plugin's settings, a tab-separated line each.
 
 mod control;
 
@@ -60,7 +52,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let bundle = Bundle::open(Path::new(bundle))?;
     let title = bundle.plugins().into_iter().find(|p| p.id == *id).map_or_else(|| id.clone(), |p| p.name);
     let mut instance = bundle.instantiate(id)?;
-    // the state saved with the song, given back before anything plays
     if let Some(bytes) = state.and_then(|path| std::fs::read(path).ok()) {
         if !instance.load_state(&bytes) {
             eprintln!("sonevo-plugin-host: the plugin would not take its state back");

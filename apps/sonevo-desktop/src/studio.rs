@@ -16,7 +16,6 @@ use std::sync::{mpsc, Arc};
 pub struct View<'a> {
     pub song: &'a Song,
     pub notes: BTreeMap<Id, &'a BTreeMap<Id, Vec<Note>>>,
-    /// Where it is saved; none for a song not saved yet.
     pub folder: Option<&'a Path>,
     pub dirty: bool,
     pub can_undo: bool,
@@ -136,7 +135,6 @@ impl Studio {
         }
     }
 
-    /// Hands the song as it now is to the engine.
     fn sync(&mut self) {
         if let Mode::Pattern(id) = self.mode {
             if self.song.pattern(id).is_none() {
@@ -180,7 +178,6 @@ impl Studio {
         }
     }
 
-    /// Where the song is kept as it changes.
     fn kept_at(&self) -> PathBuf {
         match &self.folder {
             Some(folder) => autosave::place(&self.autosaves, folder),
@@ -188,7 +185,6 @@ impl Studio {
         }
     }
 
-    /// Keeps the song as it is, if it changed since: should Sonevo end, it is not lost.
     pub fn autosave(&mut self) -> Result<(), String> {
         if !self.unkept || !self.dirty {
             return Ok(());
@@ -245,7 +241,6 @@ impl Studio {
         Ok(mended)
     }
 
-    /// The states of the plugins the song plays, saved into `folder` beside it.
     fn save_plugin_states(&self, folder: &Path) {
         let instruments = self.song.channels.iter().map(|c| &c.instrument);
         let effects = self.song.inserts.iter().chain([&self.song.master]).flat_map(|i| i.effects.iter());
@@ -356,7 +351,6 @@ impl Studio {
         self.engine.as_mut()
     }
 
-    /// Opens the output `settings` names, the engine playing out of it.
     pub fn start_audio(&mut self, settings: &Settings) {
         self.output = None;
         self.engine = None;
@@ -426,7 +420,6 @@ impl Studio {
 }
 
 impl Studio {
-    /// Records the input `input` of `driver` from where playing is, the song playing.
     pub fn record(&mut self, driver: sonevo_audio::Driver, input: Option<&str>) -> Result<(), String> {
         if self.recording.is_some() {
             return Ok(());

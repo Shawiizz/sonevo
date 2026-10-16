@@ -39,7 +39,6 @@ impl Meters {
     }
 }
 
-/// The loudest sample of a block.
 pub fn peak(samples: &[f32]) -> f32 {
     samples.iter().fold(0.0f32, |a, s| a.max(s.abs()))
 }

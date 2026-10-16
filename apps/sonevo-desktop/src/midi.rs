@@ -22,7 +22,6 @@ pub fn note(message: &[u8]) -> Option<(u8, f32, bool)> {
 /// How often the keyboards are looked for again.
 const LOOK: Duration = Duration::from_secs(2);
 
-/// The keyboards being listened to, by name.
 pub type Inputs = Arc<Mutex<BTreeMap<String, MidiInputConnection<()>>>>;
 
 /// Listens to every keyboard there is or comes, `played` called with each key.
@@ -38,7 +37,6 @@ pub fn listen(played: impl Fn(u8, f32, bool) + Send + Sync + 'static) -> Inputs 
                 .filter_map(|p| finder.port_name(&p).ok().map(|n| (n, p)))
                 .collect();
             let mut open = kept.lock().unwrap_or_else(|e| e.into_inner());
-            // a keyboard unplugged is let go of
             open.retain(|name, _| ports.iter().any(|(n, _)| n == name));
             for (name, port) in ports {
                 if open.contains_key(&name) {

@@ -45,7 +45,6 @@ pub enum AudioError {
     Format(String),
 }
 
-/// An output there is.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutputInfo {
     pub driver: Driver,
@@ -85,7 +84,6 @@ impl Default for Settings {
     }
 }
 
-/// What the output thread lets know.
 struct Status {
     /// The time from a block played to it heard, in nanoseconds.
     latency: AtomicU64,

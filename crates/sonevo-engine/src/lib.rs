@@ -1,11 +1,6 @@
-//! Plays a song: its patterns' notes through the channels' instruments, the instruments
-//! through the mixer, the mixer to the speakers or to a file.
-//!
-//! The [`Engine`] is held by the interface; the [`Renderer`] it comes with, by the audio
-//! thread. A song changed is compiled again, on the engine's side, into a graph the
-//! renderer swaps in between two blocks: instruments and effects kept from one graph to the
-//! next, so that a sound playing goes on. Old graphs come back to the engine to be freed, so
-//! that the audio thread never frees nor allocates.
+//! Plays a song through its instruments and mixer, to the speakers or to a file. A song changed
+//! is compiled on the [`Engine`]'s side into a graph the [`Renderer`] swaps in between two
+//! blocks; old graphs come back to be freed, so that the audio thread never frees nor allocates.
 
 mod compile;
 mod graph;
@@ -28,7 +23,6 @@ use sonevo_project::{Id, Region, Song, Ticks};
 use std::path::Path;
 use std::sync::Arc;
 
-/// Whose loudness to read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Meter {
     Master,
@@ -72,7 +66,6 @@ impl Engine {
         self.sample_rate
     }
 
-    /// How the plugins songs name are started.
     pub fn set_plugins(&mut self, plugins: Arc<dyn Plugins>) {
         self.plugins = Some(plugins);
     }
@@ -209,7 +202,6 @@ impl Engine {
     }
 }
 
-/// A song played through, as a file would hold it.
 pub struct Rendered {
     pub sample_rate: u32,
     pub left: Vec<f32>,

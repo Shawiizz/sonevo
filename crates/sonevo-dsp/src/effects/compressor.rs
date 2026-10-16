@@ -41,7 +41,6 @@ impl Compressor {
         self.release = coeff(self.values[3]);
     }
 
-    /// The reduction a level of `db` calls for.
     fn wanted(&self, db: f32) -> f32 {
         let (threshold, ratio, knee) = (self.values[0], self.values[1], self.values[4]);
         let over = db - threshold;
@@ -69,7 +68,6 @@ impl Processor for Compressor {
         let mix = self.values[6];
         for (l, r) in left.iter_mut().zip(right.iter_mut()) {
             let wanted = self.wanted(gain_to_db(l.abs().max(r.abs())));
-            // coming down at the attack's pace, going back up at the release's
             let coeff = if wanted < self.reduction { self.attack } else { self.release };
             self.reduction = wanted + (self.reduction - wanted) * coeff;
             let gain = db_to_gain(self.reduction) * makeup;

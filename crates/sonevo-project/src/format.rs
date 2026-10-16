@@ -1,4 +1,5 @@
-//! The folder a song is saved as:
+//! The folder a song is saved as, written the same way every time so that the files of a song
+//! changed a little differ a little:
 //!
 //! ```text
 //! My song.sonevo/
@@ -6,8 +7,6 @@
 //!   patterns/<id>.json    a pattern's notes, one note a line
 //!   samples/<name> <hash>.<ext>  the samples, named by what is in them
 //! ```
-//!
-//! Written the same way every time, the files of a song changed a little differ a little.
 
 use crate::id::Id;
 use crate::song::{Note, Song};

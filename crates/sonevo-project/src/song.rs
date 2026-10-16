@@ -19,7 +19,6 @@ pub struct Signature {
 }
 
 impl Signature {
-    /// How long a bar is.
     pub fn bar(&self) -> Ticks {
         Ticks::from(self.beats) * PPQ * 4 / Ticks::from(self.unit.max(1))
     }
@@ -44,7 +43,6 @@ pub struct Channel {
     pub insert: Option<Id>,
 }
 
-/// A note of a pattern.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
@@ -215,7 +213,6 @@ pub struct Region {
     pub end: Ticks,
 }
 
-/// A whole song.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {

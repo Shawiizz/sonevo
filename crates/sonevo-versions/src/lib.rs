@@ -1,7 +1,5 @@
-//! The versions of a song: the song's folder as it was each time a version was made, kept in
-//! a git repository of its own inside the folder (`.versions`), written by gitoxide. Nothing
-//! needs git installed, and the folder stays an ordinary folder: the user's own git, if they
-//! have one, sees the repository as one more folder to ignore.
+//! The versions of a song, kept by gitoxide in a git repository of its own inside the song's
+//! folder (`.versions`): no git needed, and the user's own git sees it as one more folder.
 
 use gix::bstr::{BString, ByteSlice};
 use gix::objs::tree::{Entry, EntryKind};
@@ -64,7 +62,6 @@ fn kept(name: &str) -> bool {
     !name.starts_with('.')
 }
 
-/// The tree of the folder `dir` as it is, written into `repo`.
 fn write_tree(repo: &gix::Repository, dir: &Path) -> Result<ObjectId, VersionError> {
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(dir).map_err(io(dir))? {

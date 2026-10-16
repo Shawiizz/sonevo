@@ -108,7 +108,6 @@ struct Synth {
     voices: Voices,
     /// The setting `VOLUME`: the gain the voices are played at, from 0 to 1.
     volume: f64,
-    /// Its window, while the host shows it.
     #[cfg(windows)]
     view: windows_sys::Win32::Foundation::HWND,
 }

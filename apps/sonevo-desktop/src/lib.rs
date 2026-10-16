@@ -45,7 +45,6 @@ impl App {
 
 type Answer<T> = Result<T, String>;
 
-/// The song as it now is, as the interface reads it.
 fn view(studio: &Studio) -> serde_json::Value {
     serde_json::to_value::<View>(studio.view()).unwrap_or_default()
 }
@@ -284,7 +283,6 @@ struct DeviceInfo {
     params: Vec<ParamInfo>,
 }
 
-/// The devices built into Sonevo, their settings described.
 #[tauri::command]
 fn devices() -> Vec<DeviceInfo> {
     sonevo_dsp::BUILTINS
@@ -322,7 +320,6 @@ fn open_plugin_window(device: Id) -> bool {
     sonevo_plugins::open_window(device)
 }
 
-/// The settings a plugin lets be moved, as its knobs show them.
 #[tauri::command(async)]
 fn plugin_params(bundle: String, id: String) -> Vec<ParamInfo> {
     sonevo_plugins::params(&bundle, &id).iter().map(param_info).collect()
@@ -351,7 +348,6 @@ fn listen(app: State<App>, path: Option<PathBuf>) -> Answer<()> {
     Ok(())
 }
 
-/// The plugins found on this computer.
 #[tauri::command]
 fn plugins(app: State<App>) -> Vec<PluginView> {
     app.plugins
@@ -550,7 +546,6 @@ fn data(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("sonevo"))
 }
 
-/// Keeps the song as it changes, every little while.
 fn keep(app: AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(20));
@@ -580,20 +575,17 @@ fn stop_recording(app: State<App>) -> Answer<serde_json::Value> {
     Ok(view(&studio))
 }
 
-/// The inputs that can be recorded from, with the driver chosen.
 #[tauri::command(async)]
 fn inputs(app: State<App>) -> Vec<String> {
     let driver = app.settings().driver();
     sonevo_audio::inputs(driver)
 }
 
-/// The channel the keyboards play from now on.
 #[tauri::command]
 fn play_with_keyboards(app: State<App>, channel: Option<Id>) {
     *app.played.lock().unwrap_or_else(|e| e.into_inner()) = channel;
 }
 
-/// The keyboards plugged in, by name.
 #[tauri::command]
 fn keyboards(app: State<App>) -> Vec<String> {
     app.keyboards.lock().unwrap_or_else(|e| e.into_inner()).keys().cloned().collect()
@@ -624,7 +616,6 @@ fn leave(app: State<App>) {
     app.studio().forget_autosave();
 }
 
-/// Whether `path` is a song's folder.
 fn is_song(path: &Path) -> bool {
     path.join(sonevo_project::SONG_FILE).is_file()
 }
@@ -643,7 +634,6 @@ pub fn run() {
             let mut studio = Studio::new(&data(&handle), song);
             let kept = studio.kept();
             studio.start_audio(&settings.audio());
-            // the song opened last, if there is one
             if !first {
                 if let Some(last) = settings.recent.first().filter(|p| is_song(p)).cloned() {
                     let _ = studio.open(&last);

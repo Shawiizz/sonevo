@@ -43,7 +43,6 @@ struct Shared {
     slots: [Slot; 2],
 }
 
-/// The block `block`'s place.
 fn slot(shared: &Shared, block: u64) -> &Slot {
     &shared.slots[(block % 2) as usize]
 }
@@ -151,7 +150,6 @@ pub struct EngineEnd {
 }
 
 impl EngineEnd {
-    /// Makes the link `name` for a plugin's process to open.
     pub fn create(name: &str) -> io::Result<EngineEnd> {
         Ok(EngineEnd { mapping: Mapping::make(name, true)?, next: 1 })
     }
@@ -230,7 +228,6 @@ pub struct PluginEnd {
 }
 
 impl PluginEnd {
-    /// Opens the link an engine made.
     pub fn open(name: &str) -> io::Result<PluginEnd> {
         let mapping = Mapping::make(name, false)?;
         // a process started again goes on from where the engine is
@@ -238,7 +235,6 @@ impl PluginEnd {
         Ok(PluginEnd { mapping, last })
     }
 
-    /// The engine is closing.
     pub fn stopping(&self) -> bool {
         self.mapping.shared().stop.load(Ordering::Acquire)
     }
