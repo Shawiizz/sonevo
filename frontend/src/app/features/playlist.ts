@@ -11,7 +11,18 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Clip, Id, Marker, newId, Point, PPQ, sampleLabel, STEP, Track } from '../core/models';
+import {
+  Clip,
+  Edit,
+  Id,
+  Marker,
+  newId,
+  Point,
+  PPQ,
+  sampleLabel,
+  STEP,
+  Track,
+} from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Files } from '../shell/files.service';
@@ -419,10 +430,93 @@ export class Playlist implements OnDestroy {
         });
       },
     });
-    if (this.studio.song()?.loopRegion) {
-      items.push({ label: t('Clear the loop'), run: () => this.setLoop(null) });
+    const loop = this.studio.song()?.loopRegion;
+    if (loop) {
+      items.push(
+        { separator: true, label: '' },
+        {
+          label: t('Play the loop’s part twice, the rest after'),
+          run: () => this.repeatPart(loop),
+        },
+        {
+          label: t('Take the loop’s part out, the rest closer'),
+          run: () => this.takeOutPart(loop),
+        },
+        { label: t('Clear the loop'), run: () => this.setLoop(null) },
+      );
     }
     this.menus.show(event, items);
+  }
+
+  /** The clips and markers starting in `part` played again after it, everything later moved on. */
+  private repeatPart(part: { start: number; end: number }): void {
+    const song = this.studio.song();
+    if (!song) return;
+    const length = part.end - part.start;
+    const edits: Edit[] = [];
+    for (const clip of song.clips) {
+      if (clip.start >= part.end) {
+        edits.push({ type: 'putClip', clip: { ...clip, start: clip.start + length } });
+      } else if (clip.start >= part.start) {
+        const kept = Math.min(clip.start + clip.length, part.end) - clip.start;
+        edits.push({
+          type: 'putClip',
+          clip: { ...clip, id: newId(), start: clip.start + length, length: kept },
+        });
+      } else if (clip.start + clip.length > part.start) {
+        // going on through the part: on through its repeat too
+        edits.push({ type: 'putClip', clip: { ...clip, length: clip.length + length } });
+      }
+    }
+    for (const m of song.markers ?? []) {
+      if (m.at >= part.end) edits.push({ type: 'putMarker', marker: { ...m, at: m.at + length } });
+    }
+    void this.studio.edit({ type: 'batch', edits });
+  }
+
+  /** What is in `part` taken out of the song, everything later brought closer. */
+  private takeOutPart(part: { start: number; end: number }): void {
+    const song = this.studio.song();
+    if (!song) return;
+    const length = part.end - part.start;
+    const edits: Edit[] = [];
+    const removed: Id[] = [];
+    for (const clip of song.clips) {
+      const end = clip.start + clip.length;
+      if (clip.start >= part.end) {
+        edits.push({ type: 'putClip', clip: { ...clip, start: clip.start - length } });
+      } else if (clip.start >= part.start && end <= part.end) {
+        removed.push(clip.id);
+      } else if (clip.start >= part.start) {
+        // starting inside: what is after the part kept, from where the part began
+        const cut = part.end - clip.start;
+        edits.push({
+          type: 'putClip',
+          clip: {
+            ...clip,
+            start: part.start,
+            length: end - part.end,
+            offset: (clip.offset ?? 0) + cut,
+          },
+        });
+      } else if (end > part.start) {
+        // starting before: cut where the part begins
+        edits.push({ type: 'putClip', clip: { ...clip, length: part.start - clip.start } });
+      }
+    }
+    if (removed.length) edits.push({ type: 'removeClips', ids: removed });
+    for (const m of song.markers ?? []) {
+      if (m.at >= part.end) edits.push({ type: 'putMarker', marker: { ...m, at: m.at - length } });
+      else if (m.at >= part.start) edits.push({ type: 'removeMarker', id: m.id });
+    }
+    edits.push({
+      type: 'setSong',
+      name: song.name,
+      tempo: song.tempo,
+      signature: song.signature,
+      loopRegion: null,
+    });
+    void this.studio.edit({ type: 'batch', edits });
   }
 
   private paintOver(s: Surface): void {

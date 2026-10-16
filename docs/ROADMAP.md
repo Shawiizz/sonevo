@@ -55,6 +55,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   `cargo run --release -p sonevo-engine --example big` le mesure.
 - ✅ **Repères** sur la règle de la playlist (Intro, Drop…) : un clic y va, un clic droit en
   ajoute, renomme ou enlève.
+- ✅ La partie de la boucle **jouée deux fois** (la suite décalée) ou **retirée** (la suite
+  rapprochée), d'un clic droit sur la règle.
 - ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
   boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
 - ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.

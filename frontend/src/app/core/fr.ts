@@ -256,6 +256,10 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Play the loop’s part twice, the rest after':
+    'Jouer deux fois la partie de la boucle, la suite après',
+  'Take the loop’s part out, the rest closer':
+    'Retirer la partie de la boucle, la suite rapprochée',
   'Find in this folder': 'Chercher dans ce dossier',
   'How far it brings the sound down now': 'De combien il baisse le son en ce moment',
   'Brought down': 'Baisse',
