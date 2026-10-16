@@ -1007,7 +1007,7 @@ dependencies = [
 
 [[package]]
 name = "engine-spike"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cpal",
  "sonevo-clap",
@@ -4361,7 +4361,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-audio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cpal",
  "rtrb",
@@ -4372,7 +4372,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-clap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap-sys",
  "libloading 0.9.0",
@@ -4380,7 +4380,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-desktop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "midir",
  "serde",
@@ -4402,14 +4402,14 @@ dependencies = [
 
 [[package]]
 name = "sonevo-dsp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sonevo-project",
 ]
 
 [[package]]
 name = "sonevo-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rtrb",
  "serde_json",
@@ -4422,7 +4422,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-plugin-host"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sonevo-clap",
  "sonevo-plugin-ipc",
@@ -4431,7 +4431,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-plugin-ipc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sonevo-clap",
  "windows-sys 0.61.2",
@@ -4439,7 +4439,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-plugins"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sonevo-dsp",
  "sonevo-engine",
@@ -4451,7 +4451,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-project"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake3",
  "getrandom 0.4.3",
@@ -4463,14 +4463,14 @@ dependencies = [
 
 [[package]]
 name = "sonevo-test-effect"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap-sys",
 ]
 
 [[package]]
 name = "sonevo-test-synth"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap-sys",
  "windows-sys 0.61.2",
@@ -4478,7 +4478,7 @@ dependencies = [
 
 [[package]]
 name = "sonevo-versions"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gix",
  "tempfile",
