@@ -165,7 +165,11 @@ export class PianoRoll implements OnDestroy {
 
   constructor() {
     afterNextRender(() => {
-      this.surface = new Surface(this.host().nativeElement, (s) => this.paint(s));
+      this.surface = new Surface(
+        this.host().nativeElement,
+        (s) => this.paint(s),
+        (s) => this.paintOver(s),
+      );
       void this.surface.start();
       this.centre();
     });
@@ -181,7 +185,7 @@ export class PianoRoll implements OnDestroy {
     });
     effect(() => {
       this.studio.status();
-      if (this.studio.view()?.patternMode) this.surface?.redraw();
+      if (this.studio.view()?.patternMode) this.surface?.redrawOver();
     });
   }
 
@@ -344,7 +348,13 @@ export class PianoRoll implements OnDestroy {
       s.text(String(tick / bar + 1), x + 4, 5, 0xbcc2cf, 11);
     }
     if (end < width) g.rect(end - 1, 0, 2, bottom).fill({ color: 0x8f8bf7, alpha: 0.7 });
+  }
 
+  /** What is drawn over the notes: a selection being made, the playhead. */
+  private paintOver(s: Surface): void {
+    const length = this.studio.pattern()?.length ?? this.studio.bar();
+    const bottom = s.height - VELOCITY;
+    const pattern = this.studio.pattern();
     // a selection being drawn
     if (this.drag?.kind === 'select') {
       const d = this.drag;

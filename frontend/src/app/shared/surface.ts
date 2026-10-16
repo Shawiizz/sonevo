@@ -18,7 +18,8 @@ const STYLE = new TextStyle({
 
 /**
  * A WebGL canvas filling `host`, drawn again only when asked: shapes into `shapes`, words
- * from a pool that grows as they are needed.
+ * from a pool that grows as they are needed; and over them what moves on its own (the
+ * playhead), drawn again alone.
  */
 export class Surface {
   readonly app = new Application();
@@ -29,6 +30,7 @@ export class Surface {
   private readonly pool: Text[] = [];
   private used = 0;
   private wanted = true;
+  private wantedOver = true;
   private ready = false;
   private destroyed = false;
   private observer: ResizeObserver | null = null;
@@ -38,16 +40,18 @@ export class Surface {
   constructor(
     private readonly host: HTMLElement,
     private readonly paint: (surface: Surface) => void,
+    private readonly paintOver: (surface: Surface) => void = () => undefined,
   ) {}
 
   async start(): Promise<void> {
     await this.app.init({
-      resizeTo: this.host,
       backgroundAlpha: 0,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
       preference: 'webgl',
+      // drawn when something changed, never otherwise
+      autoStart: false,
     });
     if (this.destroyed) {
       this.app.destroy(true);
@@ -58,22 +62,41 @@ export class Surface {
     this.app.stage.addChild(this.shapes, this.words, this.over);
     this.observer = new ResizeObserver(() => this.redraw());
     this.observer.observe(this.host);
-    this.app.ticker.add(() => {
-      if (!this.wanted) return;
+    this.ready = true;
+    this.frame();
+  }
+
+  /** Draws what is wanted, once a frame at most, and the canvas only if anything was. */
+  private frame(): void {
+    if (this.destroyed) return;
+    const drawn = this.wanted || this.wantedOver;
+    if (this.wanted) {
       this.wanted = false;
+      this.wantedOver = true;
       this.width = this.host.clientWidth;
       this.height = this.host.clientHeight;
+      this.app.renderer.resize(this.width, this.height);
       this.shapes.clear();
-      this.over.clear();
       this.used = 0;
       this.paint(this);
       for (let i = this.used; i < this.pool.length; i++) this.pool[i].visible = false;
-    });
-    this.ready = true;
+    }
+    if (this.wantedOver) {
+      this.wantedOver = false;
+      this.over.clear();
+      this.paintOver(this);
+    }
+    if (drawn) this.app.render();
+    requestAnimationFrame(() => this.frame());
   }
 
   redraw(): void {
     this.wanted = true;
+  }
+
+  /** Only what is drawn over the rest: the playhead moved. */
+  redrawOver(): void {
+    this.wantedOver = true;
   }
 
   /** Words at (x, y), their top left there unless `anchor` says otherwise. */

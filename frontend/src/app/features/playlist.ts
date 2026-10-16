@@ -157,7 +157,11 @@ export class Playlist implements OnDestroy {
 
   constructor() {
     afterNextRender(() => {
-      this.surface = new Surface(this.host().nativeElement, (s) => this.paint(s));
+      this.surface = new Surface(
+        this.host().nativeElement,
+        (s) => this.paint(s),
+        (s) => this.paintOver(s),
+      );
       void this.surface.start();
     });
     effect(() => {
@@ -168,7 +172,7 @@ export class Playlist implements OnDestroy {
     });
     effect(() => {
       this.studio.status();
-      if (!this.studio.view()?.patternMode) this.surface?.redraw();
+      if (!this.studio.view()?.patternMode) this.surface?.redrawOver();
     });
   }
 
@@ -324,7 +328,11 @@ export class Playlist implements OnDestroy {
       s.text(String(n + 1), x + 4, 6, 0xbcc2cf, 11);
     }
     s.text(this.t('Tracks'), 12, 6, 0x8d95a5, 11);
+  }
 
+  /** What is drawn over the clips: a selection being made, the playhead. */
+  private paintOver(s: Surface): void {
+    const { width, height } = s;
     // a selection being drawn
     if (this.drag?.kind === 'select') {
       const d = this.drag;
