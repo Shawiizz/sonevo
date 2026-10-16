@@ -113,7 +113,11 @@ export interface Song {
   channels: Channel[];
   patterns: Pattern[];
   tracks: Track[];
+  /** The clips of the arrangement played, named `arrangement`. */
   clips: Clip[];
+  arrangement: string;
+  /** The other arrangements, to be played in its place. */
+  arrangements?: { name: string; clips: Clip[] }[];
   inserts: Insert[];
   master: Insert;
   loopRegion?: Region;
@@ -255,6 +259,10 @@ export type Edit =
   | { type: 'removeInsert'; id: Id }
   | { type: 'setMaster'; insert: Insert }
   | { type: 'setParam'; device: Id; param: string; value: number }
+  | { type: 'keepArrangementAs'; name: string }
+  | { type: 'switchArrangement'; index: number }
+  | { type: 'renameArrangement'; name: string }
+  | { type: 'removeArrangement'; index: number }
   | { type: 'batch'; edits: Edit[] };
 
 /** The colours channels, patterns and mixer tracks take in turn. */

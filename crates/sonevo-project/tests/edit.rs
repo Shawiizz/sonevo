@@ -117,6 +117,41 @@ fn params_are_set_on_instruments_and_effects() {
 }
 
 #[test]
+fn arrangements_are_kept_switched_and_taken_out() {
+    let mut song = Song::new("A");
+    let track = song.tracks[0].id;
+    let pattern = song.patterns[0].id;
+    let clip = |start| Clip {
+        id: Id::new(),
+        track,
+        start,
+        length: PPQ * 4,
+        offset: 0,
+        content: ClipContent::Pattern { pattern },
+    };
+    song.apply(Edit::PutClip { clip: clip(0) }).unwrap();
+    song.apply(Edit::KeepArrangementAs { name: "Longer".into() }).unwrap();
+    // the copy played from now on changes alone
+    song.apply(Edit::PutClip { clip: clip(PPQ * 4) }).unwrap();
+    assert_eq!((song.arrangement.as_str(), song.clips.len()), ("Longer", 2));
+    assert_eq!((song.arrangements[0].name.as_str(), song.arrangements[0].clips.len()), ("Arrangement 1", 1));
+    song.apply(Edit::SwitchArrangement { index: 0 }).unwrap();
+    assert_eq!((song.arrangement.as_str(), song.clips.len()), ("Arrangement 1", 1));
+    assert_eq!(song.arrangements[0].name, "Longer");
+    // a track taken out takes its clips out of every arrangement
+    song.apply(Edit::PutTrack {
+        track: Track { id: Id::new(), name: "Spare".into(), mute: false },
+        index: None,
+    })
+    .unwrap();
+    song.apply(Edit::RemoveTrack { id: track }).unwrap();
+    assert!(song.clips.is_empty() && song.arrangements[0].clips.is_empty());
+    assert_eq!(song.apply(Edit::SwitchArrangement { index: 3 }), Err(EditError::NoArrangement(3)));
+    song.apply(Edit::RemoveArrangement { index: 0 }).unwrap();
+    assert!(song.arrangements.is_empty());
+}
+
+#[test]
 fn undo_and_redo_go_back_and_forth() {
     let mut song = Song::new("A");
     let mut history = History::default();

@@ -118,7 +118,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ Écouter une ancienne version à la place du morceau (A/B), revenir à une version (l'état
   actuel est gardé d'abord).
 - ✅ Variantes de patterns (dupliquer en variante).
-- ⬜ Variantes d'arrangement.
+- ✅ Variantes d'arrangement : garder une variante de l'arrangement, la modifier seule, passer
+  de l'une à l'autre (mêmes patterns et sons).
 
 ## 7. Export et finition
 

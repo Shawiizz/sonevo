@@ -15,7 +15,7 @@ pub use edit::{Edit, EditError, History};
 pub use format::{import_sample, load, save, FormatError, FORMAT, SONG_FILE};
 pub use id::Id;
 pub use song::{
-    Channel, Clip, ClipContent, Color, Insert, Note, Pattern, Point, Region, Send, Signature, Song, Target,
-    Track, COLORS,
+    Arrangement, Channel, Clip, ClipContent, Color, Insert, Note, Pattern, Point, Region, Send, Signature,
+    Song, Target, Track, COLORS,
 };
 pub use time::{Ticks, PPQ};

@@ -196,6 +196,18 @@ impl Insert {
     }
 }
 
+/// An arrangement kept beside the one played: the same patterns and sounds, placed otherwise.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Arrangement {
+    pub name: String,
+    pub clips: Vec<Clip>,
+}
+
+fn first_arrangement() -> String {
+    "Arrangement 1".into()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Region {
@@ -214,7 +226,13 @@ pub struct Song {
     pub channels: Vec<Channel>,
     pub patterns: Vec<Pattern>,
     pub tracks: Vec<Track>,
+    /// The clips of the arrangement played, named `arrangement`.
     pub clips: Vec<Clip>,
+    #[serde(default = "first_arrangement")]
+    pub arrangement: String,
+    /// The other arrangements, to be played in its place.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub arrangements: Vec<Arrangement>,
     pub inserts: Vec<Insert>,
     pub master: Insert,
     /// The part played over and over, when looping.
@@ -259,6 +277,8 @@ impl Song {
             patterns: vec![pattern],
             tracks,
             clips: Vec::new(),
+            arrangement: first_arrangement(),
+            arrangements: Vec::new(),
             inserts: Vec::new(),
             master: Insert::new("Master", "#bcc3be"),
             loop_region: None,
@@ -302,16 +322,21 @@ impl Song {
         }
         let tracks: Vec<Id> = self.tracks.iter().map(|t| t.id).collect();
         let patterns: Vec<Id> = self.patterns.iter().map(|p| p.id).collect();
-        let before = self.clips.len();
-        self.clips.retain(|clip| {
+        let fits = |clip: &Clip| {
             let content = match &clip.content {
                 ClipContent::Pattern { pattern } => patterns.contains(pattern),
                 _ => true,
             };
             content && tracks.contains(&clip.track) && clip.length > 0
-        });
-        if self.clips.len() != before {
-            mended.push(format!("{} clips of tracks or patterns gone left out", before - self.clips.len()));
+        };
+        let before = self.clips.len() + self.arrangements.iter().map(|a| a.clips.len()).sum::<usize>();
+        self.clips.retain(fits);
+        for arrangement in &mut self.arrangements {
+            arrangement.clips.retain(fits);
+        }
+        let after = self.clips.len() + self.arrangements.iter().map(|a| a.clips.len()).sum::<usize>();
+        if after != before {
+            mended.push(format!("{} clips of tracks or patterns gone left out", before - after));
         }
         let inserts: Vec<Id> = self.inserts.iter().map(|i| i.id).collect();
         for channel in &mut self.channels {

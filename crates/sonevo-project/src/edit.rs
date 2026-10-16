@@ -4,7 +4,9 @@
 
 use crate::device::Device;
 use crate::id::Id;
-use crate::song::{Channel, Clip, ClipContent, Insert, Note, Pattern, Region, Signature, Song, Track};
+use crate::song::{
+    Arrangement, Channel, Clip, ClipContent, Insert, Note, Pattern, Region, Signature, Song, Track,
+};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
@@ -68,6 +70,21 @@ pub enum Edit {
         param: String,
         value: f64,
     },
+    /// The arrangement played kept as it is, a copy of it played from now on under `name`.
+    KeepArrangementAs {
+        name: String,
+    },
+    /// The arrangement played set aside, the one at `index` among the others played instead.
+    SwitchArrangement {
+        index: usize,
+    },
+    RenameArrangement {
+        name: String,
+    },
+    /// The arrangement at `index` among the others taken out.
+    RemoveArrangement {
+        index: usize,
+    },
     /// Several edits undone as one: clips moved together.
     Batch {
         edits: Vec<Edit>,
@@ -80,6 +97,8 @@ pub enum EditError {
     Missing(Id),
     #[error("a song keeps at least one {0}")]
     Last(&'static str),
+    #[error("no arrangement {0}")]
+    NoArrangement(usize),
 }
 
 /// Puts `value` back in place of the one of the same id, or adds it at `index`.
@@ -190,6 +209,25 @@ impl Song {
             Edit::SetParam { device, param, value } => {
                 let device = self.device_mut(device).ok_or(EditError::Missing(device))?;
                 device.params.insert(param, value);
+            }
+            Edit::KeepArrangementAs { name } => {
+                let kept = Arrangement {
+                    name: std::mem::replace(&mut self.arrangement, name),
+                    clips: self.clips.clone(),
+                };
+                self.arrangements.push(kept);
+            }
+            Edit::SwitchArrangement { index } => {
+                let other = self.arrangements.get_mut(index).ok_or(EditError::NoArrangement(index))?;
+                std::mem::swap(&mut self.arrangement, &mut other.name);
+                std::mem::swap(&mut self.clips, &mut other.clips);
+            }
+            Edit::RenameArrangement { name } => self.arrangement = name,
+            Edit::RemoveArrangement { index } => {
+                if index >= self.arrangements.len() {
+                    return Err(EditError::NoArrangement(index));
+                }
+                self.arrangements.remove(index);
             }
             Edit::Batch { edits } => {
                 // all of them or none

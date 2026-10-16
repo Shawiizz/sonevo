@@ -16,7 +16,7 @@ import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
-import { Menus } from '../shared/menu';
+import { MenuItem, Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
 import { hex, palette, Surface } from '../shared/surface';
 
@@ -57,6 +57,14 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
   template: `
     <div class="s-panel-head">
       <span>{{ t('Playlist') }}</span>
+      <button
+        class="s-bar-btn arrangement"
+        (click)="arrangementMenu($event)"
+        [title]="t('The arrangement played')"
+      >
+        {{ studio.song()?.arrangement }}
+        <s-icon name="down" [size]="12" />
+      </button>
       <span class="hint">{{ t('Click to place') }} « {{ studio.pattern()?.name }} »</span>
       <span class="s-grow"></span>
       <div class="s-seg" role="radiogroup">
@@ -112,6 +120,11 @@ export const SOUND_DRAG = 'application/x-sonevo-sound';
       flex-direction: column;
       height: 100%;
       min-height: 0;
+    }
+    .arrangement {
+      height: 26px;
+      color: var(--s-text);
+      font-weight: 500;
     }
     .hint {
       color: var(--s-text-3);
@@ -909,6 +922,43 @@ export class Playlist implements OnDestroy {
   protected zoom(by: number): void {
     this.perTick = Math.min(0.4, Math.max(1 / PPQ, this.perTick * by));
     this.surface?.redraw();
+  }
+
+  protected arrangementMenu(event: MouseEvent): void {
+    const song = this.studio.song();
+    if (!song) return;
+    const t = this.t;
+    const others = song.arrangements ?? [];
+    const items: MenuItem[] = others.map((a, index) => ({
+      label: `${t('Play')} « ${a.name} »`,
+      run: () => this.studio.edit({ type: 'switchArrangement', index }),
+    }));
+    if (items.length) items.push({ separator: true, label: '' });
+    items.push(
+      {
+        label: t('Keep a variant of this arrangement'),
+        run: () =>
+          this.studio.edit({
+            type: 'keepArrangementAs',
+            name: `${t('Arrangement')} ${others.length + 2}`,
+          }),
+      },
+      {
+        label: t('Rename…'),
+        run: () =>
+          void this.rename.ask(t('Name of the arrangement'), song.arrangement).then((name) => {
+            if (name) void this.studio.edit({ type: 'renameArrangement', name });
+          }),
+      },
+    );
+    others.forEach((a, index) =>
+      items.push({
+        label: `${t('Delete')} « ${a.name} »`,
+        danger: true,
+        run: () => this.studio.edit({ type: 'removeArrangement', index }),
+      }),
+    );
+    this.menus.below(event, items);
   }
 
   protected addTrack(index: number | null = null): void {
