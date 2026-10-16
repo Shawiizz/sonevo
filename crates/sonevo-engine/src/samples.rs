@@ -23,6 +23,26 @@ pub enum DecodeError {
     Empty(PathBuf),
 }
 
+/// How many frames the sound in the file at `path` holds, and at what sample rate: read from
+/// its header where it says (WAV, FLAC), the whole sound decoded where it does not.
+pub fn length(path: &Path) -> Result<(u64, f64), DecodeError> {
+    let file = File::open(path).map_err(|e| DecodeError::Open(path.to_owned(), e))?;
+    let mut hint = Hint::new();
+    if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
+        hint.with_extension(extension);
+    }
+    let stream = MediaSourceStream::new(Box::new(file), Default::default());
+    let probed = symphonia::default::get_probe()
+        .format(&hint, stream, &FormatOptions::default(), &MetadataOptions::default())
+        .map_err(|e| DecodeError::Format(path.to_owned(), e))?;
+    let track = probed.format.default_track().ok_or_else(|| DecodeError::Empty(path.to_owned()))?;
+    let params = &track.codec_params;
+    match (params.n_frames, params.sample_rate) {
+        (Some(frames), Some(rate)) if frames > 0 => Ok((frames, f64::from(rate))),
+        _ => decode(path).map(|s| (s.frames() as u64, f64::from(s.sample_rate))),
+    }
+}
+
 /// Decodes the sound in the file at `path`, both channels (a mono sound in both).
 pub fn decode(path: &Path) -> Result<Sample, DecodeError> {
     let file = File::open(path).map_err(|e| DecodeError::Open(path.to_owned(), e))?;

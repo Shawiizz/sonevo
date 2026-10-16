@@ -482,6 +482,7 @@ export class App {
       { label: t('Add a synth'), run: () => this.studio.addChannel('sonevo.synth', t('Synth')) },
       { label: t('Add drums'), run: () => this.studio.addChannel('sonevo.drums', t('Drums')) },
       { label: t('Cut every sound'), run: () => api.panic() },
+      { label: t('Fit the loops to the tempo'), run: () => this.studio.refitLoops() },
       { label: t('Settings'), run: () => this.settingsOpen.set(true) },
       { label: t('Shortcuts'), key: 'F1', run: () => this.shortcutsOpen.set(true) },
       { label: t('Check the mix'), run: () => this.studio.checking.set(true) },

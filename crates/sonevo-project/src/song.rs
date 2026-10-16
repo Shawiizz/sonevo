@@ -139,11 +139,27 @@ pub enum ClipContent {
         /// Played from its end to its start.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         reverse: bool,
+        /// Played again and again for as long as the clip lasts.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        repeat: bool,
+        /// The loop it was made from, stretched to the song's tempo.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        fitted: Option<Fitted>,
     },
     Automation {
         target: Target,
         points: Vec<Point>,
     },
+}
+
+/// A loop stretched to a song's tempo: the sound it was, the tempo that one was played at, and
+/// the tempo it was stretched to; fitted again from the sound it was when the song's changes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Fitted {
+    pub from: String,
+    pub tempo: f64,
+    pub to: f64,
 }
 
 /// Something placed in the playlist: a pattern, a sample or an automation, on a track.

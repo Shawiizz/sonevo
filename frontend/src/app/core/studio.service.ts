@@ -73,6 +73,7 @@ export class Studio {
   readonly tab = signal<Tab>('song');
   /** The pattern whose tab is shown, played over and over while it is. */
   readonly editing = computed(() => tabPattern(this.tab()));
+  private refitting: ReturnType<typeof setTimeout> | undefined;
   readonly metronome = signal(false);
   /** Keys played are written into the pattern as it goes round. */
   readonly writing = signal(false);
@@ -531,11 +532,61 @@ export class Studio {
     });
   }
 
+  /** The song's loops fitted again to its tempo, from the sounds they were made from. */
+  async refitLoops(): Promise<void> {
+    const song = this.song();
+    if (!song) return;
+    const tempo = song.tempo;
+    // each sound fitted once, however many clips play it
+    const made = new Map<string, Promise<string>>();
+    const fitted = new Map<Id, Promise<string>>();
+    for (const clip of song.clips) {
+      const content = clip.content;
+      if (content.type !== 'audio' || !content.fitted) continue;
+      const { from, tempo: own, to } = content.fitted;
+      if (Math.abs(to - tempo) < 0.01) continue;
+      if (!made.has(from)) {
+        // at its own tempo again, the loop is the sound it was
+        made.set(
+          from,
+          Math.abs(own - tempo) < 0.01 ? Promise.resolve(from) : api.fitLoop(from, tempo),
+        );
+      }
+      fitted.set(clip.id, made.get(from)!);
+    }
+    const sounds = new Map<Id, string>();
+    for (const [id, sound] of fitted) {
+      try {
+        sounds.set(id, await sound);
+      } catch (e) {
+        this.fail(e);
+      }
+    }
+    // the clips as they are now, changed meanwhile perhaps; the tempo changed again, the next
+    // fitting does it
+    const now = this.song();
+    if (!now || now.tempo !== tempo) return;
+    const edits: Edit[] = [];
+    for (const clip of now.clips) {
+      const sample = sounds.get(clip.id);
+      const content = clip.content;
+      if (sample === undefined || content.type !== 'audio' || !content.fitted) continue;
+      const refitted = { ...content, sample, fitted: { ...content.fitted, to: tempo } };
+      edits.push({ type: 'putClip', clip: { ...clip, content: refitted } });
+    }
+    if (edits.length) await this.edit({ type: 'batch', edits });
+  }
+
   setSong(
     change: Partial<Pick<Song, 'name' | 'tempo' | 'signature' | 'loopRegion'>>,
   ): Promise<boolean> {
     const song = this.song();
     if (!song) return Promise.resolve(false);
+    if (change.tempo !== undefined && change.tempo !== song.tempo) {
+      // the loops follow, once the tempo is let go of
+      clearTimeout(this.refitting);
+      this.refitting = setTimeout(() => void this.refitLoops(), 400);
+    }
     const next = { ...song, ...change };
     return this.edit({
       type: 'setSong',

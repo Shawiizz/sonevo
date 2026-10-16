@@ -597,7 +597,15 @@ impl Studio {
             start: recording.start.round() as Ticks,
             length: length.max(1),
             offset: 0,
-            content: ClipContent::Audio { sample, gain: 1.0, fade_in: 0, fade_out: 0, reverse: false },
+            content: ClipContent::Audio {
+                sample,
+                gain: 1.0,
+                fade_in: 0,
+                fade_out: 0,
+                reverse: false,
+                repeat: false,
+                fitted: None,
+            },
         };
         self.edit(Edit::Batch { edits: vec![Edit::PutTrack { track, index: None }, Edit::PutClip { clip }] })
     }
@@ -606,10 +614,14 @@ impl Studio {
 /// The names of the sounds `song` plays, as its folder's `samples` holds them.
 pub fn used_samples(song: &Song) -> Vec<String> {
     let instruments = song.channels.iter().filter_map(|c| c.instrument.sample.clone());
-    let clips = song.clips.iter().filter_map(|c| match &c.content {
-        sonevo_project::ClipContent::Audio { sample, .. } => Some(sample.clone()),
-        _ => None,
+    // a loop fitted to the tempo keeps the sound it was, to be fitted again from it
+    let clips = song.clips.iter().flat_map(|c| match &c.content {
+        sonevo_project::ClipContent::Audio { sample, fitted, .. } => {
+            [Some(sample.clone()), fitted.as_ref().map(|f| f.from.clone())]
+        }
+        _ => [None, None],
     });
+    let clips = clips.flatten();
     let mut names: Vec<String> = instruments.chain(clips).collect();
     names.sort();
     names.dedup();

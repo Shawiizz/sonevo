@@ -17,7 +17,7 @@ pub use format::{import_sample, load, save, FormatError, FORMAT, SONG_FILE};
 pub use id::Id;
 pub use midi::{read_midi, write_midi, Midi, MidiError, MidiTrack};
 pub use song::{
-    Arrangement, Channel, Clip, ClipContent, Color, Insert, Marker, Note, Pattern, Point, Region, Send,
-    Signature, Song, Target, Track, COLORS,
+    Arrangement, Channel, Clip, ClipContent, Color, Fitted, Insert, Marker, Note, Pattern, Point, Region,
+    Send, Signature, Song, Target, Track, COLORS,
 };
 pub use time::{Ticks, PPQ};

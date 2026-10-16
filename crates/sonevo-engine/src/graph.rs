@@ -232,6 +232,8 @@ pub struct AudioClip {
     pub fade_in: i64,
     pub fade_out: i64,
     pub reverse: bool,
+    /// The sound started again each time it ends, for as long as the clip lasts.
+    pub repeat: bool,
 }
 
 pub struct Graph {

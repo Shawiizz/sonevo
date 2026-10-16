@@ -141,6 +141,11 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
   boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
 - ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.
+- ✅ **Boucles** : un son qui dure un nombre rond de mesures (1 à 32) à un tempo rond (70 à 200 BPM)
+  est reconnu comme une boucle par sa durée seule, jamais par son nom ; le navigateur le dit
+  (« 8 mes. · 142 BPM ») et le fait écouter au tempo du morceau ; posé dans la playlist, il est
+  étiré à ce tempo (à l'échantillon près), son clip dure ses mesures et le répète quand on
+  l'allonge ; changer le tempo recale les boucles depuis le son d'origine.
 - ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois dosés ;
   un effet copié avec ses réglages se colle sur une autre piste.
 - ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons

@@ -6,6 +6,7 @@ import type {
   Edit,
   Entry,
   Id,
+  Loop,
   Kept,
   Midi,
   OutputInfo,
@@ -111,7 +112,10 @@ export const api = {
   inputs: () => invoke<string[]>('inputs'),
   openPluginWindow: (device: Id) => invoke<boolean>('open_plugin_window', { device }),
   pluginValues: (device: Id) => invoke<PluginValue[]>('plugin_values', { device }),
-  listen: (path: string | null) => invoke<void>('listen', { path }),
+  listen: (path: string | null, tempo: number | null = null) =>
+    invoke<void>('listen', { path, tempo }),
+  soundLoops: (paths: string[]) => invoke<(Loop | null)[]>('sound_loops', { paths }),
+  fitLoop: (sample: string, tempo: number) => invoke<string>('fit_loop', { sample, tempo }),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
   /** The plugins installed, found as Sonevo opens. */

@@ -13,6 +13,7 @@ import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import {
   Clip,
+  ClipContent,
   Edit,
   Id,
   Marker,
@@ -294,7 +295,8 @@ export class Playlist implements OnDestroy {
         return song?.patterns.find((p) => p.id === id)?.name ?? '';
       }
       case 'audio':
-        return sampleLabel(clip.content.sample);
+        // a loop fitted to the tempo, by the name of the sound it was
+        return sampleLabel(clip.content.fitted?.from ?? clip.content.sample);
       default: {
         const target = clip.content.target;
         if (target.type === 'tempo') return this.t('Tempo');
@@ -650,9 +652,15 @@ export class Playlist implements OnDestroy {
       if (!info || !info.peaks.length) return;
       const length = this.studio.ticks(info.seconds);
       const offset = clip.offset ?? 0;
-      const visible = Math.min(clip.length, length - offset);
+      // played again and again, it is drawn again and again, a line where each time starts
+      const visible = content.repeat ? clip.length : Math.min(clip.length, length - offset);
+      if (content.repeat && length > 0) {
+        for (let at = length - (offset % length); at < clip.length; at += length) {
+          g.rect(x + at * perTick, y, 1, h).fill({ color, alpha: 0.35 });
+        }
+      }
       for (let i = 0; i < visible * perTick; i += 2) {
-        const along = offset + i / perTick;
+        const along = content.repeat ? (offset + i / perTick) % length : offset + i / perTick;
         const at = content.reverse ? length - along : along;
         const peak =
           info.peaks[
@@ -1252,6 +1260,14 @@ export class Playlist implements OnDestroy {
           run: change({ reverse: !content.reverse }),
         },
         {
+          label: `${content.repeat ? '✓ ' : ''}${t('Play it again and again')}`,
+          run: change({ repeat: !content.repeat }),
+        },
+        ...(content.fitted &&
+        Math.abs(content.fitted.to - (this.studio.song()?.tempo ?? content.fitted.to)) >= 0.01
+          ? [{ label: t('Fit it to the song’s tempo'), run: () => void this.studio.refitLoops() }]
+          : []),
+        {
           label: t('Its volume…'),
           run: () =>
             this.menus.show(event, [
@@ -1323,7 +1339,7 @@ export class Playlist implements OnDestroy {
       const sample = await api.transposeSample(content.sample, semitones);
       await this.studio.edit({
         type: 'putClip',
-        clip: { ...clip, content: { ...content, sample } },
+        clip: { ...clip, content: { ...content, sample, fitted: undefined } },
       });
     } catch (e) {
       this.studio.fail(e);
@@ -1345,7 +1361,7 @@ export class Playlist implements OnDestroy {
       const sample = await api.stretchSample(content.sample, factor);
       await this.studio.edit({
         type: 'putClip',
-        clip: { ...clip, offset: 0, content: { ...content, sample } },
+        clip: { ...clip, offset: 0, content: { ...content, sample, fitted: undefined } },
       });
     } catch (e) {
       this.studio.fail(e);
@@ -1434,20 +1450,37 @@ export class Playlist implements OnDestroy {
     const { x, y } = this.point(event);
     const track = this.tracks[this.laneAt(y)];
     if (!track || x < HEADERS) return;
+    const start = this.snapped(this.tickAt(x));
     const [sound] = await this.files.import([path]);
     if (!sound) return;
     // as long as the sound, to the beat after its end
     const info = await api.sampleInfo(sound.sample).catch(() => null);
-    const length = info
+    let length = info
       ? Math.ceil(this.studio.ticks(info.seconds) / PPQ) * PPQ
       : this.studio.bar() * 2;
-    const clip: Clip = {
-      id: newId(),
-      track: track.id,
-      start: this.snapped(this.tickAt(x)),
-      length,
-      content: { type: 'audio', sample: sound.sample, gain: 1 },
-    };
+    let content: ClipContent = { type: 'audio', sample: sound.sample, gain: 1 };
+    if (info?.loop) {
+      // a loop: fitted to the song's tempo, as many bars long, played again and again
+      const tempo = this.studio.song()?.tempo ?? 120;
+      let sample = sound.sample;
+      if (Math.abs(info.loop.tempo - tempo) >= 0.01) {
+        this.files.busy.set(this.t('Fitting the loop to the tempo…'));
+        try {
+          sample = await api.fitLoop(sound.sample, tempo);
+        } catch (e) {
+          this.studio.fail(e);
+        } finally {
+          this.files.busy.set(null);
+        }
+      }
+      const fitted =
+        sample !== sound.sample || Math.abs(info.loop.tempo - tempo) < 0.01
+          ? { from: sound.sample, tempo: info.loop.tempo, to: tempo }
+          : undefined;
+      content = { ...content, sample, repeat: true, fitted };
+      length = info.loop.bars * 4 * PPQ;
+    }
+    const clip: Clip = { id: newId(), track: track.id, start, length, content };
     void this.studio.edit({ type: 'putClip', clip });
   }
 }

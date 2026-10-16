@@ -1,8 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { Entry, sampleLabel } from '../core/models';
+import { Entry, Loop, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files, soundName } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -131,6 +138,18 @@ import { SOUND_DRAG } from './playlist';
                 [filled]="listening() === e.path"
               />
               <span>{{ e.folder ? e.name : label(e) }}</span>
+              @if (loops()[e.path]; as loop) {
+                <em
+                  class="loop s-mono"
+                  [title]="
+                    t('A loop of {bars} bars at {tempo} BPM: it plays at the song’s tempo', {
+                      bars: loop.bars,
+                      tempo: loop.tempo,
+                    })
+                  "
+                  >{{ t('{bars} bars · {tempo} BPM', { bars: loop.bars, tempo: loop.tempo }) }}</em
+                >
+              }
             </button>
             @if (!e.folder && !isMidi(e)) {
               <button
@@ -208,6 +227,12 @@ import { SOUND_DRAG } from './playlist';
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+      }
+      .loop {
+        flex: none;
+        color: var(--s-text-3);
+        font-size: 10px;
+        font-style: normal;
       }
       s-icon {
         color: var(--s-text-3);
@@ -291,6 +316,27 @@ export class Browser {
   protected readonly trail = signal<Entry[]>([]);
   protected readonly here = computed(() => this.trail().at(-1) ?? null);
   protected readonly listening = signal<string | null>(null);
+  /** The sounds of the folder shown that are loops, by their path. */
+  protected readonly loops = signal<Record<string, Loop>>({});
+  private readonly told = effect(() => {
+    const shown = this.entries();
+    const sounds = shown.filter((e) => !e.folder && !this.isMidi(e));
+    this.loops.set({});
+    if (!sounds.length) return;
+    void api
+      .soundLoops(sounds.map((e) => e.path))
+      .then((found) => {
+        // another folder opened meanwhile: its own are being read
+        if (this.entries() !== shown) return;
+        const loops: Record<string, Loop> = {};
+        sounds.forEach((e, i) => {
+          const loop = found[i];
+          if (loop) loops[e.path] = loop;
+        });
+        this.loops.set(loops);
+      })
+      .catch(() => undefined);
+  });
 
   protected add(name: string, label: string): void {
     void this.studio.addChannel(name, this.t(label));
@@ -334,7 +380,7 @@ export class Browser {
     const again = this.listening() === e.path;
     this.listening.set(again ? null : e.path);
     try {
-      await api.listen(again ? null : e.path);
+      await api.listen(again ? null : e.path, this.studio.song()?.tempo ?? null);
     } catch (error) {
       this.listening.set(null);
       this.studio.fail(error);

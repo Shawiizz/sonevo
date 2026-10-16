@@ -248,6 +248,13 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Fitting the loop to the tempo…': 'Calage de la boucle au tempo…',
+  'Play it again and again': 'Le répéter en boucle',
+  'Fit it to the song’s tempo': 'Le recaler au tempo du morceau',
+  'Fit the loops to the tempo': 'Recaler les boucles au tempo',
+  '{bars} bars · {tempo} BPM': '{bars} mes. · {tempo} BPM',
+  'A loop of {bars} bars at {tempo} BPM: it plays at the song’s tempo':
+    'Une boucle de {bars} mesures à {tempo} BPM : elle joue au tempo du morceau',
   'Show the song': 'Afficher le morceau',
   'Open the pattern chosen': 'Ouvrir le pattern choisi',
   'The song · the pattern chosen · the mixer': 'Le morceau · le pattern choisi · le mixeur',

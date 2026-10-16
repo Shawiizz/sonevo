@@ -129,6 +129,10 @@ export type ClipContent =
       fadeIn?: Ticks;
       fadeOut?: Ticks;
       reverse?: boolean;
+      /** Played again and again for as long as the clip lasts. */
+      repeat?: boolean;
+      /** The loop it was made from, stretched to the song's tempo. */
+      fitted?: { from: string; tempo: number; to: number };
     }
   | { type: 'automation'; target: Target; points: Point[] };
 
@@ -283,9 +287,17 @@ export function sampleLabel(name: string): string {
   return name.replace(/ ?[0-9a-f]{16}\.[^.]+$/, '') || name;
 }
 
+/** A loop: how many bars of four beats it lasts, at what tempo. */
+export interface Loop {
+  bars: number;
+  tempo: number;
+}
+
 export interface SampleInfo {
   seconds: number;
   peaks: number[];
+  /** The loop it is, told by its length. */
+  loop: Loop | null;
 }
 
 /** A song an earlier run kept and never saved. */

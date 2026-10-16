@@ -520,20 +520,30 @@ impl Renderer {
             let insert = &mut inserts[clip.insert];
             let sample = &clip.sample;
             let rate = f64::from(sample.sample_rate);
-            let last = sample.frames() as f64 - 2.0;
+            let length = sample.frames();
+            if length < 2 {
+                continue;
+            }
+            // played once, its last frame is the one read with the one before; played again
+            // and again, the frame after its last is its first
+            let last = if clip.repeat { length as f64 - 1.0 } else { length as f64 - 2.0 };
             for i in 0..frames {
                 let tick = start + i as f64 * per_frame;
                 if tick < clip.start as f64 || tick >= clip.end as f64 || tick >= loop_end {
                     continue;
                 }
-                let along = (tick - clip.start as f64 + clip.offset as f64) * seconds_per_tick * rate;
+                let mut along = (tick - clip.start as f64 + clip.offset as f64) * seconds_per_tick * rate;
+                if clip.repeat {
+                    along = along.rem_euclid(length as f64);
+                }
                 let at = if clip.reverse { last - along } else { along };
                 if at < 0.0 || at > last {
                     continue;
                 }
-                let index = at as usize;
+                let index = (at as usize).min(length - 1);
+                let next = if index + 1 < length { index + 1 } else { 0 };
                 let fraction = (at - index as f64) as f32;
-                let lerp = |s: &[f32]| s[index] + (s[index + 1] - s[index]) * fraction;
+                let lerp = |s: &[f32]| s[index] + (s[next] - s[index]) * fraction;
                 let mut gain = clip.gain;
                 if clip.fade_in > 0 {
                     gain *= ((tick - clip.start as f64) / clip.fade_in as f64).min(1.0) as f32;

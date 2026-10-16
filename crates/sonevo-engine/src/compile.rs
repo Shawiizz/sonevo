@@ -482,7 +482,7 @@ pub fn compile(
                             );
                         }
                     }
-                    ClipContent::Audio { sample, gain, fade_in, fade_out, reverse } => {
+                    ClipContent::Audio { sample, gain, fade_in, fade_out, reverse, repeat, .. } => {
                         let insert = track_inserts.get(&clip.track).copied().unwrap_or(master);
                         if insert == master && !straight {
                             continue;
@@ -498,6 +498,7 @@ pub fn compile(
                                 fade_in: (*fade_in).max(0),
                                 fade_out: (*fade_out).max(0),
                                 reverse: *reverse,
+                                repeat: *repeat,
                             }),
                             None => slots.missing.push(format!("the sound {sample} could not be read")),
                         }

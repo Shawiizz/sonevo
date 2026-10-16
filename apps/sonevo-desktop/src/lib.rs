@@ -227,6 +227,32 @@ struct SampleInfo {
     seconds: f64,
     /// The loudest sample of each of its equal parts, from its start to its end.
     peaks: Vec<f32>,
+    /// The loop it is, its length told by its length.
+    #[serde(rename = "loop")]
+    looped: Option<LoopView>,
+}
+
+/// A loop: how many bars of four beats it lasts, at what tempo.
+#[derive(Clone, Copy, Serialize)]
+struct LoopView {
+    bars: u32,
+    tempo: f64,
+}
+
+impl From<sonevo_engine::Loop> for LoopView {
+    fn from(l: sonevo_engine::Loop) -> LoopView {
+        LoopView { bars: l.bars, tempo: l.tempo }
+    }
+}
+
+/// Which of the sounds at `paths` are loops, told by their length alone.
+#[tauri::command(async)]
+fn sound_loops(paths: Vec<PathBuf>) -> Vec<Option<LoopView>> {
+    let of = |path: &PathBuf| {
+        let (frames, rate) = sonevo_engine::length(path).ok()?;
+        sonevo_engine::loop_of(frames, rate).map(LoopView::from)
+    };
+    paths.iter().map(of).collect()
 }
 
 /// How many parts a sound's outline is drawn from.
@@ -252,7 +278,9 @@ fn sample_info(app: State<App>, name: String) -> Answer<SampleInfo> {
             side(&sample.left).max(side(&sample.right))
         })
         .collect();
-    let info = SampleInfo { seconds: frames as f64 / f64::from(sample.sample_rate), peaks };
+    let rate = f64::from(sample.sample_rate);
+    let looped = sonevo_engine::loop_of(frames as u64, rate).map(LoopView::from);
+    let info = SampleInfo { seconds: frames as f64 / rate, peaks, looped };
     app.sample_infos.lock().unwrap_or_else(|e| e.into_inner()).insert(name, info.clone());
     Ok(info)
 }
@@ -401,9 +429,20 @@ struct PluginView {
 
 /// Plays the sound at `path` as it is, to hear it before using it; none stops it.
 #[tauri::command(async)]
-fn listen(app: State<App>, path: Option<PathBuf>) -> Answer<()> {
+fn listen(app: State<App>, path: Option<PathBuf>, tempo: Option<f64>) -> Answer<()> {
     let sample = match path {
-        Some(path) => Some(Arc::new(sonevo_engine::decode(&path).map_err(|e| e.to_string())?)),
+        Some(path) => {
+            let mut sample = sonevo_engine::decode(&path).map_err(|e| e.to_string())?;
+            // a loop heard as it will play in the song, at the song's tempo
+            let looped = sonevo_engine::loop_of(sample.frames() as u64, f64::from(sample.sample_rate));
+            if let (Some(looped), Some(tempo)) = (looped, tempo) {
+                let factor = looped.tempo / tempo;
+                if (factor - 1.0).abs() > 0.001 && (0.25..=4.0).contains(&factor) {
+                    (sample.left, sample.right) = sonevo_dsp::stretch(&sample.left, &sample.right, factor);
+                }
+            }
+            Some(Arc::new(sample))
+        }
         None => None,
     };
     if let Some(engine) = app.studio().engine() {
@@ -704,6 +743,30 @@ fn stretch_sample(app: State<App>, sample: String, factor: f64) -> Answer<String
         return Err("A sound is stretched from a quarter to four times its length".into());
     }
     remake(&app, &sample, "stretched", |l, r| sonevo_dsp::stretch(l, r, factor))
+}
+
+/// The song's loop `sample` stretched to `tempo` at its own pitch, exactly as many bars long at
+/// it as it was at its own, kept in the song as a sound of its own: its name.
+#[tauri::command(async)]
+fn fit_loop(app: State<App>, sample: String, tempo: f64) -> Answer<String> {
+    if !sonevo_engine::Samples::plain_name(&sample) {
+        return Err(format!("{sample} is not a sound of the song"));
+    }
+    let path = app.studio().working_folder().join("samples").join(&sample);
+    let (frames, rate) = sonevo_engine::length(&path).map_err(|e| e.to_string())?;
+    let looped = sonevo_engine::loop_of(frames, rate).ok_or_else(|| format!("{sample} is not a loop"))?;
+    let factor = looped.tempo / tempo;
+    if !(0.25..=4.0).contains(&factor) {
+        return Err("A loop is fitted to a tempo from a quarter to four times its own".into());
+    }
+    // to the frame, so that it plays again and again in time
+    let wanted = (f64::from(looped.bars) * 4.0 * 60.0 / tempo * rate).round() as usize;
+    remake(&app, &sample, &format!("{tempo} BPM"), move |l, r| {
+        let (mut left, mut right) = sonevo_dsp::stretch(l, r, factor);
+        left.resize(wanted, 0.0);
+        right.resize(wanted, 0.0);
+        (left, right)
+    })
 }
 
 /// The song's sound `sample` `semitones` higher or lower, as long as it was, kept in the song
@@ -1051,6 +1114,8 @@ pub fn run() {
             midi_file,
             export_midi,
             stretch_sample,
+            fit_loop,
+            sound_loops,
             check_mix,
             my_templates,
             save_template,
