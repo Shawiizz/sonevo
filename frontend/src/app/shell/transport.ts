@@ -85,6 +85,20 @@ import { Rename } from '../shared/rename';
         >
       }
       <span class="unit">BPM</span>
+      <button
+        class="tap"
+        (click)="tap()"
+        [title]="t('Tap in time, a few times: the tempo follows')"
+      >
+        {{ t('Tap') }}
+      </button>
+      <button
+        class="signature s-mono"
+        (click)="signatureMenu($event)"
+        [title]="t('Beats to a bar')"
+      >
+        {{ studio.song()?.signature?.beats }}/{{ studio.song()?.signature?.unit }}
+      </button>
     </div>
 
     <div class="readout position">
@@ -220,6 +234,20 @@ import { Rename } from '../shared/rename';
         cursor: ns-resize;
       }
     }
+    .tap,
+    .signature {
+      height: 24px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: 4px;
+      background: var(--s-hover);
+      color: var(--s-text-2);
+      font-size: 11px;
+      cursor: pointer;
+      &:hover {
+        color: var(--s-text);
+      }
+    }
     .position .value {
       min-width: 64px;
     }
@@ -319,15 +347,38 @@ export class Transport {
   }
 
   private commitTempo(tempo: number): void {
-    const song = this.studio.song();
-    if (!song || tempo === song.tempo) return;
-    void this.studio.edit({
-      type: 'setSong',
-      name: song.name,
-      tempo,
-      signature: song.signature,
-      loopRegion: song.loopRegion ?? null,
-    });
+    if (tempo !== this.studio.song()?.tempo) void this.studio.setSong({ tempo });
+  }
+
+  /** The times tapped lately: their spacing is the tempo. */
+  private taps: number[] = [];
+
+  protected tap(): void {
+    const now = performance.now();
+    // a pause of two seconds starts again
+    this.taps = [...this.taps.filter((t) => now - t < 2000), now].slice(-6);
+    if (this.taps.length < 3) return;
+    const spacing = (this.taps[this.taps.length - 1] - this.taps[0]) / (this.taps.length - 1);
+    this.commitTempo(Math.round((60000 / spacing) * 10) / 10);
+  }
+
+  protected signatureMenu(event: MouseEvent): void {
+    const signatures = [
+      [4, 4],
+      [3, 4],
+      [2, 4],
+      [5, 4],
+      [6, 8],
+      [7, 8],
+      [12, 8],
+    ];
+    this.menus.below(
+      event,
+      signatures.map(([beats, unit]) => ({
+        label: `${beats}/${unit}`,
+        run: () => this.studio.setSong({ signature: { beats, unit } }),
+      })),
+    );
   }
 
   protected dragTempo(event: PointerEvent): void {

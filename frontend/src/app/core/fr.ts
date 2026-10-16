@@ -255,6 +255,11 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Rename the song': 'Renommer le morceau',
+  'Name of the song': 'Nom du morceau',
+  'Tap in time, a few times: the tempo follows': 'Tape en rythme, quelques fois : le tempo suit',
+  Tap: 'Taper',
+  'Beats to a bar': 'Temps par mesure',
   'Write the keys played into the pattern, as it goes round':
     'Écrire dans le pattern les touches jouées, pendant qu’il tourne',
   Write: 'Écrire',

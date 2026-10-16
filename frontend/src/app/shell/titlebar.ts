@@ -4,6 +4,7 @@ import { I18n } from '../core/i18n';
 import { Studio } from '../core/studio.service';
 import { Icon } from '../shared/icon';
 import { Menus } from '../shared/menu';
+import { Rename } from '../shared/rename';
 import { Files } from './files.service';
 
 /** The window's bar: the menu, the song's name, the window's buttons. */
@@ -19,7 +20,9 @@ import { Files } from './files.service';
       <button class="s-bar-btn" (click)="guide.emit()">{{ t('First steps') }}</button>
     </div>
     <div class="title" data-tauri-drag-region>
-      <span data-tauri-drag-region>{{ studio.song()?.name }}</span>
+      <button class="name" (click)="rename()" [title]="t('Rename the song')">
+        {{ studio.song()?.name }}
+      </button>
       @if (studio.view()?.dirty) {
         <span class="dirty" [title]="t('Changes not saved')"></span>
       }
@@ -65,6 +68,17 @@ import { Files } from './files.service';
       height: 100%;
       font-weight: 600;
     }
+    .name {
+      padding: 2px 8px;
+      border: 0;
+      border-radius: var(--s-radius);
+      background: transparent;
+      font-weight: 600;
+      cursor: pointer;
+      &:hover {
+        background: var(--s-hover);
+      }
+    }
     .dirty {
       width: 7px;
       height: 7px;
@@ -109,6 +123,7 @@ export class Titlebar {
   protected readonly t = inject(I18n).t;
   private readonly files = inject(Files);
   private readonly menus = inject(Menus);
+  private readonly renaming = inject(Rename);
   readonly settings = output();
   readonly palette = output();
   readonly guide = output();
@@ -134,6 +149,14 @@ export class Titlebar {
       { label: t('Undo'), key: 'Ctrl+Z', disabled: !view?.canUndo, run: () => this.studio.undo() },
       { label: t('Redo'), key: 'Ctrl+Y', disabled: !view?.canRedo, run: () => this.studio.redo() },
     ]);
+  }
+
+  protected rename(): void {
+    const song = this.studio.song();
+    if (!song) return;
+    void this.renaming.ask(this.t('Name of the song'), song.name).then((name) => {
+      if (name) void this.studio.setSong({ name });
+    });
   }
 
   protected minimize(): void {

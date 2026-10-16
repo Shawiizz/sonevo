@@ -17,6 +17,7 @@ import {
   PluginInfo,
   STEP,
   SampleInfo,
+  Song,
   Status,
   Target,
   View,
@@ -310,6 +311,22 @@ export class Studio {
         { type: 'putTrack', track, index: null },
         { type: 'putClip', clip },
       ],
+    });
+  }
+
+  /** The song's name, tempo, signature or loop changed, the rest as it is. */
+  setSong(
+    change: Partial<Pick<Song, 'name' | 'tempo' | 'signature' | 'loopRegion'>>,
+  ): Promise<boolean> {
+    const song = this.song();
+    if (!song) return Promise.resolve(false);
+    const next = { ...song, ...change };
+    return this.edit({
+      type: 'setSong',
+      name: next.name,
+      tempo: next.tempo,
+      signature: next.signature,
+      loopRegion: next.loopRegion ?? null,
     });
   }
 
