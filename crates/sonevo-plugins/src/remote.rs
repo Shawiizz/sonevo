@@ -219,7 +219,7 @@ impl Processor for Remote {
         if count > 0 {
             let mut left = [0.0f32; 1];
             let mut right = [0.0f32; 1];
-            let context = Context { sample_rate: self.sample_rate, tempo: 120.0 };
+            let context = Context { sample_rate: self.sample_rate, tempo: 120.0, key: None };
             self.process(&context, &events[..count], &mut left, &mut right);
         }
     }

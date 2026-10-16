@@ -62,7 +62,8 @@ impl ChannelNode {
 }
 
 pub struct InsertNode {
-    pub effects: Vec<usize>,
+    /// Each effect's slot, and the mixer track it listens to if it does.
+    pub effects: Vec<(usize, Option<usize>)>,
     pub volume: f32,
     pub pan: f32,
     pub audible: bool,

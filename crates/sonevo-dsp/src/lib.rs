@@ -25,10 +25,13 @@ pub struct Event {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Context {
+pub struct Context<'a> {
     pub sample_rate: f32,
     /// Beats a minute.
     pub tempo: f64,
+    /// For an effect listening to another mixer track (a sidechain): that track's sound, as
+    /// long as the block.
+    pub key: Option<(&'a [f32], &'a [f32])>,
 }
 
 pub trait Processor: Send {

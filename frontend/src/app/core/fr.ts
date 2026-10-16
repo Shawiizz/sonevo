@@ -255,6 +255,10 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Listens to': 'Écoute',
+  'Its own sound': 'Son propre son',
+  'When that track gets loud, this one is brought down: the pumping of a bass under the kick.':
+    'Quand cette piste devient forte, celle-ci est baissée : la basse qui « pompe » sous le kick.',
   'Import a MIDI file': 'Importer un fichier MIDI',
   'Import a MIDI file…': 'Importer un fichier MIDI…',
   'Export the pattern as MIDI': 'Exporter le pattern en MIDI',

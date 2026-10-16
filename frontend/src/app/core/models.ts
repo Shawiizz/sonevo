@@ -21,6 +21,8 @@ export interface Device {
   /** Missing is on. */
   enabled?: boolean;
   sample?: string;
+  /** For an effect: the mixer track it listens to instead of its own sound (a sidechain). */
+  key?: Id;
 }
 
 export interface Channel {

@@ -689,7 +689,7 @@ pub fn run() {
                                 engine.note(channel, key, velocity, on);
                             }
                         }
-                        let _ = handle.emit("key", (key, on));
+                        let _ = handle.emit("key", (key, velocity, on));
                     }
                 }),
                 settings: Mutex::new(settings),

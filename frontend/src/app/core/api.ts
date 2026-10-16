@@ -77,6 +77,6 @@ export const api = {
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
   /** A key of a MIDI keyboard pressed or let go of. */
-  onKey: (handler: (key: number, on: boolean) => void): Promise<UnlistenFn> =>
-    listen<[number, boolean]>('key', (e) => handler(e.payload[0], e.payload[1])),
+  onKey: (handler: (key: number, velocity: number, on: boolean) => void): Promise<UnlistenFn> =>
+    listen<[number, number, boolean]>('key', (e) => handler(...e.payload)),
 };

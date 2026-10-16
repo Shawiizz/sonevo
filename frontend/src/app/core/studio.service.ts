@@ -64,7 +64,7 @@ export class Studio {
   readonly writing = signal(false);
   private statusAt = 0;
   /** The keys down being written, and where in the pattern each went down. */
-  private readonly down = new Map<number, number>();
+  private readonly down = new Map<number, { at: number; velocity: number }>();
 
   readonly pattern = computed<Pattern | null>(() => {
     const song = this.song();
@@ -106,7 +106,7 @@ export class Studio {
       this.status.set(status);
       this.statusAt = performance.now();
     });
-    await api.onKey((key, on) => this.played(key, on ? 0.8 : 0, on));
+    await api.onKey((key, velocity, on) => this.played(key, velocity, on));
   }
 
   show(view: View): void {
@@ -422,12 +422,13 @@ export class Studio {
     const channel = this.channel();
     if (at === null || !pattern || !channel) return;
     if (on) {
-      this.down.set(key, at);
+      this.down.set(key, { at, velocity });
       return;
     }
-    const start = this.down.get(key);
+    const pressed = this.down.get(key);
     this.down.delete(key);
-    if (start === undefined) return;
+    if (!pressed) return;
+    const start = pressed.at;
     const step = STEP;
     const from = (Math.round(start / step) * step) % pattern.length;
     let length = at - start;
@@ -436,7 +437,7 @@ export class Studio {
       start: from,
       length: Math.max(step, Math.round(length / step) * step),
       key,
-      velocity: velocity || 0.8,
+      velocity: pressed.velocity || 0.8,
     };
     void this.setNotes(pattern.id, channel.id, [...this.notes(pattern.id, channel.id), note]);
   }

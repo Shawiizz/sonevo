@@ -306,7 +306,19 @@ pub fn compile(
             }
         }
     }
-    let order = order(&edges);
+    // an effect listening to another track is played after it, unless that makes a loop
+    let mut after = edges.clone();
+    let mut keys: HashMap<Id, usize> = HashMap::new();
+    for (i, insert) in all.iter().enumerate() {
+        for device in &insert.effects {
+            let Some(key) = device.key.and_then(|k| index.get(&k).copied()) else { continue };
+            if key != i && key != master && !reaches(i, key, &after) {
+                after[key].push(i);
+                keys.insert(device.id, key);
+            }
+        }
+    }
+    let order = order(&after);
     let stem = match mode {
         Mode::Stem(id) => Some(index.get(&id).copied().unwrap_or(master)),
         _ => None,
@@ -318,7 +330,11 @@ pub fn compile(
         .iter()
         .enumerate()
         .map(|(i, insert)| {
-            let effects = insert.effects.iter().filter_map(|d| slots.add(d, samples)).collect();
+            let effects = insert
+                .effects
+                .iter()
+                .filter_map(|d| Some((slots.add(d, samples)?, keys.get(&d.id).copied())))
+                .collect();
             // a track alone: only its sound comes to the master, every other's goes nowhere
             let output = match stem {
                 _ if i == master => None,

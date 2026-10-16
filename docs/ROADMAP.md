@@ -58,6 +58,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Entrée MIDI** : les claviers branchés (ou branchés plus tard) jouent la voie choisie.
 - ✅ **Fichiers MIDI** : un .mid ouvert (menu des patterns, palette, ou clic dans le navigateur)
   devient un pattern, chaque piste jouée par un synthé ; un pattern s'exporte en .mid.
+- ✅ **Écrire** au clavier MIDI (ou d'ordinateur) pendant que le pattern tourne, avec la force
+  de frappe de chaque note.
 - ⬜ Mesurer la latence ASIO basse sur la carte UMC (elle n'était pas branchée).
 
 ## 3. Instruments et effets intégrés
@@ -67,6 +69,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
+  « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
 
 ## 4. Les plugins (CLAP, puis VST3)
@@ -133,7 +137,6 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 
 ## Plus tard
 
-- Enregistrer les notes jouées au clavier MIDI dans le piano roll.
 - Grille de clips à lancer, modulateurs branchables partout.
 - Séparation de pistes et audio vers MIDI en local.
 - Envoyer à l'interface seulement ce qui a changé (aujourd'hui le morceau entier).

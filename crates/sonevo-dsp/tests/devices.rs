@@ -4,7 +4,7 @@ use sonevo_dsp::{builtin, Context, Event, Processor, Sample, Scale, BUILTINS};
 
 const RATE: f32 = 48_000.0;
 const BLOCK: usize = 480;
-const CONTEXT: Context = Context { sample_rate: RATE, tempo: 128.0 };
+const CONTEXT: Context = Context { sample_rate: RATE, tempo: 128.0, key: None };
 
 fn note(at: u32, key: u8, on: bool) -> Event {
     Event { at, key, velocity: 0.8, on }

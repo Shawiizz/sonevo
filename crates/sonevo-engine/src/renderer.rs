@@ -314,7 +314,7 @@ impl Renderer {
         if self.playing {
             automate(&mut graph, self.position);
         }
-        let context = Context { sample_rate: self.sample_rate, tempo: graph.tempo };
+        let context = Context { sample_rate: self.sample_rate, tempo: graph.tempo, key: None };
         for insert in &mut graph.inserts {
             insert.left[..frames].fill(0.0);
             insert.right[..frames].fill(0.0);
@@ -347,15 +347,30 @@ impl Renderer {
         let master = graph.master();
         for k in 0..graph.order.len() {
             let i = graph.order[k];
-            let Graph { slots, inserts, .. } = &mut *graph;
+            let Graph { slots, inserts, scratch_left, scratch_right, .. } = &mut *graph;
+            for e in 0..inserts[i].effects.len() {
+                let (slot, key) = inserts[i].effects[e];
+                let Some(p) = slots[slot].as_mut() else { continue };
+                // the track listened to was played before this one: its sound is final
+                let key = match key {
+                    Some(k) => {
+                        scratch_left[..frames].copy_from_slice(&inserts[k].left[..frames]);
+                        scratch_right[..frames].copy_from_slice(&inserts[k].right[..frames]);
+                        Some((&scratch_left[..frames], &scratch_right[..frames]))
+                    }
+                    None => None,
+                };
+                let insert = &mut inserts[i];
+                p.process(
+                    &Context { key, ..context },
+                    &[],
+                    &mut insert.left[..frames],
+                    &mut insert.right[..frames],
+                );
+            }
             let insert = &mut inserts[i];
             let gains = insert.gains();
             let (l, r) = (&mut insert.left[..frames], &mut insert.right[..frames]);
-            for &slot in &insert.effects {
-                if let Some(p) = slots[slot].as_mut() {
-                    p.process(&context, &[], l, r);
-                }
-            }
             glide(l, r, insert.applied, gains);
             insert.applied = gains;
             self.shared.meters.hear(insert.meter, meters::peak(l).max(meters::peak(r)));

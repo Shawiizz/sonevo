@@ -45,6 +45,10 @@ pub struct Device {
     /// The sample it plays, as the song's folder holds it (`samples/<name>`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sample: Option<String>,
+    /// For an effect: the mixer track it listens to instead of the sound it changes, as a
+    /// compressor ducking a bass under the kick (a sidechain).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<Id>,
 }
 
 fn on() -> bool {
@@ -63,6 +67,7 @@ impl Device {
             params: BTreeMap::new(),
             enabled: true,
             sample: None,
+            key: None,
         }
     }
 

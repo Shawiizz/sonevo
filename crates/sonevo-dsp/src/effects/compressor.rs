@@ -1,5 +1,6 @@
 //! A compressor: what goes over the threshold brought down by the ratio, both channels
-//! together, a soft knee, the level made up after.
+//! together, a soft knee, the level made up after. Given another track to listen to, it is
+//! that track going over the threshold that brings this one down.
 
 use crate::param::Param;
 use crate::util::{db_to_gain, gain_to_db};
@@ -63,11 +64,15 @@ impl Processor for Compressor {
         }
     }
 
-    fn process(&mut self, _context: &Context, _events: &[Event], left: &mut [f32], right: &mut [f32]) {
+    fn process(&mut self, context: &Context, _events: &[Event], left: &mut [f32], right: &mut [f32]) {
         let makeup = db_to_gain(self.values[5]);
         let mix = self.values[6];
-        for (l, r) in left.iter_mut().zip(right.iter_mut()) {
-            let wanted = self.wanted(gain_to_db(l.abs().max(r.abs())));
+        for (i, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
+            let heard = match context.key {
+                Some((kl, kr)) => kl[i].abs().max(kr[i].abs()),
+                None => l.abs().max(r.abs()),
+            };
+            let wanted = self.wanted(gain_to_db(heard));
             let coeff = if wanted < self.reduction { self.attack } else { self.release };
             self.reduction = wanted + (self.reduction - wanted) * coeff;
             let gain = db_to_gain(self.reduction) * makeup;

@@ -58,6 +58,28 @@ const ABOUT: Record<string, string> = {
             <s-icon name="maximize" [size]="12" /> {{ t('Open its window') }}
           </button>
         }
+        @if (info()?.name === 'sonevo.compressor') {
+          <label class="s-field listens">
+            <span>{{ t('Listens to') }}</span>
+            <select (change)="listen(shown.device, $any($event.target).value)">
+              <option value="" [selected]="!shown.device.key">{{ t('Its own sound') }}</option>
+              @for (insert of keys(); track insert.id) {
+                <option [value]="insert.id" [selected]="shown.device.key === insert.id">
+                  {{ insert.name }}
+                </option>
+              }
+            </select>
+          </label>
+          @if (shown.device.key) {
+            <p class="about">
+              {{
+                t(
+                  'When that track gets loud, this one is brought down: the pumping of a bass under the kick.'
+                )
+              }}
+            </p>
+          }
+        }
         @if (info()?.name === 'sonevo.sampler') {
           <div class="sample">
             <s-icon name="sample" />
@@ -184,6 +206,9 @@ const ABOUT: Record<string, string> = {
     .window {
       margin-bottom: 12px;
     }
+    .listens {
+      margin-bottom: 12px;
+    }
     .sample {
       display: flex;
       align-items: center;
@@ -302,15 +327,29 @@ export class DevicePanel {
   }
 
   protected toggle(device: Device): void {
+    this.change(device, { enabled: device.enabled === false });
+  }
+
+  /** The mixer tracks an effect may listen to: any but its own and the master. */
+  protected readonly keys = computed(() => {
+    const song = this.studio.song();
+    const device = this.shown()?.device;
+    if (!song || !device) return [];
+    return song.inserts.filter((i) => !i.effects?.some((e) => e.id === device.id));
+  });
+
+  protected listen(device: Device, key: string): void {
+    this.change(device, { key: key || undefined });
+  }
+
+  private change(device: Device, change: Partial<Device>): void {
     const song = this.studio.song();
     if (!song) return;
     for (const insert of [...song.inserts, song.master]) {
       if (insert.effects?.some((e) => e.id === device.id)) {
         void this.studio.putInsert({
           ...insert,
-          effects: insert.effects.map((e) =>
-            e.id === device.id ? { ...e, enabled: e.enabled === false } : e,
-          ),
+          effects: insert.effects.map((e) => (e.id === device.id ? { ...e, ...change } : e)),
         });
       }
     }

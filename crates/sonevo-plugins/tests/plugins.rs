@@ -23,7 +23,7 @@ fn installed() -> tempfile::TempDir {
 }
 
 fn play(remote: &mut Remote, events: &[Event], blocks: usize) -> f32 {
-    let context = Context { sample_rate: RATE, tempo: 120.0 };
+    let context = Context { sample_rate: RATE, tempo: 120.0, key: None };
     let mut loudest = 0.0f32;
     for i in 0..blocks {
         let (mut left, mut right) = ([0.0f32; 256], [0.0f32; 256]);

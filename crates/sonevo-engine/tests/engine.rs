@@ -283,6 +283,51 @@ fn a_song_renders_to_its_end_and_its_tails() {
 }
 
 #[test]
+fn a_compressor_listening_to_the_kick_ducks_the_pad() {
+    let (mut song, _, _) = song(&[note(0, 4, 48)]);
+    let pad = insert(&mut song, "Pad");
+    let kick = insert(&mut song, "Kick");
+    song.channels[0].insert = Some(pad);
+    let mut drums = song.channels[0].clone();
+    drums.id = Id::new();
+    drums.instrument = Device::builtin(builtin::DRUMS);
+    drums.insert = Some(kick);
+    song.patterns[0].notes.insert(drums.id, vec![note(2, 1, 60)]);
+    song.channels.push(drums);
+    let mut compressor =
+        Device::builtin(builtin::COMPRESSOR).with("threshold", -40.0).with("ratio", 20.0).with("attack", 0.1);
+    song.inserts[0].effects.push(compressor.clone());
+    let level = |song: &sonevo_project::Song| {
+        let stem = sonevo_engine::render_stem(song, None, 48_000, pad);
+        (loudest(&stem.left[beat(1.5)..beat(1.9)]), loudest(&stem.left[beat(2.05)..beat(2.2)]))
+    };
+
+    let (before, during) = level(&song);
+    assert!((during / before - 1.0).abs() < 0.2, "ducked listening to itself: {before} then {during}");
+
+    compressor.key = Some(kick);
+    song.inserts[0].effects[0] = compressor;
+    let (before, during) = level(&song);
+    assert!(during < before * 0.5, "not ducked under the kick: {before} then {during}");
+}
+
+#[test]
+fn a_track_listening_to_one_after_it_is_left_alone() {
+    let (mut song, _, _) = song(&[note(0, 1, 60)]);
+    let a = insert(&mut song, "A");
+    let b = insert(&mut song, "B");
+    song.channels[0].insert = Some(a);
+    // A goes to B, so B listening to A is fine; A listening to B would be a loop, and is let go
+    song.inserts[0].output = Some(b);
+    let mut listens = Device::builtin(builtin::COMPRESSOR);
+    listens.key = Some(b);
+    song.inserts[0].effects.push(listens);
+    let (mut engine, mut renderer) = started(&song, Mode::Song);
+    engine.play();
+    assert!(loudest(&play(&mut renderer, beat(0.5)).0) > 0.05);
+}
+
+#[test]
 fn a_stem_holds_its_track_only() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let dry = insert(&mut song, "Dry");
