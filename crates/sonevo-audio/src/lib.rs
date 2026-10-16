@@ -1,6 +1,10 @@
 //! The sound card: the outputs there are, and one opened with the engine's renderer playing
 //! out of it on a thread of its own.
 
+mod input;
+
+pub use input::{inputs, Input};
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample};
 use sonevo_engine::Renderer;

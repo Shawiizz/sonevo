@@ -32,6 +32,17 @@ import { Rename } from '../shared/rename';
       <button class="s-bar-btn" (click)="stop()" [title]="t('Stop')">
         <s-icon name="stop" [filled]="true" />
       </button>
+      <button
+        class="record"
+        [class.on]="recording()"
+        (click)="studio.toggleRecord()"
+        [title]="recording() ? t('Stop recording') : t('Record the microphone, the song playing')"
+      >
+        <s-icon name="record" [filled]="true" [size]="12" />
+      </button>
+      @if (recording()) {
+        <s-meter class="input" [peak]="studio.status().recording ?? 0" />
+      }
     </div>
 
     <div class="s-seg" role="radiogroup">
@@ -135,6 +146,34 @@ import { Rename } from '../shared/rename';
       align-items: center;
       gap: 4px;
     }
+    .record {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: var(--s-radius);
+      background: transparent;
+      color: var(--s-record);
+      cursor: pointer;
+      &:hover {
+        background: var(--s-hover);
+      }
+      &.on {
+        background: var(--s-record);
+        color: #1a0605;
+        animation: pulse 1s ease-in-out infinite alternate;
+      }
+    }
+    @keyframes pulse {
+      to {
+        background: color-mix(in srgb, var(--s-record) 60%, transparent);
+      }
+    }
+    .input {
+      height: 28px;
+    }
     .play {
       width: 38px;
       height: 34px;
@@ -232,6 +271,7 @@ export class Transport {
   protected readonly tempo = computed(() => this.studio.song()?.tempo ?? 120);
   protected readonly tempoShown = computed(() => (this.draggingTempo() ?? this.tempo()).toFixed(1));
   protected readonly patternMode = computed(() => !!this.studio.view()?.patternMode);
+  protected readonly recording = computed(() => this.studio.status().recording !== null);
 
   protected readonly position = computed(() => {
     const song = this.studio.song();
@@ -258,7 +298,8 @@ export class Transport {
   });
 
   protected stop(): void {
-    void api.stop();
+    if (this.recording()) void this.studio.stopRecording().then(() => api.stop());
+    else void api.stop();
   }
 
   protected setMode(pattern: boolean): void {

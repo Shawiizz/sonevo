@@ -255,6 +255,10 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Stop recording': 'Arrêter l’enregistrement',
+  'Record the microphone, the song playing': 'Enregistrer le micro, le morceau jouant',
+  'Recorded from': 'Enregistrer depuis',
+  'The default input': 'L’entrée par défaut',
   Keyboards: 'Claviers',
   'Plugged in, playing the channel chosen:': 'Branchés, ils jouent la voie choisie :',
   'No MIDI keyboard plugged in. One plugged in is found by itself, and plays the channel chosen.':

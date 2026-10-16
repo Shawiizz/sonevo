@@ -157,6 +157,8 @@ export interface Status {
   channels: Record<Id, number>;
   inserts: Record<Id, number>;
   audio: AudioStatus;
+  /** While recording, the loudest the input was since the last look. */
+  recording: number | null;
 }
 
 export interface ParamInfo {
@@ -187,6 +189,7 @@ export interface Settings {
   driver: string;
   device: string | null;
   buffer: number | null;
+  input: string | null;
   language: string | null;
   recent: string[];
   folders: string[];

@@ -10,6 +10,7 @@ description = "The sound card: the engine's renderer played out of it"
 [dependencies]
 sonevo-engine.workspace = true
 thiserror.workspace = true
+rtrb.workspace = true
 cpal = { workspace = true, features = ["realtime", "asio"] }
 
 [dev-dependencies]

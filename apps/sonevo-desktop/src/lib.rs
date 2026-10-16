@@ -543,6 +543,31 @@ fn keep(app: AppHandle) {
     });
 }
 
+/// Records the input chosen in the settings, the song playing from where it is.
+#[tauri::command(async)]
+fn record(app: State<App>) -> Answer<()> {
+    let (driver, input) = {
+        let settings = app.settings();
+        (settings.driver(), settings.input.clone())
+    };
+    app.studio().record(driver, input.as_deref())
+}
+
+/// Stops recording: what was heard on a new track.
+#[tauri::command(async)]
+fn stop_recording(app: State<App>) -> Answer<serde_json::Value> {
+    let mut studio = app.studio();
+    studio.stop_recording()?;
+    Ok(view(&studio))
+}
+
+/// The inputs that can be recorded from, with the driver chosen.
+#[tauri::command(async)]
+fn inputs(app: State<App>) -> Vec<String> {
+    let driver = app.settings().driver();
+    sonevo_audio::inputs(driver)
+}
+
 /// The channel the keyboards play from now on.
 #[tauri::command]
 fn play_with_keyboards(app: State<App>, channel: Option<Id>) {
@@ -669,6 +694,9 @@ pub fn run() {
             leave,
             play_with_keyboards,
             keyboards,
+            record,
+            stop_recording,
+            inputs,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

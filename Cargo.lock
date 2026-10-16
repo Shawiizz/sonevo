@@ -4166,6 +4166,7 @@ name = "sonevo-audio"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "rtrb",
  "sonevo-engine",
  "sonevo-project",
  "thiserror 2.0.21",

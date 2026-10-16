@@ -38,6 +38,15 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
             </select>
           </label>
           <label class="s-field">
+            <span>{{ t('Recorded from') }}</span>
+            <select [ngModel]="s.input ?? ''" (ngModelChange)="set({ input: $event || null })">
+              <option value="">{{ t('The default input') }}</option>
+              @for (i of inputs(); track i) {
+                <option [value]="i">{{ i }}</option>
+              }
+            </select>
+          </label>
+          <label class="s-field">
             <span>{{ t('Buffer (frames): smaller is less latency, larger is safer') }}</span>
             <select [ngModel]="s.buffer ?? 0" (ngModelChange)="set({ buffer: +$event || null })">
               <option [value]="0">{{ t('The card’s own') }}</option>
@@ -199,12 +208,14 @@ export class SettingsDialog {
   protected readonly settings = signal<Settings | null>(null);
   protected readonly outputs = signal<OutputInfo[]>([]);
   protected readonly keyboards = signal<string[]>([]);
+  protected readonly inputs = signal<string[]>([]);
   protected readonly audio = () => this.studio.status().audio;
 
   constructor() {
     void api.settings().then((s) => this.settings.set(s));
     void api.outputs().then((o) => this.outputs.set(o));
     void api.keyboards().then((k) => this.keyboards.set(k));
+    void api.inputs().then((i) => this.inputs.set(i));
   }
 
   protected outputsOf(driver: string): OutputInfo[] {

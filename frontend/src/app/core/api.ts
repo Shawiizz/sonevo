@@ -67,6 +67,9 @@ export const api = {
   keyboards: () => invoke<string[]>('keyboards'),
   pluginParams: (bundle: string, id: string) =>
     invoke<ParamInfo[]>('plugin_params', { bundle, id }),
+  record: () => invoke<void>('record'),
+  stopRecording: () => invoke<View>('stop_recording'),
+  inputs: () => invoke<string[]>('inputs'),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

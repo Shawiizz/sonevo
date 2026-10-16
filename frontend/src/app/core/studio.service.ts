@@ -30,6 +30,7 @@ const SILENT: Status = {
   channels: {},
   inserts: {},
   audio: { device: null, sampleRate: 0, latencyMs: 0, failed: false, error: null },
+  recording: null,
 };
 
 /**
@@ -313,7 +314,29 @@ export class Studio {
   }
 
   togglePlay(): void {
-    if (this.status().playing) void api.pause();
+    if (this.status().recording !== null) void this.stopRecording();
+    else if (this.status().playing) void api.pause();
     else void api.play();
+  }
+
+  /** Records the input from where playing is, the song playing; or stops. */
+  async toggleRecord(): Promise<void> {
+    if (this.status().recording !== null) {
+      await this.stopRecording();
+      return;
+    }
+    try {
+      await api.record();
+    } catch (e) {
+      this.fail(e);
+    }
+  }
+
+  async stopRecording(): Promise<void> {
+    try {
+      this.show(await api.stopRecording());
+    } catch (e) {
+      this.fail(e);
+    }
   }
 }

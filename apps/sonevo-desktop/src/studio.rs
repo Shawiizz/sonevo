@@ -5,7 +5,7 @@ use crate::autosave;
 use serde::Serialize;
 use sonevo_audio::{Output, Settings};
 use sonevo_engine::{Engine, Meter, Mode};
-use sonevo_project::{Edit, History, Id, Note, Song};
+use sonevo_project::{Clip, ClipContent, Edit, History, Id, Note, Song, Ticks, Track, PPQ};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
@@ -38,6 +38,8 @@ pub struct Status {
     pub channels: BTreeMap<Id, f32>,
     pub inserts: BTreeMap<Id, f32>,
     pub audio: AudioStatus,
+    /// While recording, the loudest the input was since the last look.
+    pub recording: Option<f32>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -68,6 +70,15 @@ pub struct Studio {
     output: Option<Output>,
     audio_error: Option<String>,
     comparing: Option<Compared>,
+    recording: Option<Recording>,
+}
+
+/// An input being recorded, from where playing was when it started.
+struct Recording {
+    input: sonevo_audio::Input,
+    start: f64,
+    left: Vec<f32>,
+    right: Vec<f32>,
 }
 
 /// A version of the song, written out beside it to be played in its place.
@@ -96,6 +107,7 @@ impl Studio {
             output: None,
             audio_error: None,
             comparing: None,
+            recording: None,
         }
     }
 
@@ -360,6 +372,10 @@ impl Studio {
 
     pub fn status(&mut self) -> Status {
         let audio = self.audio();
+        let recording = self.recording.as_mut().map(|r| {
+            r.input.take(&mut r.left, &mut r.right);
+            r.input.peak()
+        });
         let Some(engine) = &mut self.engine else {
             return Status {
                 position: 0.0,
@@ -368,6 +384,7 @@ impl Studio {
                 channels: BTreeMap::new(),
                 inserts: BTreeMap::new(),
                 audio,
+                recording,
             };
         };
         engine.collect();
@@ -381,7 +398,67 @@ impl Studio {
             channels,
             inserts,
             audio,
+            recording,
         }
+    }
+}
+
+impl Studio {
+    /// Records the input `input` of `driver` from where playing is, the song playing.
+    pub fn record(&mut self, driver: sonevo_audio::Driver, input: Option<&str>) -> Result<(), String> {
+        if self.recording.is_some() {
+            return Ok(());
+        }
+        let Some(engine) = &mut self.engine else { return Err("No sound card is open".into()) };
+        let input = sonevo_audio::Input::start(driver, input).map_err(|e| e.to_string())?;
+        let start = engine.position();
+        engine.play();
+        self.recording = Some(Recording { input, start, left: Vec::new(), right: Vec::new() });
+        Ok(())
+    }
+
+    /// Stops recording: what was heard placed on a new track, from where it started.
+    pub fn stop_recording(&mut self) -> Result<(), String> {
+        let Some(mut recording) = self.recording.take() else { return Ok(()) };
+        if let Some(engine) = &mut self.engine {
+            engine.pause();
+        }
+        recording.input.take(&mut recording.left, &mut recording.right);
+        let rate = recording.input.sample_rate;
+        drop(recording.input);
+        if recording.left.is_empty() {
+            return Ok(());
+        }
+        // written apart first, under the name the song will know it by
+        let apart = std::env::temp_dir().join(format!("sonevo-{}", Id::new()));
+        let file = apart.join("Recording.wav");
+        std::fs::create_dir_all(&apart).map_err(|e| e.to_string())?;
+        let written = sonevo_engine::write_wav(
+            &file,
+            rate,
+            &recording.left,
+            &recording.right,
+            sonevo_engine::Depth::Pcm24,
+        )
+        .map_err(|e| e.to_string());
+        let sample = written.and_then(|()| {
+            sonevo_project::import_sample(self.working_folder(), &file).map_err(|e| e.to_string())
+        });
+        let _ = std::fs::remove_dir_all(&apart);
+        let sample = sample?;
+        let seconds = recording.left.len() as f64 / f64::from(rate);
+        let length = (seconds * self.song.tempo * PPQ as f64 / 60.0).ceil() as Ticks;
+        let taken = self.song.tracks.iter().filter(|t| t.name.starts_with("Recording")).count();
+        let track = Track { id: Id::new(), name: format!("Recording {}", taken + 1), mute: false };
+        let clip = Clip {
+            id: Id::new(),
+            track: track.id,
+            start: recording.start.round() as Ticks,
+            length: length.max(1),
+            offset: 0,
+            content: ClipContent::Audio { sample, gain: 1.0 },
+        };
+        self.edit(Edit::Batch { edits: vec![Edit::PutTrack { track, index: None }, Edit::PutClip { clip }] })
     }
 }
 

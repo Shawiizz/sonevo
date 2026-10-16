@@ -12,6 +12,8 @@ pub struct Settings {
     pub driver: String,
     pub device: Option<String>,
     pub buffer: Option<u32>,
+    /// The input recorded from; the driver's default if none.
+    pub input: Option<String>,
     /// `en`, `fr`, or none for the system's.
     pub language: Option<String>,
     pub recent: Vec<PathBuf>,
@@ -29,6 +31,7 @@ impl Default for Settings {
             driver: "wasapi".into(),
             device: None,
             buffer: None,
+            input: None,
             language: None,
             recent: Vec::new(),
             folders: Vec::new(),
@@ -56,9 +59,16 @@ impl Settings {
         std::fs::write(path, text + "\n")
     }
 
+    pub fn driver(&self) -> Driver {
+        if self.driver == "asio" {
+            Driver::Asio
+        } else {
+            Driver::Wasapi
+        }
+    }
+
     pub fn audio(&self) -> sonevo_audio::Settings {
-        let driver = if self.driver == "asio" { Driver::Asio } else { Driver::Wasapi };
-        sonevo_audio::Settings { driver, device: self.device.clone(), buffer: self.buffer }
+        sonevo_audio::Settings { driver: self.driver(), device: self.device.clone(), buffer: self.buffer }
     }
 
     /// `folder` first among the songs opened last.
