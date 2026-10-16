@@ -255,6 +255,25 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Export: 'Exporter',
+  What: 'Quoi',
+  'The whole song': 'Tout le morceau',
+  'One file, from the start to the end of the last clip, the tails after.':
+    'Un fichier, du début à la fin du dernier clip, avec les queues de son après.',
+  'The loop': 'La boucle',
+  'One file of the part set on the ruler.': 'Un fichier de la partie choisie sur la règle.',
+  'Set a loop on the playlist’s ruler first.':
+    'Choisis d’abord une boucle sur la règle de la playlist.',
+  'Each mixer track': 'Chaque piste de mixage',
+  'A file each, in a folder: to mix elsewhere, or to share the parts.':
+    'Un fichier chacune, dans un dossier : pour mixer ailleurs, ou partager les parties.',
+  Quality: 'Qualité',
+  'CD, the smallest': 'CD, le plus léger',
+  'for mastering': 'pour le mastering',
+  'every bit kept': 'tout est gardé',
+  'Sample rate': 'Fréquence',
+  'Export…': 'Exporter…',
+  'The folder the tracks go in': 'Le dossier où vont les pistes',
   'Sonevo closed before these songs were saved':
     'Sonevo s’est fermé avant que ces morceaux soient enregistrés',
   'Their changes were kept as they were made. Open one to pick up where you were.':

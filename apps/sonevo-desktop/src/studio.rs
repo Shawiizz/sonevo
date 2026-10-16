@@ -114,7 +114,7 @@ impl Studio {
             can_redo: self.history.can_redo(),
             pattern_mode: match self.mode {
                 Mode::Pattern(id) => Some(id),
-                Mode::Song => None,
+                Mode::Song | Mode::Stem(_) => None,
             },
             missing: &self.missing,
             comparing: self.comparing.as_ref().map(|c| c.id.as_str()),

@@ -270,6 +270,34 @@ fn a_song_renders_to_its_end_and_its_tails() {
 }
 
 #[test]
+fn a_stem_holds_its_track_only() {
+    let (mut song, _, _) = song(&[note(0, 1, 60)]);
+    let dry = insert(&mut song, "Dry");
+    let wet = insert(&mut song, "Wet");
+    song.channels[0].insert = Some(dry);
+    song.inserts[0].sends.push(Send { to: wet, amount: 1.0 });
+    song.inserts[1].effects.push(Device::builtin(builtin::REVERB).with("mix", 1.0));
+    let dry_stem = sonevo_engine::render_stem(&song, None, 48_000, dry);
+    let wet_stem = sonevo_engine::render_stem(&song, None, 48_000, wet);
+    let master = sonevo_engine::render_stem(&song, None, 48_000, song.master.id);
+    // the dry track ends with its note; the wet one rings on; nothing goes straight to the master
+    let after = beat(1.5);
+    assert!(loudest(&dry_stem.left[..beat(0.5)]) > 0.05);
+    assert!(loudest(&dry_stem.left[after..]) < 0.01, "{}", loudest(&dry_stem.left[after..]));
+    assert!(loudest(&wet_stem.left[after..]) > 0.01);
+    assert_eq!(loudest(&master.left), 0.0);
+}
+
+#[test]
+fn a_part_of_a_song_renders_alone() {
+    let (song, _, _) = song(&[note(0, 1, 60), note(2, 1, 64)]);
+    let part = sonevo_engine::render_part(&song, None, 48_000, Some(Region { start: 2 * PPQ, end: 3 * PPQ }));
+    // the third beat's note from the start, then its tail
+    assert!(loudest(&part.left[..beat(0.25)]) > 0.05);
+    assert!(part.left.len() >= beat(1.0) && part.left.len() < beat(1.0) + 48_000 * 2, "{}", part.left.len());
+}
+
+#[test]
 fn a_rendered_song_reads_back_from_its_file() {
     let (song, _, _) = song(&[note(0, 1, 60)]);
     let rendered = render(&song, None, 48_000);

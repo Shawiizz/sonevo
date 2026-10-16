@@ -23,7 +23,7 @@ use compile::{compile, Mirror};
 use graph::Graph;
 use renderer::{Command, Shared};
 use rtrb::{Consumer, Producer, RingBuffer};
-use sonevo_project::{Id, Song, Ticks};
+use sonevo_project::{Id, Region, Song, Ticks};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -213,10 +213,34 @@ const TAIL: usize = 10;
 /// Plays `song` from its start to its end, then its tails (a reverb, a delay) until they
 /// die away.
 pub fn render(song: &Song, folder: Option<&Path>, sample_rate: u32) -> Rendered {
+    render_part(song, folder, sample_rate, None)
+}
+
+/// Plays `song` as [`render`] does, only from `region`'s start to its end if given.
+pub fn render_part(song: &Song, folder: Option<&Path>, sample_rate: u32, region: Option<Region>) -> Rendered {
+    render_with(song, folder, sample_rate, region, Mode::Song)
+}
+
+/// Plays `song` as [`render`] does, as the mixer track `insert` alone sends it to the
+/// master; the master's id gives what goes to the master straight, through no track.
+pub fn render_stem(song: &Song, folder: Option<&Path>, sample_rate: u32, insert: Id) -> Rendered {
+    render_with(song, folder, sample_rate, None, Mode::Stem(insert))
+}
+
+fn render_with(
+    song: &Song,
+    folder: Option<&Path>,
+    sample_rate: u32,
+    region: Option<Region>,
+    mode: Mode,
+) -> Rendered {
     let mut song = song.clone();
-    song.loop_region = None;
+    song.loop_region = region.filter(|r| r.end > r.start);
     let (mut engine, mut renderer) = Engine::new(sample_rate as f32);
-    let missing = engine.load(&song, Mode::Song, folder);
+    let missing = engine.load(&song, mode, folder);
+    if let Some(region) = song.loop_region {
+        engine.seek(region.start);
+    }
     engine.play_once();
     let block = 1024;
     let (mut left, mut right) = (Vec::new(), Vec::new());

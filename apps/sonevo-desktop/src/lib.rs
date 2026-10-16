@@ -391,22 +391,60 @@ fn set_settings(app: State<App>, settings: Settings) -> studio::AudioStatus {
     studio.audio()
 }
 
-/// The song played through into a WAV file at `path`.
+/// What is played to files.
+#[derive(Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+enum Part {
+    /// The whole song, into the file `path`.
+    Song,
+    /// The loop only, into the file `path`.
+    Loop,
+    /// Each mixer track alone, into a file each in the folder `path`.
+    Stems,
+}
+
+/// The song played through into WAV files at `path`: what could not be played, said plainly.
 #[tauri::command(async)]
-fn export_wav(app: State<App>, path: PathBuf, depth: String, sample_rate: u32) -> Answer<Vec<String>> {
+fn export_wav(
+    app: State<App>,
+    path: PathBuf,
+    part: Part,
+    depth: String,
+    sample_rate: u32,
+) -> Answer<Vec<String>> {
     let (song, folder) = {
         let studio = app.studio();
         (studio.song.clone(), studio.working_folder().to_owned())
     };
-    let rendered = sonevo_engine::render(&song, Some(&folder), sample_rate.clamp(22_050, 192_000));
     let depth = match depth.as_str() {
         "16" => Depth::Pcm16,
         "32" => Depth::Float32,
         _ => Depth::Pcm24,
     };
-    write_wav(&path, rendered.sample_rate, &rendered.left, &rendered.right, depth)
-        .map_err(|e| e.to_string())?;
-    Ok(rendered.missing)
+    let rate = sample_rate.clamp(22_050, 192_000);
+    let write = |rendered: sonevo_engine::Rendered, path: &Path| -> Answer<Vec<String>> {
+        write_wav(path, rendered.sample_rate, &rendered.left, &rendered.right, depth)
+            .map_err(|e| e.to_string())?;
+        Ok(rendered.missing)
+    };
+    match part {
+        Part::Song => write(sonevo_engine::render_part(&song, Some(&folder), rate, None), &path),
+        Part::Loop => write(sonevo_engine::render_part(&song, Some(&folder), rate, song.loop_region), &path),
+        Part::Stems => {
+            std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+            let mut missing = Vec::new();
+            // what goes straight to the master first, then each track alone
+            let tracks = std::iter::once((0, &song.master))
+                .chain(song.inserts.iter().enumerate().map(|(i, t)| (i + 1, t)));
+            for (i, insert) in tracks {
+                let name: String = insert.name.chars().filter(|c| !r#"<>:"/\\|?*"#.contains(*c)).collect();
+                let rendered = sonevo_engine::render_stem(&song, Some(&folder), rate, insert.id);
+                missing.extend(write(rendered, &path.join(format!("{i:02} {name}.wav")))?);
+            }
+            missing.dedup();
+            Ok(missing)
+        }
+    }
 }
 
 #[derive(Serialize)]

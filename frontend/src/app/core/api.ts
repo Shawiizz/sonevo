@@ -48,8 +48,8 @@ export const api = {
   outputs: () => invoke<OutputInfo[]>('outputs'),
   settings: () => invoke<Settings>('settings'),
   setSettings: (settings: Settings) => invoke<AudioStatus>('set_settings', { settings }),
-  exportWav: (path: string, depth: string, sampleRate: number) =>
-    invoke<string[]>('export_wav', { path, depth, sampleRate }),
+  exportWav: (path: string, part: 'song' | 'loop' | 'stems', depth: string, sampleRate: number) =>
+    invoke<string[]>('export_wav', { path, part, depth, sampleRate }),
   browse: (folder: string) => invoke<Entry[]>('browse', { folder }),
   places: () => invoke<Entry[]>('places'),
   versions: () => invoke<VersionInfo[]>('versions'),

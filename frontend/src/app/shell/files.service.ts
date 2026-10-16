@@ -80,17 +80,22 @@ export class Files {
     }
   }
 
-  async exportWav(): Promise<void> {
-    const name = this.studio.song()?.name ?? 'Song';
-    const chosen = await save({
-      title: this.i18n.t('Export the song as a WAV file'),
-      defaultPath: `${name}.wav`,
-      filters: [{ name: 'WAV', extensions: ['wav'] }],
-    });
-    if (!chosen) return;
+  /** Whether the export dialog shows. */
+  readonly exporting = signal(false);
+
+  exportWav(): void {
+    this.exporting.set(true);
+  }
+
+  async export(
+    path: string,
+    part: 'song' | 'loop' | 'stems',
+    depth: string,
+    rate: number,
+  ): Promise<void> {
     this.busy.set(this.i18n.t('Exporting…'));
     try {
-      const missing = await api.exportWav(chosen, '24', 48000);
+      const missing = await api.exportWav(path, part, depth, rate);
       this.say(missing.length ? missing.join(' · ') : this.i18n.t('Exported'));
     } catch (e) {
       this.studio.fail(e);

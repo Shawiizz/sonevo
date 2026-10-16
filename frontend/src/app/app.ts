@@ -19,6 +19,7 @@ import { Playlist } from './features/playlist';
 import { VersionsPanel } from './features/versions-panel';
 import { Files } from './shell/files.service';
 import { Command, Palette } from './shell/palette';
+import { ExportDialog } from './shell/export-dialog';
 import { RecoveryDialog } from './shell/recovery-dialog';
 import { SettingsDialog } from './shell/settings-dialog';
 import { Titlebar } from './shell/titlebar';
@@ -66,6 +67,7 @@ const PIANO: Record<string, number> = {
     Browser,
     ChannelRack,
     DevicePanel,
+    ExportDialog,
     Icon,
     Mixer,
     Palette,
@@ -182,6 +184,9 @@ const PIANO: Record<string, number> = {
     }
     @if (kept().length) {
       <app-recovery-dialog [kept]="kept()" (closed)="kept.set([])" (done)="forgot($event)" />
+    }
+    @if (files.exporting()) {
+      <app-export-dialog (closed)="files.exporting.set(false)" />
     }
     @if (settingsOpen()) {
       <app-settings-dialog (closed)="settingsOpen.set(false)" />
@@ -343,7 +348,7 @@ export class App {
   protected readonly studio = inject(Studio);
   protected readonly menus = inject(Menus);
   protected readonly t = inject(I18n).t;
-  private readonly files = inject(Files);
+  protected readonly files = inject(Files);
 
   protected readonly tabs: { id: Dock; label: string; icon: string; key: string }[] = [
     { id: 'rack', label: 'Channel rack', icon: 'rack', key: 'F6' },

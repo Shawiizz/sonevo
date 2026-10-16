@@ -10,11 +10,13 @@ use sonevo_project::{ClipContent, Device, DeviceKind, Id, Insert, Pattern, Song,
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
-/// What plays: the whole song, or one pattern over and over.
+/// What plays: the whole song, one pattern over and over, or the song as one mixer track
+/// alone sends it to the master (the master itself: what goes to it straight).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Song,
     Pattern(Id),
+    Stem(Id),
 }
 
 /// A device the audio thread has, as the engine remembers it.
@@ -294,13 +296,25 @@ pub fn compile(
         }
     }
     let order = order(&edges);
+    let stem = match mode {
+        Mode::Stem(id) => Some(index.get(&id).copied().unwrap_or(master)),
+        _ => None,
+    };
+    // whether what goes straight to the master is heard: not when another track is alone
+    let straight = stem.is_none_or(|s| s == master);
     let heard = audible(&all, &edges);
     let inserts: Vec<InsertNode> = all
         .iter()
         .enumerate()
         .map(|(i, insert)| {
             let effects = insert.effects.iter().filter_map(|d| slots.add(d, samples)).collect();
-            let output = (i != master).then_some(outputs[i]);
+            // a track alone: only its sound comes to the master, every other's goes nowhere
+            let output = match stem {
+                _ if i == master => None,
+                Some(s) if s == i => Some(master),
+                Some(_) if outputs[i] == master => None,
+                _ => Some(outputs[i]),
+            };
             let sends = std::mem::take(&mut sends[i]);
             InsertNode {
                 effects,
@@ -323,12 +337,16 @@ pub fn compile(
         .channels
         .iter()
         .enumerate()
-        .map(|(i, channel)| ChannelNode {
+        .map(|(i, channel)| {
+            let insert = channel.insert.and_then(|id| index.get(&id).copied()).unwrap_or(master);
+            (i, channel, insert)
+        })
+        .map(|(i, channel, insert)| ChannelNode {
             slot: slots.add(&channel.instrument, samples),
             volume: channel.volume.clamp(0.0, 1.0),
             pan: channel.pan,
-            audible: !channel.mute,
-            insert: channel.insert.and_then(|id| index.get(&id).copied()).unwrap_or(master),
+            audible: !channel.mute && (straight || insert != master),
+            insert,
             applied: Gains::SILENT,
             events: Vec::with_capacity(EVENTS),
             held: 0,
@@ -349,7 +367,7 @@ pub fn compile(
             }
             (0, length)
         }
-        Mode::Song => {
+        Mode::Song | Mode::Stem(_) => {
             let muted: HashSet<Id> = song.tracks.iter().filter(|t| t.mute).map(|t| t.id).collect();
             let mut automation: BTreeMap<&Target, Vec<AutomationClip>> = BTreeMap::new();
             for clip in song.clips.iter().filter(|c| !muted.contains(&c.track)) {
@@ -367,6 +385,7 @@ pub fn compile(
                             );
                         }
                     }
+                    ClipContent::Audio { .. } if !straight => {}
                     ClipContent::Audio { sample, gain } => match samples.get(sample) {
                         Some(sample) => audio.push(AudioClip {
                             start: clip.start,
