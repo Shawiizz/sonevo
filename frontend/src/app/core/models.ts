@@ -307,6 +307,26 @@ export const SCALES: { name: string; steps: number[] }[] = [
   { name: 'Dorian', steps: [0, 2, 3, 5, 7, 9, 10] },
 ];
 
+/**
+ * The keys of a chord from `key`, of `notes` notes: a scale's own, a note in two of it apart
+ * (its chords sound right in it, minor or major as it wants); without a scale, major.
+ */
+export function chordKeys(
+  key: number,
+  notes: number,
+  root: number,
+  scale: number[] | null,
+): number[] {
+  if (!scale) return [0, 4, 7, 10].slice(0, notes).map((step) => key + step);
+  // the scale's notes up from the key, over two octaves
+  const steps: number[] = [];
+  for (let k = key; steps.length < 7 && k < key + 24; k++) {
+    if (inScale(k, root, scale)) steps.push(k);
+  }
+  if (!steps.length || steps[0] !== key) return [key];
+  return [0, 2, 4, 6].slice(0, notes).map((i) => steps[i] ?? key);
+}
+
 /** Whether `key` is a note of the scale `scale` from `root` (0 is C). */
 export function inScale(key: number, root: number, scale: number[]): boolean {
   return scale.includes((((key - root) % 12) + 12) % 12);

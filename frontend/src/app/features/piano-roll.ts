@@ -12,7 +12,17 @@ import {
 } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { inScale, isBlack, keyName, NAMES, Note, PPQ, SCALES, STEP } from '../core/models';
+import {
+  chordKeys,
+  inScale,
+  isBlack,
+  keyName,
+  NAMES,
+  Note,
+  PPQ,
+  SCALES,
+  STEP,
+} from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Themes } from '../core/theme';
 import { Icon } from '../shared/icon';
@@ -63,6 +73,17 @@ type Drag =
           <option [value]="$index" [selected]="$index === scale()">{{ t(s.name) }}</option>
         }
       </select>
+      <div class="s-seg" role="radiogroup" [title]="t('What a click draws')">
+        @for (c of chords; track c.notes) {
+          <button
+            role="radio"
+            [attr.aria-checked]="chord() === c.notes"
+            (click)="chord.set(c.notes)"
+          >
+            {{ t(c.label) }}
+          </button>
+        }
+      </div>
       <div class="s-seg" role="radiogroup" [title]="t('Notes snap to')">
         @for (s of snaps; track s.ticks) {
           <button role="radio" [attr.aria-checked]="snap() === s.ticks" (click)="snap.set(s.ticks)">
@@ -137,6 +158,14 @@ export class PianoRoll implements OnDestroy {
   /** The scale lit, by its index in SCALES (-1 for none), and its root. */
   protected readonly scale = signal(-1);
   protected readonly root = signal(9);
+
+  protected readonly chords = [
+    { label: 'Note', notes: 1 },
+    { label: 'Chord', notes: 3 },
+    { label: 'Chord 7', notes: 4 },
+  ];
+  /** How many notes a click draws: one, or a chord. */
+  protected readonly chord = signal(1);
 
   protected readonly snaps = [
     { label: '1/32', ticks: STEP / 2 },
@@ -465,22 +494,23 @@ export class PianoRoll implements OnDestroy {
         index = from + [...this.selected].length - 1;
       }
     } else {
-      const note: Note = {
-        start: this.snapped(this.tickAt(x)),
-        length: this.lastLength,
-        key: this.keyAt(y),
-        velocity: 0.8,
-      };
-      this.working.push(note);
-      index = this.working.length - 1;
-      this.selected = new Set([index]);
+      const start = this.snapped(this.tickAt(x));
+      const scale = SCALES[this.scale()]?.steps ?? null;
+      const keys = chordKeys(this.keyAt(y), this.chord(), this.root(), scale).filter(
+        (k) => k <= 127,
+      );
+      const from = this.working.length;
+      for (const key of keys)
+        this.working.push({ start, length: this.lastLength, key, velocity: 0.8 });
+      const picked = keys.map((_, i) => from + i);
+      this.selected = new Set(picked);
       this.drag = {
         kind: 'resize',
-        from: note.start + note.length,
+        from: start + this.lastLength,
         original: [...this.working],
-        picked: [index],
+        picked,
       };
-      this.sound(note.key);
+      this.sound(keys[0]);
       this.surface?.redraw();
       return;
     }
@@ -726,6 +756,14 @@ export class PianoRoll implements OnDestroy {
       // pasted where they were, chosen, to be dragged where wanted
       this.working = [...notes, ...copied.map((n) => ({ ...n }))];
       this.selected = new Set(copied.map((_, i) => notes.length + i));
+      this.commit();
+    } else if (event.key.toLowerCase() === 'q' && !event.ctrlKey) {
+      // the notes chosen, or all, put on the grid
+      const snap = this.snap();
+      const all = this.selected.size === 0;
+      this.working = notes.map((n, i) =>
+        all || this.selected.has(i) ? { ...n, start: Math.round(n.start / snap) * snap } : n,
+      );
       this.commit();
     } else if (event.key === 'Escape') {
       this.selected.clear();

@@ -1,4 +1,13 @@
-import { barLength, formatPosition, isBlack, keyName, newId, PPQ, sampleLabel } from './models';
+import {
+  barLength,
+  chordKeys,
+  formatPosition,
+  isBlack,
+  keyName,
+  newId,
+  PPQ,
+  sampleLabel,
+} from './models';
 
 describe('models', () => {
   it('writes positions as bars, beats and steps from 1', () => {
@@ -22,6 +31,17 @@ describe('models', () => {
     expect(keyName(61)).toBe('C#4');
     expect(isBlack(61)).toBe(true);
     expect(isBlack(64)).toBe(false);
+  });
+
+  it('makes chords of a scale, or major without one', () => {
+    expect(chordKeys(60, 3, 0, null)).toEqual([60, 64, 67]);
+    expect(chordKeys(60, 4, 0, null)).toEqual([60, 64, 67, 70]);
+    const major = [0, 2, 4, 5, 7, 9, 11];
+    // in C major, D's chord is minor, G's a dominant seventh
+    expect(chordKeys(62, 3, 0, major)).toEqual([62, 65, 69]);
+    expect(chordKeys(67, 4, 0, major)).toEqual([67, 71, 74, 77]);
+    // a key out of the scale stays alone
+    expect(chordKeys(61, 3, 0, major)).toEqual([61]);
   });
 
   it('names sounds by their own name', () => {
