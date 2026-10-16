@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { Arp, Channel, Device, ParamInfo, PPQ, PresetInfo, sampleLabel } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
+import { EqCurve } from '../shared/eq-curve';
 import { Knob, toNormal } from '../shared/knob';
 import { MenuItem, Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
@@ -57,7 +58,7 @@ const ABOUT: Record<string, string> = {
  */
 @Component({
   selector: 'app-device-panel',
-  imports: [Icon, Knob],
+  imports: [EqCurve, Icon, Knob],
   template: `
     @if (shown(); as shown) {
       <div class="s-panel-head">
@@ -93,6 +94,9 @@ const ABOUT: Record<string, string> = {
           <button class="s-btn window" (click)="openWindow(shown.device)">
             <s-icon name="maximize" [size]="12" /> {{ t('Open its window') }}
           </button>
+        }
+        @if (info()?.name === 'sonevo.eq') {
+          <s-eq-curve class="curve" [values]="settings(shown.device)" />
         }
         @if (info()?.name === 'sonevo.compressor') {
           <label class="s-field listens">
@@ -319,6 +323,9 @@ const ABOUT: Record<string, string> = {
     .window {
       margin-bottom: 12px;
     }
+    .curve {
+      margin-bottom: 12px;
+    }
     .waveform {
       display: block;
       width: 100%;
@@ -433,7 +440,18 @@ export class DevicePanel {
     return this.studio.value(device, p.id);
   }
 
+  /** The settings of `device` as they are now, those being turned as far as they are. */
+  protected settings(device: Device): Record<string, number> {
+    const turning = this.turning();
+    const params = this.info()?.params ?? [];
+    return Object.fromEntries(params.map((p) => [p.id, turning[p.id] ?? this.value(device, p)]));
+  }
+
+  /** The settings being turned, before they are let go of. */
+  private readonly turning = signal<Record<string, number>>({});
+
   protected live(device: Device, p: ParamInfo, value: number): void {
+    this.turning.update((t) => ({ ...t, [p.id]: value }));
     void api.liveParam(device.id, p.id, value);
     const normal = toNormal(value, p.min, p.max, p.scale === 'log');
     const name = `${this.shown()?.owner ?? ''} · ${this.t(p.name)}`;
@@ -441,6 +459,7 @@ export class DevicePanel {
   }
 
   protected set(device: Device, p: ParamInfo, value: number): void {
+    this.turning.update(({ [p.id]: _, ...rest }) => rest);
     void api.liveParam(device.id, p.id, value);
     void this.studio.edit({ type: 'setParam', device: device.id, param: p.id, value });
     void this.studio.letGo({ type: 'param', device: device.id, param: p.id });
