@@ -1,0 +1,42 @@
+/*
+ * Sonevo's design tokens: a near-black ground with a touch of night blue, light text, one
+ * accent from the logo. Channels, patterns and mixer tracks bring their own colours.
+ */
+:root {
+  color-scheme: dark;
+  --s-void: #08090c;
+  --s-base: #0f1115;
+  --s-raised: #161920;
+  --s-hover: #1f232c;
+  --s-line: #252a33;
+  --s-line-strong: #363c48;
+
+  --s-text: #f0f2f6;
+  --s-text-2: #bcc2cf;
+  --s-text-3: #8d95a5;
+
+  --s-accent: #8f8bf7;
+  --s-on-accent: #0d0c22;
+  --s-play: #5fd3a8;
+  --s-record: #ef6f6c;
+  --s-danger: #ef6f6c;
+  --s-warn: #f2b84b;
+
+  /* the grids of the piano roll and the playlist */
+  --s-grid-bar: #2c323d;
+  --s-grid-beat: #1e222a;
+  --s-grid-step: #15181e;
+  --s-key-white: #1a1d24;
+  --s-key-black: #111318;
+
+  --s-font: 'Geist Variable', 'Segoe UI', sans-serif;
+  --s-mono: 'Geist Mono Variable', 'Cascadia Mono', monospace;
+
+  --s-titlebar: 44px;
+  --s-transport: 52px;
+  --s-panel-head: 38px;
+  --s-row: 32px;
+  --s-radius: 6px;
+  --s-radius-panel: 8px;
+  --s-fast: 120ms;
+}

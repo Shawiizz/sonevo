@@ -1,0 +1,342 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { api } from '../core/api';
+import { I18n } from '../core/i18n';
+import { formatPosition } from '../core/models';
+import { Studio } from '../core/studio.service';
+import { Icon } from '../shared/icon';
+import { Menus } from '../shared/menu';
+import { Meter } from '../shared/meter';
+
+/**
+ * The transport: play and stop, the pattern played alone or the whole song, the tempo, where
+ * playing is, the metronome; the master's level and the sound card's latency.
+ */
+@Component({
+  selector: 'app-transport',
+  imports: [Icon, Meter],
+  template: `
+    <div class="group">
+      <button
+        class="play"
+        [class.on]="studio.status().playing"
+        (click)="studio.togglePlay()"
+        [title]="t('Play') + ' / ' + t('Pause') + ' (Space)'"
+      >
+        <s-icon
+          [name]="studio.status().playing ? 'pause' : 'play'"
+          [size]="16"
+          [filled]="!studio.status().playing"
+        />
+      </button>
+      <button class="s-bar-btn" (click)="stop()" [title]="t('Stop')">
+        <s-icon name="stop" [filled]="true" />
+      </button>
+    </div>
+
+    <div class="s-seg" role="radiogroup">
+      <button
+        role="radio"
+        [attr.aria-checked]="patternMode()"
+        (click)="setMode(true)"
+        [title]="t('Play the pattern chosen, over and over')"
+      >
+        {{ t('Pattern') }}
+      </button>
+      <button
+        role="radio"
+        [attr.aria-checked]="!patternMode()"
+        (click)="setMode(false)"
+        [title]="t('Play the whole song')"
+      >
+        {{ t('Song') }}
+      </button>
+    </div>
+
+    <div class="readout">
+      <span class="label">{{ t('Tempo') }}</span>
+      @if (editingTempo()) {
+        <input
+          class="s-inline s-mono tempo-input"
+          [value]="tempo()"
+          (keydown.enter)="setTempo($any($event.target).value)"
+          (keydown.escape)="editingTempo.set(false)"
+          (blur)="setTempo($any($event.target).value)"
+          autofocus
+        />
+      } @else {
+        <span
+          class="value s-mono drag"
+          (pointerdown)="dragTempo($event)"
+          (dblclick)="editingTempo.set(true)"
+          [title]="t('Drag up or down, or double-click to type')"
+          >{{ tempoShown() }}</span
+        >
+      }
+      <span class="unit">BPM</span>
+    </div>
+
+    <div class="readout position">
+      <span class="label">{{ t('Position') }}</span>
+      <span class="value s-mono">{{ position() }}</span>
+    </div>
+
+    <button
+      class="s-bar-btn"
+      [class.on]="studio.metronome()"
+      (click)="toggleMetronome()"
+      [title]="t('Metronome')"
+    >
+      <s-icon name="metronome" [size]="16" />
+    </button>
+
+    <div class="pattern">
+      <button
+        class="s-bar-btn pattern-pick"
+        (click)="patternMenu($event)"
+        [title]="t('The pattern edited')"
+      >
+        <span class="swatch" [style.background]="studio.pattern()?.color"></span>
+        {{ studio.pattern()?.name }}
+        <s-icon name="down" [size]="12" />
+      </button>
+      <button class="s-bar-btn" (click)="studio.addPattern()" [title]="t('New pattern')">
+        <s-icon name="plus" />
+      </button>
+    </div>
+
+    <div class="grow"></div>
+
+    <div class="audio" [class.bad]="!!audioProblem()" [title]="audioTitle()">
+      @if (audioProblem(); as problem) {
+        {{ problem }}
+      } @else {
+        <span class="s-mono">{{ latency() }}</span>
+      }
+    </div>
+    <div class="master">
+      <s-meter [peak]="studio.status().master" />
+      <s-meter [peak]="studio.status().master" />
+    </div>
+  `,
+  styles: `
+    :host {
+      flex: none;
+      height: var(--s-transport);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 12px;
+      background: var(--s-base);
+      border-bottom: 1px solid var(--s-line);
+    }
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .play {
+      width: 38px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: var(--s-radius);
+      background: var(--s-raised);
+      color: var(--s-text);
+      cursor: pointer;
+      &:hover {
+        background: var(--s-hover);
+      }
+      &.on {
+        background: var(--s-play);
+        color: #06140e;
+      }
+    }
+    .readout {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: var(--s-radius);
+      background: var(--s-void);
+      line-height: 34px;
+      .label {
+        color: var(--s-text-3);
+        font-size: 11px;
+      }
+      .value {
+        min-width: 44px;
+        color: var(--s-text);
+        font-size: 15px;
+        text-align: right;
+      }
+      .unit {
+        color: var(--s-text-3);
+        font-size: 11px;
+      }
+      .drag {
+        cursor: ns-resize;
+      }
+    }
+    .position .value {
+      min-width: 64px;
+    }
+    .tempo-input {
+      width: 64px;
+      margin-top: 4px;
+    }
+    .pattern {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .pattern-pick {
+      min-width: 140px;
+      justify-content: flex-start;
+      color: var(--s-text);
+    }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+    .grow {
+      flex: 1;
+    }
+    .audio {
+      color: var(--s-text-3);
+      font-size: 12px;
+      &.bad {
+        color: var(--s-warn);
+      }
+    }
+    .master {
+      display: flex;
+      gap: 3px;
+      height: 32px;
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class Transport {
+  protected readonly studio = inject(Studio);
+  protected readonly t = inject(I18n).t;
+  private readonly menus = inject(Menus);
+
+  protected readonly editingTempo = signal(false);
+  private readonly draggingTempo = signal<number | null>(null);
+  protected readonly tempo = computed(() => this.studio.song()?.tempo ?? 120);
+  protected readonly tempoShown = computed(() => (this.draggingTempo() ?? this.tempo()).toFixed(1));
+  protected readonly patternMode = computed(() => !!this.studio.view()?.patternMode);
+
+  protected readonly position = computed(() => {
+    const song = this.studio.song();
+    return song ? formatPosition(this.studio.status().position, song.signature) : '1.1.1';
+  });
+
+  protected readonly latency = computed(() => {
+    const audio = this.studio.status().audio;
+    return audio.device
+      ? `${audio.latencyMs.toFixed(0)} ms · ${(audio.sampleRate / 1000).toFixed(1)} kHz`
+      : '';
+  });
+
+  protected readonly audioProblem = computed(() => {
+    const audio = this.studio.status().audio;
+    if (audio.failed) return this.t('The sound card stopped');
+    if (!audio.device) return audio.error ? this.t('No sound card') : '';
+    return '';
+  });
+
+  protected readonly audioTitle = computed(() => {
+    const audio = this.studio.status().audio;
+    return audio.error ?? audio.device ?? '';
+  });
+
+  protected stop(): void {
+    void api.stop();
+  }
+
+  protected setMode(pattern: boolean): void {
+    void this.studio.setMode(pattern ? (this.studio.pattern()?.id ?? null) : null);
+  }
+
+  protected toggleMetronome(): void {
+    const on = !this.studio.metronome();
+    this.studio.metronome.set(on);
+    void api.metronome(on);
+  }
+
+  protected setTempo(text: string): void {
+    this.editingTempo.set(false);
+    const tempo = Number(String(text).replace(',', '.'));
+    if (Number.isFinite(tempo) && tempo >= 10 && tempo <= 999) this.commitTempo(tempo);
+  }
+
+  private commitTempo(tempo: number): void {
+    const song = this.studio.song();
+    if (!song || tempo === song.tempo) return;
+    void this.studio.edit({
+      type: 'setSong',
+      name: song.name,
+      tempo,
+      signature: song.signature,
+      loopRegion: song.loopRegion ?? null,
+    });
+  }
+
+  protected dragTempo(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    const target = event.currentTarget as Element;
+    target.setPointerCapture(event.pointerId);
+    const start = this.tempo();
+    const y = event.clientY;
+    const move = (e: PointerEvent) => {
+      const step = e.shiftKey ? 0.1 : 1;
+      const tempo = Math.min(999, Math.max(10, start + Math.round((y - e.clientY) / 3) * step));
+      this.draggingTempo.set(Math.round(tempo * 10) / 10);
+    };
+    const up = () => {
+      target.removeEventListener('pointermove', move as EventListener);
+      target.removeEventListener('pointerup', up);
+      const tempo = this.draggingTempo();
+      this.draggingTempo.set(null);
+      if (tempo !== null) this.commitTempo(tempo);
+    };
+    target.addEventListener('pointermove', move as EventListener);
+    target.addEventListener('pointerup', up);
+  }
+
+  protected patternMenu(event: MouseEvent): void {
+    const song = this.studio.song();
+    if (!song) return;
+    const t = this.t;
+    const current = this.studio.pattern();
+    this.menus.below(event, [
+      ...song.patterns.map((p) => ({ label: p.name, run: () => this.studio.selectPattern(p.id) })),
+      { separator: true, label: '' },
+      { label: t('New pattern'), run: () => this.studio.addPattern() },
+      {
+        label: t('Rename…'),
+        disabled: !current,
+        run: () => {
+          const name = current && prompt(t('Name of the pattern'), current.name);
+          if (current && name)
+            void this.studio.edit({
+              type: 'putPattern',
+              pattern: { ...current, name },
+              index: null,
+            });
+        },
+      },
+      {
+        label: t('Delete the pattern'),
+        disabled: !current || song.patterns.length < 2,
+        danger: true,
+        run: () => current && this.studio.edit({ type: 'removePattern', id: current.id }),
+      },
+    ]);
+  }
+}

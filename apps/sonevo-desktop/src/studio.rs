@@ -1,0 +1,280 @@
+//! The song open, its history, where it is saved; and the engine playing it out of the
+//! sound card.
+
+use serde::Serialize;
+use sonevo_audio::{Output, Settings};
+use sonevo_engine::{Engine, Meter, Mode};
+use sonevo_project::{Edit, History, Id, Note, Song};
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+
+/// The song as the interface shows it: its patterns' notes with it.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct View<'a> {
+    pub song: &'a Song,
+    pub notes: BTreeMap<Id, &'a BTreeMap<Id, Vec<Note>>>,
+    /// Where it is saved; none for a song not saved yet.
+    pub folder: Option<&'a Path>,
+    pub dirty: bool,
+    pub can_undo: bool,
+    pub can_redo: bool,
+    /// The pattern playing over and over, if not the song.
+    pub pattern_mode: Option<Id>,
+    pub missing: &'a [String],
+}
+
+/// What changes as the song plays, read many times a second.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Status {
+    pub position: f64,
+    pub playing: bool,
+    pub master: f32,
+    pub channels: BTreeMap<Id, f32>,
+    pub inserts: BTreeMap<Id, f32>,
+    pub audio: AudioStatus,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioStatus {
+    pub device: Option<String>,
+    pub sample_rate: u32,
+    pub latency_ms: f64,
+    pub failed: bool,
+    pub error: Option<String>,
+}
+
+pub struct Studio {
+    pub song: Song,
+    history: History,
+    folder: Option<PathBuf>,
+    /// Where a song not saved yet keeps its sounds.
+    draft: PathBuf,
+    drafts: PathBuf,
+    dirty: bool,
+    mode: Mode,
+    missing: Vec<String>,
+    engine: Option<Engine>,
+    output: Option<Output>,
+    audio_error: Option<String>,
+}
+
+impl Studio {
+    pub fn new(drafts: &Path, song: Song) -> Studio {
+        Studio {
+            song,
+            history: History::default(),
+            folder: None,
+            draft: drafts.join(format!("{}.sonevo", Id::new())),
+            drafts: drafts.to_owned(),
+            dirty: false,
+            mode: Mode::Song,
+            missing: Vec::new(),
+            engine: None,
+            output: None,
+            audio_error: None,
+        }
+    }
+
+    /// The folder the song's sounds are in.
+    pub fn working_folder(&self) -> &Path {
+        self.folder.as_deref().unwrap_or(&self.draft)
+    }
+
+    pub fn view(&self) -> View<'_> {
+        View {
+            song: &self.song,
+            notes: self.song.patterns.iter().map(|p| (p.id, &p.notes)).collect(),
+            folder: self.folder.as_deref(),
+            dirty: self.dirty,
+            can_undo: self.history.can_undo(),
+            can_redo: self.history.can_redo(),
+            pattern_mode: match self.mode {
+                Mode::Pattern(id) => Some(id),
+                Mode::Song => None,
+            },
+            missing: &self.missing,
+        }
+    }
+
+    /// Hands the song as it now is to the engine.
+    fn sync(&mut self) {
+        if let Mode::Pattern(id) = self.mode {
+            if self.song.pattern(id).is_none() {
+                self.mode = Mode::Song;
+            }
+        }
+        let folder = self.folder.clone().unwrap_or_else(|| self.draft.clone());
+        if let Some(engine) = &mut self.engine {
+            self.missing = engine.load(&self.song, self.mode, Some(&folder));
+        }
+    }
+
+    pub fn edit(&mut self, edit: Edit) -> Result<(), String> {
+        self.history.apply(&mut self.song, edit).map_err(|e| e.to_string())?;
+        self.dirty = true;
+        self.sync();
+        Ok(())
+    }
+
+    pub fn undo(&mut self) {
+        if self.history.undo(&mut self.song) {
+            self.dirty = true;
+            self.sync();
+        }
+    }
+
+    pub fn redo(&mut self) {
+        if self.history.redo(&mut self.song) {
+            self.dirty = true;
+            self.sync();
+        }
+    }
+
+    /// Another song in place of this one, its history forgotten.
+    pub fn replace(&mut self, song: Song, folder: Option<PathBuf>) {
+        if let Some(engine) = &mut self.engine {
+            engine.stop();
+            engine.seek(0);
+            engine.panic();
+        }
+        self.song = song;
+        self.folder = folder;
+        self.draft = self.drafts.join(format!("{}.sonevo", Id::new()));
+        self.history.clear();
+        self.dirty = false;
+        self.mode = Mode::Song;
+        self.sync();
+    }
+
+    pub fn open(&mut self, folder: &Path) -> Result<Vec<String>, String> {
+        let (song, mended) = sonevo_project::load(folder).map_err(|e| e.to_string())?;
+        self.replace(song, Some(folder.to_owned()));
+        Ok(mended)
+    }
+
+    /// Saves where the song was saved last; false if it never was.
+    pub fn save(&mut self) -> Result<bool, String> {
+        let Some(folder) = self.folder.clone() else { return Ok(false) };
+        sonevo_project::save(&folder, &self.song).map_err(|e| e.to_string())?;
+        self.dirty = false;
+        Ok(true)
+    }
+
+    /// Saves into `folder`, the sounds the song plays taken along.
+    pub fn save_as(&mut self, folder: &Path) -> Result<(), String> {
+        let from = self.working_folder().join("samples");
+        let to = folder.join("samples");
+        if from.is_dir() && from != to {
+            std::fs::create_dir_all(&to).map_err(|e| e.to_string())?;
+            for name in used_samples(&self.song) {
+                let (source, target) = (from.join(&name), to.join(&name));
+                if source.is_file() && !target.exists() {
+                    std::fs::copy(&source, &target).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        sonevo_project::save(folder, &self.song).map_err(|e| e.to_string())?;
+        self.folder = Some(folder.to_owned());
+        self.dirty = false;
+        self.sync();
+        Ok(())
+    }
+
+    /// Copies the sound at `source` into the song's folder: the name the song knows it by.
+    pub fn import_sample(&mut self, source: &Path) -> Result<String, String> {
+        let folder = self.working_folder().to_owned();
+        sonevo_project::import_sample(&folder, source).map_err(|e| e.to_string())
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        if self.mode != mode {
+            self.mode = mode;
+            if let Some(engine) = &mut self.engine {
+                engine.seek(0);
+            }
+            self.sync();
+        }
+    }
+
+    pub fn engine(&mut self) -> Option<&mut Engine> {
+        self.engine.as_mut()
+    }
+
+    /// Opens the output `settings` names, the engine playing out of it.
+    pub fn start_audio(&mut self, settings: &Settings) {
+        self.output = None;
+        self.engine = None;
+        let (engines, engine_in) = mpsc::channel();
+        let started = Output::start(settings, move |rate| {
+            let (engine, renderer) = Engine::new(rate as f32);
+            let _ = engines.send(engine);
+            renderer
+        });
+        match started.map(|output| (output, engine_in.recv())) {
+            Ok((output, Ok(engine))) => {
+                self.output = Some(output);
+                self.engine = Some(engine);
+                self.audio_error = None;
+            }
+            Ok((_, Err(_))) => self.audio_error = Some("the output started no engine".into()),
+            Err(e) => self.audio_error = Some(e.to_string()),
+        }
+        self.sync();
+    }
+
+    pub fn audio(&self) -> AudioStatus {
+        match &self.output {
+            Some(o) => AudioStatus {
+                device: Some(o.name.clone()),
+                sample_rate: o.sample_rate,
+                latency_ms: o.latency() * 1000.0,
+                failed: o.failed(),
+                error: None,
+            },
+            None => AudioStatus { error: self.audio_error.clone(), ..AudioStatus::default() },
+        }
+    }
+
+    pub fn status(&mut self) -> Status {
+        let audio = self.audio();
+        let Some(engine) = &mut self.engine else {
+            return Status {
+                position: 0.0,
+                playing: false,
+                master: 0.0,
+                channels: BTreeMap::new(),
+                inserts: BTreeMap::new(),
+                audio,
+            };
+        };
+        engine.collect();
+        let channels =
+            self.song.channels.iter().map(|c| (c.id, engine.meter(Meter::Channel(c.id)))).collect();
+        let inserts = self.song.inserts.iter().map(|i| (i.id, engine.meter(Meter::Insert(i.id)))).collect();
+        Status {
+            position: engine.position(),
+            playing: engine.playing(),
+            master: engine.meter(Meter::Master),
+            channels,
+            inserts,
+            audio,
+        }
+    }
+}
+
+/// The names of the sounds `song` plays, as its folder's `samples` holds them.
+pub fn used_samples(song: &Song) -> Vec<String> {
+    let instruments = song.channels.iter().filter_map(|c| c.instrument.sample.clone());
+    let clips = song.clips.iter().filter_map(|c| match &c.content {
+        sonevo_project::ClipContent::Audio { sample, .. } => Some(sample.clone()),
+        _ => None,
+    });
+    let mut names: Vec<String> = instruments.chain(clips).collect();
+    names.sort();
+    names.dedup();
+    names
+}

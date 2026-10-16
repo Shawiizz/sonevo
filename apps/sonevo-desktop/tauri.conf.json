@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Sonevo",
+  "identifier": "com.shawiizz.sonevo",
+  "build": {
+    "frontendDist": "../../frontend/dist/frontend/browser",
+    "devUrl": "http://localhost:4500",
+    "beforeDevCommand": { "script": "pnpm start", "cwd": "../../frontend" },
+    "beforeBuildCommand": { "script": "pnpm build", "cwd": "../../frontend" }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Sonevo",
+        "width": 1600,
+        "height": 960,
+        "minWidth": 1100,
+        "minHeight": 680,
+        "decorations": false,
+        "center": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Shawiizz",
+    "shortDescription": "Music studio",
+    "category": "Music",
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "../../LICENSE",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "French"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

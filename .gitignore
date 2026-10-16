@@ -1,2 +1,6 @@
 /target
 /.tools
+/frontend/node_modules
+/frontend/dist
+/frontend/.angular
+/apps/sonevo-desktop/gen
