@@ -137,6 +137,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).
 - ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus
   long ou plus court, sur les notes choisies ou toutes.
+- ✅ **Dans la gamme seulement** : les notes dessinées ou déplacées se rangent sur la gamme choisie.
 - ✅ **Aide à composer** : écrire une suite d'accords connue (pop, triste, années 50, jazz,
   épique, sombre, flamenco) dans la tonalité choisie, ou une mélodie tirée de la gamme.
 - ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.

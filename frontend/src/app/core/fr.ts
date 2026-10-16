@@ -256,6 +256,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'In the scale only': 'Dans la gamme seulement',
+  'Notes drawn or moved stay in the scale chosen':
+    'Les notes dessinées ou déplacées restent dans la gamme choisie',
   'Open a recent song…': 'Ouvrir un morceau récent…',
   'No song opened yet': 'Aucun morceau ouvert pour l’instant',
   'Copy it, settings and all': 'Le copier, avec ses réglages',

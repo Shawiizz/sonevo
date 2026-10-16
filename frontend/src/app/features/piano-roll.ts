@@ -89,6 +89,16 @@ type Drag =
           <option [value]="$index" [selected]="$index === scale()">{{ t(s.name) }}</option>
         }
       </select>
+      @if (scale() >= 0) {
+        <button
+          class="s-bar-btn"
+          [class.on]="keepToScale()"
+          (click)="keepToScale.set(!keepToScale())"
+          [title]="t('Notes drawn or moved stay in the scale chosen')"
+        >
+          {{ t('In the scale only') }}
+        </button>
+      }
       <div class="s-seg" role="radiogroup" [title]="t('What a click draws')">
         @for (c of chords; track c.notes) {
           <button
@@ -190,6 +200,7 @@ export class PianoRoll implements OnDestroy {
   /** The scale lit, by its index in SCALES (-1 for none), and its root. */
   protected readonly scale = signal(-1);
   protected readonly root = signal(9);
+  protected readonly keepToScale = signal(false);
 
   protected readonly chords = [
     { label: 'Note', notes: 1 },
@@ -266,6 +277,18 @@ export class PianoRoll implements OnDestroy {
       (this.host().nativeElement.clientHeight - RULER - VELOCITY) / this.rowHeight,
     );
     this.top = Math.min(127, middle + Math.floor(rows / 2));
+  }
+
+  /** `key`, or the nearest of the scale's when notes keep to it. */
+  private inKey(key: number): number {
+    const scale = SCALES[this.scale()]?.steps;
+    if (!this.keepToScale() || !scale || inScale(key, this.root(), scale)) return key;
+    for (let off = 1; off < 12; off++) {
+      for (const k of [key - off, key + off]) {
+        if (k >= 0 && k <= 127 && inScale(k, this.root(), scale)) return k;
+      }
+    }
+    return key;
   }
 
   private get current(): Note[] {
@@ -517,7 +540,7 @@ export class PianoRoll implements OnDestroy {
     } else {
       const start = this.snapped(this.tickAt(x));
       const scale = SCALES[this.scale()]?.steps ?? null;
-      const keys = chordKeys(this.keyAt(y), this.chord(), this.root(), scale).filter(
+      const keys = chordKeys(this.inKey(this.keyAt(y)), this.chord(), this.root(), scale).filter(
         (k) => k <= 127,
       );
       const from = this.working.length;
@@ -588,7 +611,7 @@ export class PianoRoll implements OnDestroy {
           this.working![i] = {
             ...o,
             start: o.start + shift,
-            key: Math.max(0, Math.min(127, o.key + dk)),
+            key: this.inKey(Math.max(0, Math.min(127, o.key + dk))),
           };
         }
         const lead = this.working![drag.picked[drag.picked.length - 1]];
