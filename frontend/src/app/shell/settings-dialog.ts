@@ -9,7 +9,6 @@ import { Themes } from '../core/theme';
 
 const BUFFERS = [64, 128, 256, 512, 1024, 2048];
 
-/** The settings: the sound card and its latency, the language. */
 @Component({
   selector: 'app-settings-dialog',
   imports: [FormsModule],

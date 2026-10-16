@@ -18,7 +18,6 @@ import type {
   View,
 } from './models';
 
-/** The commands of the engine's side, typed. */
 export const api = {
   song: () => invoke<View>('song'),
   edit: (edit: Edit) => invoke<View>('edit', { edit }),

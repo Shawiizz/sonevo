@@ -247,7 +247,6 @@ export class Browser {
   /** The folders gone into, from a place; none at the places themselves. */
   protected readonly trail = signal<Entry[]>([]);
   protected readonly here = computed(() => this.trail().at(-1) ?? null);
-  /** The sound being listened to. */
   protected readonly listening = signal<string | null>(null);
 
   protected add(name: string, label: string): void {
@@ -279,7 +278,6 @@ export class Browser {
       }
       return;
     }
-    // a sound clicked is heard; clicked again, it stops
     const again = this.listening() === e.path;
     this.listening.set(again ? null : e.path);
     try {

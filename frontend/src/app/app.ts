@@ -379,7 +379,6 @@ export class App {
   ];
   protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
-  /** The guide shows by itself the first time, and after from the title bar. */
   protected readonly guideOpen = signal(!seen());
   protected readonly kept = signal<Kept[]>([]);
 

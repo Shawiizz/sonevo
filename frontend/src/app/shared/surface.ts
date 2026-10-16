@@ -1,16 +1,13 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 
-/** A colour as `#rrggbb`, as Pixi takes it. */
 export function hex(color: string): number {
   return Number.parseInt(color.replace('#', ''), 16) || 0;
 }
 
-/** The CSS custom property `name` of the page, as a colour. */
 export function token(name: string): number {
   return hex(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 }
 
-/** The colours the canvases draw with, by what they are for. */
 const DARK = {
   accent: 0x8f8bf7,
   play: 0x5fd3a8,
@@ -73,7 +70,6 @@ const LIGHT: typeof DARK = {
   laneLine: 0xe2e5eb,
 };
 
-/** The colours of the theme shown. */
 export function palette(): typeof DARK {
   return document.documentElement.dataset['theme'] === 'light' ? LIGHT : DARK;
 }
@@ -85,14 +81,12 @@ const STYLE = new TextStyle({
 });
 
 /**
- * A WebGL canvas filling `host`, drawn again only when asked: shapes into `shapes`, words
- * from a pool that grows as they are needed; and over them what moves on its own (the
- * playhead), drawn again alone.
+ * A WebGL canvas filling `host`, drawn again only when asked; what moves on its own (the
+ * playhead) is drawn over it, alone.
  */
 export class Surface {
   readonly app = new Application();
   readonly shapes = new Graphics();
-  /** Drawn over the shapes: the playhead, a selection being made. */
   readonly over = new Graphics();
   private readonly words = new Container();
   private readonly pool: Text[] = [];
@@ -162,12 +156,10 @@ export class Surface {
     this.wanted = true;
   }
 
-  /** Only what is drawn over the rest: the playhead moved. */
   redrawOver(): void {
     this.wantedOver = true;
   }
 
-  /** Words at (x, y), their top left there unless `anchor` says otherwise. */
   text(words: string, x: number, y: number, color = 0xbcc2cf, size = 11, anchor = 0): void {
     let t = this.pool[this.used];
     if (!t) {

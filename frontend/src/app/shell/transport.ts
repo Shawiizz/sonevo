@@ -350,7 +350,6 @@ export class Transport {
     if (tempo !== this.studio.song()?.tempo) void this.studio.setSong({ tempo });
   }
 
-  /** The times tapped lately: their spacing is the tempo. */
   private taps: number[] = [];
 
   protected tap(): void {

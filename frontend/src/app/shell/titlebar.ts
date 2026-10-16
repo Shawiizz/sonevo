@@ -7,7 +7,6 @@ import { Menus } from '../shared/menu';
 import { Rename } from '../shared/rename';
 import { Files } from './files.service';
 
-/** The window's bar: the menu, the song's name, the window's buttons. */
 @Component({
   selector: 'app-titlebar',
   imports: [Icon],

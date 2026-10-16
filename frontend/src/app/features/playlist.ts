@@ -42,14 +42,11 @@ interface Body {
   height: number;
 }
 
-/** The mime type a sound of the browser is dragged with. */
 export const SOUND_DRAG = 'application/x-sonevo-sound';
 
 /**
  * The playlist: the song's tracks, and on them the patterns, sounds and automation placed
- * in time. Click an empty spot to place the pattern edited; drag a clip to move it, its end
- * to make it longer (a pattern repeats); right-click deletes. The ruler moves where playing
- * starts, and dragged along it, sets the loop.
+ * in time. Dragged along, the ruler sets the loop.
  */
 @Component({
   selector: 'app-playlist',
@@ -167,7 +164,6 @@ export class Playlist implements OnDestroy {
   private selected = new Set<Id>();
   private working: Clip[] | null = null;
   private drag: Drag | null = null;
-  /** The loop as it is being dragged along the ruler. */
   private loopPreview: { start: number; end: number } | null = null;
 
   constructor() {
@@ -269,7 +265,6 @@ export class Playlist implements OnDestroy {
     if (!song) return;
     const tracks = this.tracks;
 
-    // the lanes
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
       if (y + this.laneHeight < RULER || y > height) return;
@@ -284,7 +279,6 @@ export class Playlist implements OnDestroy {
         });
     });
 
-    // the loop, then the grid
     const loop = this.loopPreview ?? song.loopRegion;
     if (loop) {
       const a = Math.max(HEADERS, this.x(loop.start));
@@ -304,7 +298,6 @@ export class Playlist implements OnDestroy {
       );
     }
 
-    // the clips
     for (const clip of this.clips) {
       const lane = tracks.findIndex((t) => t.id === clip.track);
       if (lane < 0) continue;
@@ -328,7 +321,6 @@ export class Playlist implements OnDestroy {
       this.paintContent(s, clip, x, top + 17, w, h - 19, color);
     }
 
-    // the headers
     g.rect(0, RULER, HEADERS, height - RULER).fill(palette().base);
     tracks.forEach((track, i) => {
       const y = this.laneY(i);
@@ -347,7 +339,6 @@ export class Playlist implements OnDestroy {
     });
     g.rect(HEADERS - 1, RULER, 1, height - RULER).fill(palette().line);
 
-    // the ruler
     g.rect(0, 0, width, RULER).fill(palette().base);
     g.rect(0, RULER - 1, width, 1).fill(palette().line);
     if (loop) {
@@ -366,10 +357,8 @@ export class Playlist implements OnDestroy {
     s.text(this.t('Tracks'), 12, 6, palette().text3, 11);
   }
 
-  /** What is drawn over the clips: a selection being made, the playhead. */
   private paintOver(s: Surface): void {
     const { width, height } = s;
-    // a selection being drawn
     if (this.drag?.kind === 'select') {
       const d = this.drag;
       s.over
@@ -383,7 +372,6 @@ export class Playlist implements OnDestroy {
         .stroke({ width: 1, color: palette().accent });
     }
 
-    // where playing is
     if (!this.studio.view()?.patternMode) {
       const x = this.x(this.studio.status().position);
       if (x >= HEADERS && x <= width) {
@@ -393,7 +381,6 @@ export class Playlist implements OnDestroy {
     }
   }
 
-  /** What a clip holds, drawn small inside it: notes, a line of automation, a sound. */
   private paintContent(
     s: Surface,
     clip: Clip,
@@ -456,7 +443,6 @@ export class Playlist implements OnDestroy {
     } else {
       const info = this.studio.sample(content.sample);
       if (!info || !info.peaks.length) return;
-      // the sound's outline, as long as it lasts at the song's tempo
       const length = this.studio.ticks(info.seconds);
       const offset = clip.offset ?? 0;
       const visible = Math.min(clip.length, length - offset);
@@ -595,7 +581,6 @@ export class Playlist implements OnDestroy {
     });
   }
 
-  /** The automation clip whose line is under (x, y), if any. */
   private automationAt(x: number, y: number): Body | null {
     const hit = this.hit(x, y);
     if (!hit || hit.clip.content.type !== 'automation') return null;
@@ -620,7 +605,6 @@ export class Playlist implements OnDestroy {
     return body.top + body.height - point.value * body.height;
   }
 
-  /** A point of an automation clip taken, added or (right-click) taken out. */
   private editPoint(event: PointerEvent, body: Body, x: number, y: number): void {
     const near = body.points.findIndex(
       (p) => Math.abs(this.pointX(body, p) - x) < 7 && Math.abs(this.pointY(body, p) - y) < 9,
@@ -655,7 +639,6 @@ export class Playlist implements OnDestroy {
     return { ...clip, content: { ...clip.content, points } };
   }
 
-  /** The pattern edited placed where clicked, as long as it is. */
   private place(x: number, y: number): void {
     const track = this.tracks[this.laneAt(y)];
     const pattern = this.studio.pattern();
@@ -809,7 +792,6 @@ export class Playlist implements OnDestroy {
     this.working = this.working.filter((c) => c.id !== hit.clip.id);
   }
 
-  /** The clips as changed, sent as one edit. */
   private commit(): void {
     const working = this.working;
     const song = this.studio.song();
@@ -997,7 +979,6 @@ export class Playlist implements OnDestroy {
     }
   }
 
-  /** A sound of the browser dropped on a track: an audio clip there. */
   protected async drop(event: DragEvent): Promise<void> {
     const path = event.dataTransfer?.getData(SOUND_DRAG);
     if (!path) return;

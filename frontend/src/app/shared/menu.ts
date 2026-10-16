@@ -6,7 +6,6 @@ export interface MenuItem {
   disabled?: boolean;
   danger?: boolean;
   run?: () => void;
-  /** A line between the items before and after. */
   separator?: boolean;
 }
 
@@ -21,7 +20,6 @@ export class Menus {
     this.open.set({ x: event.clientX, y: event.clientY, items });
   }
 
-  /** Under the element clicked. */
   below(event: MouseEvent, items: MenuItem[]): void {
     event.stopPropagation();
     const box = (event.currentTarget as Element).getBoundingClientRect();

@@ -5,7 +5,6 @@ import { Dock, Studio } from '../core/studio.service';
 interface Step {
   title: string;
   text: string;
-  /** What the step shows, a button away. */
   show?: { label: string; dock?: Dock; play?: boolean };
 }
 

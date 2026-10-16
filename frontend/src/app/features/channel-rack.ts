@@ -18,7 +18,6 @@ interface Row {
   icon: string;
 }
 
-/** The key a step sequencer's step plays. */
 const STEP_KEY = 60;
 const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', 'Rim', 'Cowbell'];
 

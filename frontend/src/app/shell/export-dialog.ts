@@ -14,7 +14,6 @@ import { Files } from './files.service';
 
 type Part = 'song' | 'loop' | 'stems';
 
-/** Exporting: what is played to files, in what quality. */
 @Component({
   selector: 'app-export-dialog',
   template: `

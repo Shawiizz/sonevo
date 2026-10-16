@@ -45,11 +45,8 @@ export class Studio {
   readonly status = signal<Status>(SILENT);
   readonly devices = signal<DeviceInfo[]>([]);
   readonly plugins = signal<PluginInfo[]>([]);
-  /** The settings of the plugins asked about, by bundle and id, once known. */
   private readonly pluginParams = signal<Record<string, ParamInfo[]>>({});
-  /** The plugins and sounds asked about: asked once, the answer coming later. */
   private readonly asked = new Set<string>();
-  /** The sounds of the song read so far, by name. */
   readonly samples = signal<Record<string, SampleInfo>>({});
   readonly error = signal<string | null>(null);
 
@@ -79,7 +76,6 @@ export class Studio {
     return song.channels.find((c) => c.id === this.channelId()) ?? song.channels[0] ?? null;
   });
 
-  /** The device shown in the device panel: one chosen, or the channel's instrument. */
   readonly device = computed<{ device: Device; owner: string } | null>(() => {
     const song = this.song();
     if (!song) return null;
@@ -96,7 +92,6 @@ export class Studio {
   });
 
   constructor() {
-    // the keyboards plugged in play the channel chosen
     effect(() => void api.playWithKeyboards(this.channel()?.id ?? null).catch(() => undefined));
   }
 
@@ -112,7 +107,6 @@ export class Studio {
     await api.onKey((key, on) => this.played(key, on ? 0.8 : 0, on));
   }
 
-  /** The song as the engine's side sent it back. */
   show(view: View): void {
     this.view.set(view);
     const song = view.song;
@@ -153,14 +147,12 @@ export class Studio {
     return this.devices().find((d) => d.name === name) ?? null;
   }
 
-  /** A device's setting: as set, or its default. */
   value(device: Device, param: string): number {
     const set = device.params?.[param];
     if (set !== undefined) return set;
     return this.info(device)?.params.find((p) => p.id === param)?.default ?? 0;
   }
 
-  /** The sound `name`, read once and kept; null until read. */
   sample(name: string): SampleInfo | null {
     if (!this.asked.has(name)) {
       this.asked.add(name);
@@ -172,7 +164,6 @@ export class Studio {
     return this.samples()[name] ?? null;
   }
 
-  /** Ticks to `seconds` at the song's tempo. */
   ticks(seconds: number): number {
     return (seconds * (this.song()?.tempo ?? 120) * PPQ) / 60;
   }
@@ -196,19 +187,16 @@ export class Studio {
     return this.edit({ type: 'putInsert', insert, index: null });
   }
 
-  /** A new channel playing `name`, a built-in instrument; selected once added. */
   async addChannel(name: string, label: string, sample?: string): Promise<void> {
     const instrument: Device = { id: newId(), kind: { type: 'builtin', name }, params: {}, sample };
     await this.addChannelOf(instrument, label);
   }
 
-  /** A new channel playing `plugin`. */
   async addPlugin(plugin: PluginInfo): Promise<void> {
     const kind = { type: 'clap' as const, bundle: plugin.bundle, plugin: plugin.id };
     await this.addChannelOf({ id: newId(), kind, params: {} }, plugin.name);
   }
 
-  /** A plugin device described as a built-in one is: its settings asked for once. */
   private pluginInfo(device: Device): DeviceInfo | null {
     const kind = device.kind;
     if (kind.type !== 'clap') return null;
@@ -227,7 +215,6 @@ export class Studio {
     return { name: kind.plugin, label: plugin.name, instrument: plugin.instrument, params };
   }
 
-  /** The plugin a device plays, if it is one installed. */
   plugin(device: Device): PluginInfo | null {
     const kind = device.kind;
     if (kind.type !== 'clap') return null;
@@ -278,10 +265,7 @@ export class Studio {
     return (await this.edit({ type: 'putInsert', insert, index: null })) ? insert : null;
   }
 
-  /**
-   * A new track holding an automation of `target`, flat at `value` (0 to 1) over the song,
-   * named `name`: its line then drawn in the playlist.
-   */
+  /** A new track holding an automation of `target`, flat at `value` (0 to 1) over the song. */
   async automate(target: Target, value: number, name: string): Promise<void> {
     const song = this.song();
     if (!song) return;
@@ -314,7 +298,6 @@ export class Studio {
     });
   }
 
-  /** The song's name, tempo, signature or loop changed, the rest as it is. */
   setSong(
     change: Partial<Pick<Song, 'name' | 'tempo' | 'signature' | 'loopRegion'>>,
   ): Promise<boolean> {
@@ -332,7 +315,6 @@ export class Studio {
 
   selectPattern(id: Id): void {
     this.patternId.set(id);
-    // a pattern played alone follows the one chosen
     if (this.view()?.patternMode) void this.setMode(id);
   }
 
@@ -351,10 +333,7 @@ export class Studio {
     return tick % Math.max(1, pattern.length);
   }
 
-  /**
-   * A key played on the computer's keyboard or a MIDI one: while writing, the pattern playing
-   * gets the note, from where the key went down to where it came up, on the grid's steps.
-   */
+  /** While writing, a key held goes into the pattern playing as a note, on the grid's steps. */
   played(key: number, velocity: number, on: boolean): void {
     if (!this.writing()) return;
     const at = this.patternTick();
@@ -387,7 +366,6 @@ export class Studio {
     else void api.play();
   }
 
-  /** Records the input from where playing is, the song playing; or stops. */
   async toggleRecord(): Promise<void> {
     if (this.status().recording !== null) {
       await this.stopRecording();

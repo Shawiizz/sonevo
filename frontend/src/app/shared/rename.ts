@@ -109,7 +109,6 @@ export class RenameField {
   private readonly input = viewChild<ElementRef<HTMLInputElement>>('input');
 
   constructor() {
-    // the field focused and its text chosen, each time it opens
     effect(() => {
       const input = this.input()?.nativeElement;
       input?.focus();

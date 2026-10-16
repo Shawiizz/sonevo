@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { Studio } from '../core/studio.service';
 
-/** The meter's range: -60 dB at the bottom, +6 at the top. */
 const FLOOR = -60;
 const TOP = 6;
 
@@ -63,7 +62,6 @@ export class Meter {
       // each status read, even with the same peak, lets the bar fall a little
       this.studio.status();
       const peak = this.peak();
-      // up at once, down a little each time
       this.shown.update((was) => Math.max(peak, was * 0.82));
     });
   }

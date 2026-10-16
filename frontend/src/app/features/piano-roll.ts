@@ -29,7 +29,6 @@ import { Icon } from '../shared/icon';
 import { hex, palette, Surface } from '../shared/surface';
 
 const KEYS = 64;
-/** The notes copied last. */
 let copied: Note[] = [];
 const RULER = 24;
 const VELOCITY = 64;
@@ -45,8 +44,7 @@ type Drag =
 
 /**
  * The piano roll: the chosen channel's notes in the pattern edited, time across, keys up the
- * side. Click to draw a note, drag it to move it, its end to make it longer; right-click
- * deletes. The other channels' notes show faintly behind.
+ * side; the other channels' notes faintly behind.
  */
 @Component({
   selector: 'app-piano-roll',
@@ -194,7 +192,6 @@ export class PianoRoll implements OnDestroy {
   private top = 84;
   private rowHeight = 14;
   private selected = new Set<number>();
-  /** The notes as they are being changed, before the change is sent. */
   private working: Note[] | null = null;
   private drag: Drag | null = null;
   private lastLength = PPQ / 2;
@@ -282,7 +279,6 @@ export class PianoRoll implements OnDestroy {
     const bar = this.studio.bar();
     const beat = PPQ;
 
-    // rows: the black keys' darker; with a scale, its notes' lighter and the others' darker
     const scale = SCALES[this.scale()]?.steps;
     for (let key = this.top; key >= 0; key--) {
       const y = this.y(key);
@@ -300,12 +296,10 @@ export class PianoRoll implements OnDestroy {
       if (key % 12 === 0)
         g.rect(KEYS, y + this.rowHeight - 1, width - KEYS, 1).fill(palette().gridOctave);
     }
-    // past the pattern's end, dimmed
     const end = this.x(length);
     if (end < width)
       g.rect(end, RULER, width - end, bottom - RULER).fill({ color: palette().shade, alpha: 0.45 });
 
-    // the grid
     const first = Math.max(0, Math.floor(this.scrollX / STEP) * STEP);
     for (let tick = first; this.x(tick) < width; tick += STEP) {
       const x = this.x(tick);
@@ -320,7 +314,6 @@ export class PianoRoll implements OnDestroy {
       g.rect(Math.round(x), RULER, 1, bottom - RULER).fill(strong);
     }
 
-    // the other channels' notes, faintly
     const pattern = this.studio.pattern();
     const channel = this.studio.channel();
     const song = this.studio.song();
@@ -340,7 +333,6 @@ export class PianoRoll implements OnDestroy {
       }
     }
 
-    // the notes
     const notes = this.current;
     notes.forEach((n, i) => {
       const x = this.x(n.start);
@@ -362,7 +354,6 @@ export class PianoRoll implements OnDestroy {
         s.text(keyName(n.key), x + 4, y + 1, palette().onColor, 10);
     });
 
-    // the velocity lane
     g.rect(0, bottom, width, VELOCITY).fill(palette().void);
     g.rect(0, bottom, width, 1).fill(palette().gridBeat);
     s.text(this.t('Velocity'), 8, bottom + 6, palette().text3, 10);
@@ -375,7 +366,6 @@ export class PianoRoll implements OnDestroy {
       g.circle(x + 1, height - 4 - h, 3).fill(picked ? palette().picked : color);
     });
 
-    // the keyboard: white keys under, the black ones over their left
     g.rect(0, RULER, KEYS - 1, bottom - RULER).fill(palette().keyWhite);
     for (let key = this.top; key >= 0; key--) {
       const y = this.y(key);
@@ -392,7 +382,6 @@ export class PianoRoll implements OnDestroy {
       if (key % 12 === 0) s.text(keyName(key), KEYS - 5, y + 1, palette().keyLabel, 10, 1);
     }
 
-    // the ruler
     g.rect(0, 0, width, RULER).fill(palette().base);
     g.rect(0, RULER - 1, width, 1).fill(palette().gridBeat);
     for (let tick = Math.floor(this.scrollX / bar) * bar; this.x(tick) < width; tick += bar) {
@@ -404,12 +393,10 @@ export class PianoRoll implements OnDestroy {
     if (end < width) g.rect(end - 1, 0, 2, bottom).fill({ color: palette().accent, alpha: 0.7 });
   }
 
-  /** What is drawn over the notes: a selection being made, the playhead. */
   private paintOver(s: Surface): void {
     const length = this.studio.pattern()?.length ?? this.studio.bar();
     const bottom = s.height - VELOCITY;
     const pattern = this.studio.pattern();
-    // a selection being drawn
     if (this.drag?.kind === 'select') {
       const d = this.drag;
       const [x0, x1] = [Math.min(d.x0, d.x1), Math.max(d.x0, d.x1)];
@@ -420,7 +407,6 @@ export class PianoRoll implements OnDestroy {
         .stroke({ width: 1, color: palette().accent });
     }
 
-    // where playing is, the pattern going round
     const view = this.studio.view();
     if (view?.patternMode && view.patternMode === pattern?.id && this.studio.status().playing) {
       const at = this.studio.status().position % Math.max(1, length);
@@ -717,7 +703,6 @@ export class PianoRoll implements OnDestroy {
     this.surface?.redraw();
   }
 
-  /** Writing on or off: on, the pattern plays alone, going round. */
   protected write(): void {
     const on = !this.studio.writing();
     this.studio.writing.set(on);
@@ -749,7 +734,6 @@ export class PianoRoll implements OnDestroy {
       this.selected = new Set(notes.map((_, i) => i));
       this.surface?.redraw();
     } else if (event.ctrlKey && event.key.toLowerCase() === 'd' && this.selected.size) {
-      // the selection copied right after itself
       const picked = [...this.selected].map((i) => notes[i]);
       const start = Math.min(...picked.map((n) => n.start));
       const end = Math.max(...picked.map((n) => n.start + n.length));
@@ -782,7 +766,6 @@ export class PianoRoll implements OnDestroy {
       this.selected = new Set(copied.map((_, i) => notes.length + i));
       this.commit();
     } else if (event.key.toLowerCase() === 'q' && !event.ctrlKey) {
-      // the notes chosen, or all, put on the grid
       const snap = this.snap();
       const all = this.selected.size === 0;
       this.working = notes.map((n, i) =>

@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
-/** Where `value` is along a knob from 0 to 1, a log knob's steps multiplying. */
 export function toNormal(value: number, min: number, max: number, log: boolean): number {
   const v = Math.min(max, Math.max(min, value));
   const p = log && min > 0 ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
@@ -12,7 +11,6 @@ export function fromNormal(position: number, min: number, max: number, log: bool
   return log && min > 0 ? min * Math.pow(max / min, p) : min + p * (max - min);
 }
 
-/** A value as a knob shows it: a few figures, its unit after. */
 export function formatValue(value: number, unit: string): string {
   if (unit === 's') {
     return value < 1 ? `${Math.round(value * 1000)} ms` : `${value.toFixed(2)} s`;
@@ -106,7 +104,6 @@ export class Knob {
   readonly label = input('');
   readonly size = input(36);
   readonly color = input('var(--s-accent)');
-  /** Shows the value as it is wanted, in place of the number. */
   readonly format = input<((value: number) => string) | null>(null);
 
   readonly live = output<number>();
@@ -122,7 +119,6 @@ export class Knob {
     return format ? format(this.shown()) : formatValue(this.shown(), this.unit());
   });
 
-  /** A knob that goes from the middle: from 0 when its range is either side of it. */
   private readonly origin = computed(() =>
     this.min() < 0 && this.max() > 0 && !this.log()
       ? toNormal(0, this.min(), this.max(), false)

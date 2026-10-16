@@ -8,7 +8,6 @@ import { Icon } from '../shared/icon';
 import { Knob, toNormal } from '../shared/knob';
 import { Menus } from '../shared/menu';
 
-/** What each built-in device does, said plainly. */
 const ABOUT: Record<string, string> = {
   'sonevo.synth':
     'A synthesizer: two oscillators make the tone, a filter makes it darker or brighter, envelopes shape how each note starts and fades.',
@@ -227,7 +226,6 @@ export class DevicePanel {
     if (!device || device.kind.type !== 'clap') return '';
     return this.studio.plugin(device)?.name ?? device.kind.plugin;
   });
-  /** Whether the device shown is an effect of the mixer, to be turned off and on. */
   protected readonly effect = computed(() => {
     const song = this.studio.song();
     const id = this.shown()?.device.id;
@@ -245,7 +243,6 @@ export class DevicePanel {
     return ABOUT[this.info()?.name ?? ''] ?? null;
   });
 
-  /** The settings in groups, as the synth's are: the oscillators, the filter, the shape. */
   protected readonly groups = computed(() => {
     const params = this.info()?.params ?? [];
     if (this.info()?.name !== 'sonevo.synth') return [{ name: '', params }];

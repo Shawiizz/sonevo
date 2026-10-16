@@ -80,7 +80,6 @@ export class Files {
     }
   }
 
-  /** Whether the export dialog shows. */
   readonly exporting = signal(false);
 
   exportWav(): void {
@@ -129,7 +128,6 @@ export class Files {
   }
 }
 
-/** A file's name without its folders or its extension. */
 export function soundName(path: string): string {
   const file = path.split(/[\\/]/).pop() ?? path;
   return file.replace(/\.[^.]+$/, '');

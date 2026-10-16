@@ -3,7 +3,6 @@
 export type Id = string;
 export type Ticks = number;
 
-/** Ticks to a quarter note. */
 export const PPQ = 960;
 export const STEP = PPQ / 4;
 
@@ -133,14 +132,12 @@ export interface View {
   canRedo: boolean;
   patternMode: Id | null;
   missing: string[];
-  /** The version played in place of the song, to compare by ear. */
   comparing: string | null;
 }
 
 export interface VersionInfo {
   id: string;
   name: string;
-  /** Made as the song was saved, not named. */
   automatic: boolean;
   /** Seconds since 1970. */
   time: number;
@@ -207,7 +204,6 @@ export function sampleLabel(name: string): string {
   return name.replace(/ ?[0-9a-f]{16}\.[^.]+$/, '') || name;
 }
 
-/** A sound of the song: how long it lasts, and its outline. */
 export interface SampleInfo {
   seconds: number;
   peaks: number[];
@@ -223,7 +219,6 @@ export interface Kept {
   time: number;
 }
 
-/** A plugin installed on this computer. */
 export interface PluginInfo {
   bundle: string;
   id: string;
@@ -265,7 +260,6 @@ export type Edit =
   | { type: 'removeArrangement'; index: number }
   | { type: 'batch'; edits: Edit[] };
 
-/** The colours channels, patterns and mixer tracks take in turn. */
 export const COLORS = [
   '#5ab0f0',
   '#f2b84b',
@@ -287,12 +281,10 @@ export function builtinName(device: Device): string | null {
   return device.kind.type === 'builtin' ? device.kind.name : null;
 }
 
-/** A bar's length in ticks. */
 export function barLength(signature: Signature): Ticks {
   return (signature.beats * PPQ * 4) / Math.max(1, signature.unit);
 }
 
-/** A position as bars, beats and sixteenths, each from 1. */
 export function formatPosition(ticks: Ticks, signature: Signature): string {
   const beat = (PPQ * 4) / Math.max(1, signature.unit);
   const bar = beat * signature.beats;
@@ -305,7 +297,6 @@ export function formatPosition(ticks: Ticks, signature: Signature): string {
 
 export const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-/** The scales the piano roll lights, by the steps of their notes above their root. */
 export const SCALES: { name: string; steps: number[] }[] = [
   { name: 'Major', steps: [0, 2, 4, 5, 7, 9, 11] },
   { name: 'Minor', steps: [0, 2, 3, 5, 7, 8, 10] },
@@ -326,7 +317,6 @@ export function chordKeys(
   scale: number[] | null,
 ): number[] {
   if (!scale) return [0, 4, 7, 10].slice(0, notes).map((step) => key + step);
-  // the scale's notes up from the key, over two octaves
   const steps: number[] = [];
   for (let k = key; steps.length < 7 && k < key + 24; k++) {
     if (inScale(k, root, scale)) steps.push(k);
@@ -335,7 +325,6 @@ export function chordKeys(
   return [0, 2, 4, 6].slice(0, notes).map((i) => steps[i] ?? key);
 }
 
-/** Whether `key` is a note of the scale `scale` from `root` (0 is C). */
 export function inScale(key: number, root: number, scale: number[]): boolean {
   return scale.includes((((key - root) % 12) + 12) % 12);
 }
