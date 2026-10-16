@@ -20,6 +20,7 @@ import { VersionsPanel } from './features/versions-panel';
 import { Files } from './shell/files.service';
 import { Command, Palette } from './shell/palette';
 import { ExportDialog } from './shell/export-dialog';
+import { Guide } from './shell/guide';
 import { RecoveryDialog } from './shell/recovery-dialog';
 import { SettingsDialog } from './shell/settings-dialog';
 import { Titlebar } from './shell/titlebar';
@@ -27,6 +28,16 @@ import { Transport } from './shell/transport';
 import { Icon } from './shared/icon';
 import { Menus } from './shared/menu';
 import { RenameField } from './shared/rename';
+
+const GUIDE_SEEN = 'sonevo.guide.seen';
+
+function seen(): boolean {
+  try {
+    return localStorage.getItem(GUIDE_SEEN) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /** The computer's keys as a piano, by where they are whatever the layout: two octaves. */
 const PIANO: Record<string, number> = {
@@ -69,6 +80,7 @@ const PIANO: Record<string, number> = {
     ChannelRack,
     DevicePanel,
     ExportDialog,
+    Guide,
     Icon,
     Mixer,
     Palette,
@@ -82,7 +94,11 @@ const PIANO: Record<string, number> = {
     VersionsPanel,
   ],
   template: `
-    <app-titlebar (settings)="settingsOpen.set(true)" (palette)="paletteOpen.set(true)" />
+    <app-titlebar
+      (settings)="settingsOpen.set(true)"
+      (palette)="paletteOpen.set(true)"
+      (guide)="guideOpen.set(true)"
+    />
     <app-transport />
     <div class="body">
       <aside class="side left"><app-browser /></aside>
@@ -188,6 +204,9 @@ const PIANO: Record<string, number> = {
       <app-recovery-dialog [kept]="kept()" (closed)="kept.set([])" (done)="forgot($event)" />
     }
     <s-rename />
+    @if (guideOpen() && !kept().length) {
+      <app-guide (closed)="closeGuide()" />
+    }
     @if (files.exporting()) {
       <app-export-dialog (closed)="files.exporting.set(false)" />
     }
@@ -360,10 +379,21 @@ export class App {
   ];
   protected readonly side = signal<'device' | 'versions'>('device');
   protected readonly settingsOpen = signal(false);
+  /** The guide shows by itself the first time, and after from the title bar. */
+  protected readonly guideOpen = signal(!seen());
   protected readonly kept = signal<Kept[]>([]);
 
   constructor() {
     void api.kept().then((kept) => this.kept.set(kept));
+  }
+
+  protected closeGuide(): void {
+    this.guideOpen.set(false);
+    try {
+      localStorage.setItem(GUIDE_SEEN, '1');
+    } catch {
+      // without storage it shows again next time: no harm
+    }
   }
 
   protected forgot(k: Kept): void {

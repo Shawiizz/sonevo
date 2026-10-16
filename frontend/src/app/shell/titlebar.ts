@@ -16,6 +16,7 @@ import { Files } from './files.service';
       <button class="s-bar-btn" (click)="fileMenu($event)">{{ t('File') }}</button>
       <button class="s-bar-btn" (click)="editMenu($event)">{{ t('Edit') }}</button>
       <button class="s-bar-btn" (click)="settings.emit()">{{ t('Settings') }}</button>
+      <button class="s-bar-btn" (click)="guide.emit()">{{ t('First steps') }}</button>
     </div>
     <div class="title" data-tauri-drag-region>
       <span data-tauri-drag-region>{{ studio.song()?.name }}</span>
@@ -110,6 +111,7 @@ export class Titlebar {
   private readonly menus = inject(Menus);
   readonly settings = output();
   readonly palette = output();
+  readonly guide = output();
 
   protected fileMenu(event: MouseEvent): void {
     const t = this.t;
