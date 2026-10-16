@@ -411,6 +411,30 @@ export class ChannelRack {
     void this.studio.setNotes(pattern.id, row.channel.id, notes);
   }
 
+  /** A step-long note every `every` steps of the pattern, in place of its notes. */
+  private fill(channel: Channel, every: number): void {
+    const pattern = this.studio.pattern();
+    if (!pattern) return;
+    const key = this.studio.notes(pattern.id, channel.id)[0]?.key ?? STEP_KEY;
+    const notes: Note[] = [];
+    for (let start = 0; start < pattern.length; start += every * STEP) {
+      notes.push({ start, length: STEP, key, velocity: 0.8 });
+    }
+    void this.studio.setNotes(pattern.id, channel.id, notes);
+  }
+
+  /** Every note `by` steps later, those past the end round to the start. */
+  private shift(channel: Channel, by: number): void {
+    const pattern = this.studio.pattern();
+    if (!pattern) return;
+    const length = pattern.length;
+    const notes = this.studio.notes(pattern.id, channel.id).map((n) => ({
+      ...n,
+      start: (((n.start + by * STEP) % length) + length) % length,
+    }));
+    void this.studio.setNotes(pattern.id, channel.id, notes);
+  }
+
   protected setSwing(swing: number): void {
     const pattern = this.studio.pattern();
     if (pattern)
@@ -513,6 +537,12 @@ export class ChannelRack {
         run: () => this.studio.putChannel(channel, index + 1),
       },
       { separator: true, label: '' },
+      ...[2, 4, 8].map((every) => ({
+        label: t('Fill every {n} steps', { n: every }),
+        run: () => this.fill(channel, every),
+      })),
+      { label: t('Move its notes a step later'), run: () => this.shift(channel, 1) },
+      { label: t('Move its notes a step earlier'), run: () => this.shift(channel, -1) },
       {
         label: t('Clear its notes in this pattern'),
         run: () => {

@@ -75,6 +75,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   nappe, grande salle, pompe sidechain…), et les tiens, enregistrés à côté des réglages.
 - ✅ **Arpégiateur** par voie : montant, descendant, aller-retour ou au hasard, de 1/4 à 1/32
   (et en triolets), sur 1 à 4 octaves.
+- ✅ Rack : remplir tous les 2, 4 ou 8 pas, décaler les notes d'un pas.
 - ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
 - ✅ **Spectre** du master dans le mixeur : où est l'énergie, des graves aux aigus, en direct.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui

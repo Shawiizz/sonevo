@@ -255,6 +255,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Fill every {n} steps': 'Remplir tous les {n} pas',
+  'Move its notes a step later': "Décaler ses notes d'un pas plus tard",
+  'Move its notes a step earlier': "Décaler ses notes d'un pas plus tôt",
   Spectrum: 'Spectre',
   'The master across the spectrum: the lows on the left, the highs on the right':
     'Le master sur tout le spectre : les graves à gauche, les aigus à droite',
