@@ -15,8 +15,8 @@ pub const PARAMS: &[Param] = &[
 ];
 
 const VOICES: usize = 16;
-/// The longest loop, a period of the lowest note played: 20 Hz at 96 kHz.
-const LOOP: usize = 4800;
+/// The longest loop, a period of the lowest note played and a little more: 20 Hz at 192 kHz.
+const LOOP: usize = 9604;
 
 #[derive(Clone)]
 struct Voice {
@@ -50,6 +50,14 @@ impl Voice {
             age: 0,
         }
     }
+}
+
+/// The next of a noise from -1 to 1, `seed` its state.
+fn noise(seed: &mut u32) -> f32 {
+    *seed ^= *seed << 13;
+    *seed ^= *seed >> 17;
+    *seed ^= *seed << 5;
+    *seed as f32 / u32::MAX as f32 * 2.0 - 1.0
 }
 
 /// How much the softening takes of the newer sample: half and half is the softest.
@@ -86,13 +94,6 @@ impl Strings {
         0.001f32.powf(1.0 / (seconds * frequency).max(1.0))
     }
 
-    fn noise(&mut self) -> f32 {
-        self.seed ^= self.seed << 13;
-        self.seed ^= self.seed >> 17;
-        self.seed ^= self.seed << 5;
-        self.seed as f32 / u32::MAX as f32 * 2.0 - 1.0
-    }
-
     fn press(&mut self, key: u8, velocity: f32) {
         for voice in &mut self.voices {
             voice.age = voice.age.saturating_add(1);
@@ -106,21 +107,19 @@ impl Strings {
         let frequency = key_frequency(f32::from(key));
         // the softening makes the loop longer, by as much as it leans on the older sample
         let length =
-            (self.sample_rate / frequency - (1.0 - lean(self.values[2]))).clamp(2.0, (LOOP - 2) as f32);
+            (self.sample_rate / frequency - (1.0 - lean(self.values[2]))).clamp(2.0, (LOOP - 4) as f32);
         let keep = Strings::keep(frequency, self.values[1]);
-        // the pluck: noise, darker the lower its setting
+        // the pluck: noise, darker the lower its setting, written straight into the loop
         let bright = 0.05 + 0.95 * self.values[0];
         let mut smooth = 0.0;
-        let span = length.ceil() as usize + 2;
-        let mut burst = [0.0f32; LOOP];
-        for sample in burst.iter_mut().take(span) {
-            smooth += (self.noise() - smooth) * bright;
+        let span = (length.ceil() as usize + 2).min(LOOP - 1);
+        let voice = &mut self.voices[at];
+        for sample in voice.line.iter_mut().take(span) {
+            smooth += (noise(&mut self.seed) - smooth) * bright;
             *sample = smooth * velocity.clamp(0.0, 1.0);
         }
-        let voice = &mut self.voices[at];
-        voice.line[..span].copy_from_slice(&burst[..span]);
         voice.line[span..].fill(0.0);
-        voice.write = span;
+        voice.write = span % LOOP;
         voice.length = length;
         voice.keep = keep;
         voice.last = 0.0;

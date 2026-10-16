@@ -129,10 +129,16 @@ fn my_templates(app: State<App>) -> Vec<String> {
 #[tauri::command(async)]
 fn save_template(app: State<App>, name: String) -> Answer<()> {
     let folder = template_folder(&app, &name)?;
+    // written beside first: the one of that name goes only once the new one is whole
+    let new = folder.with_extension("sonevo-new");
+    if new.exists() {
+        std::fs::remove_dir_all(&new).map_err(|e| e.to_string())?;
+    }
+    app.studio().save_template(&new)?;
     if folder.exists() {
         std::fs::remove_dir_all(&folder).map_err(|e| e.to_string())?;
     }
-    app.studio().save_template(&folder)
+    std::fs::rename(&new, &folder).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -689,7 +695,7 @@ fn remake(
     named: &str,
     change: impl FnOnce(&[f32], &[f32]) -> (Vec<f32>, Vec<f32>),
 ) -> Answer<String> {
-    if sample.contains(['/', '\\']) || sample.contains("..") {
+    if !sonevo_engine::Samples::plain_name(sample) {
         return Err(format!("{sample} is not a sound of the song"));
     }
     let folder = app.studio().working_folder().to_owned();

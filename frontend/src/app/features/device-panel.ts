@@ -490,6 +490,7 @@ export class DevicePanel {
    * second, falling back slowly. */
   protected readonly reduction = signal(0);
   private reductions: number[] = [];
+  private measured: string | undefined;
 
   /** The settings being turned, before they are let go of. */
   private readonly turning = signal<Record<string, number>>({});
@@ -567,9 +568,17 @@ export class DevicePanel {
   constructor() {
     effect(() => {
       const id = this.shown()?.device.id;
+      if (id !== this.measured) this.reductions = [];
+      this.measured = id;
       const now = id ? (this.studio.status().reductions[id] ?? 0) : 0;
       this.reductions = [...this.reductions, now].slice(-15);
       this.reduction.set(Math.max(...this.reductions));
+    });
+    // a song changed, or another device shown: what the knobs say is the song's again
+    effect(() => {
+      this.studio.view();
+      this.shown();
+      this.turning.set({});
     });
   }
 

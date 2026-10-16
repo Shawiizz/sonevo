@@ -271,6 +271,11 @@ impl Studio {
 
     /// `song` in place of the one open, at `folder`, not played yet.
     fn reset_to(&mut self, song: Song, folder: Option<PathBuf>) {
+        let draft = self.drafts.join(format!("{}.sonevo", Id::new()));
+        self.reset_with(song, folder, draft);
+    }
+
+    fn reset_with(&mut self, song: Song, folder: Option<PathBuf>, draft: PathBuf) {
         if let Some(engine) = &mut self.engine {
             engine.stop();
             engine.seek(0);
@@ -279,7 +284,7 @@ impl Studio {
         self.song = song;
         self.folder = folder;
         self.comparing = None;
-        self.draft = self.drafts.join(format!("{}.sonevo", Id::new()));
+        self.draft = draft;
         self.history.clear();
         self.dirty = false;
         self.unkept = false;
@@ -390,9 +395,8 @@ impl Studio {
     /// of its plugins' states its own, the template left as it is.
     pub fn start_from_template(&mut self, folder: &Path) -> Result<(), String> {
         let (song, _) = sonevo_project::load(folder).map_err(|e| e.to_string())?;
-        // its sounds copied before it is played, for the engine to find them
-        self.reset_to(song, None);
-        let draft = self.working_folder().to_owned();
+        // its sounds copied into its draft before anything changes, for the engine to find them
+        let draft = self.drafts.join(format!("{}.sonevo", Id::new()));
         for part in ["samples", "plugins"] {
             let Ok(entries) = std::fs::read_dir(folder.join(part)) else { continue };
             std::fs::create_dir_all(draft.join(part)).map_err(|e| e.to_string())?;
@@ -401,6 +405,7 @@ impl Studio {
                     .map_err(|e| e.to_string())?;
             }
         }
+        self.reset_with(song, None, draft);
         self.sync();
         Ok(())
     }

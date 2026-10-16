@@ -92,6 +92,11 @@ impl Samples {
     }
 
     /// Where the song's sounds are, the ones of another folder forgotten.
+    /// Whether `name` is a file's own name, and no way to another folder or drive.
+    pub fn plain_name(name: &str) -> bool {
+        plain(name)
+    }
+
     pub fn set_folder(&mut self, folder: Option<&Path>) {
         if self.folder.as_deref() != folder {
             self.folder = folder.map(Path::to_owned);
@@ -111,10 +116,17 @@ impl Samples {
         let decoded = self
             .folder
             .as_ref()
-            .filter(|_| !name.contains(['/', '\\']) && name != ".." && name != ".")
+            .filter(|_| plain(name))
             .and_then(|folder| decode(&folder.join("samples").join(name)).ok())
             .map(Arc::new);
         self.loaded.insert(name.to_owned(), decoded.clone());
         decoded
     }
+}
+
+/// Whether `name` is a single plain file name: no folder, no drive, no `..`.
+fn plain(name: &str) -> bool {
+    let mut parts = Path::new(name).components();
+    matches!((parts.next(), parts.next()), (Some(std::path::Component::Normal(_)), None))
+        && !name.contains([':', '/', '\\'])
 }

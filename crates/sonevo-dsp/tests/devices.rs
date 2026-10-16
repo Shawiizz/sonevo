@@ -358,6 +358,12 @@ fn a_string_plucked_rings_at_its_key_then_dies_away() {
     device.process(&CONTEXT, &[note(0, 57, false)], &mut [0.0; BLOCK], &mut [0.0; BLOCK]);
     play(&mut *device, &[], 100);
     assert_eq!(play(&mut *device, &[], 10), 0.0, "it rang on after the key was let go of");
+    // the lowest keys at the highest rate fit the loop
+    let mut high = strings.make(192_000.0);
+    for key in [0, 1, 20, 127] {
+        let (mut left, mut right) = (vec![0.0; BLOCK], vec![0.0; BLOCK]);
+        high.process(&CONTEXT, &[note(0, key, true)], &mut left, &mut right);
+    }
 }
 
 #[test]
