@@ -8,6 +8,7 @@ use clap_sys::events::{
     clap_event_header, clap_event_note, clap_event_param_value, clap_input_events, clap_output_events,
     CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_NOTE_OFF, CLAP_EVENT_NOTE_ON, CLAP_EVENT_PARAM_VALUE,
 };
+use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports, CLAP_EXT_AUDIO_PORTS};
 use clap_sys::ext::gui::{
     clap_plugin_gui, clap_window, clap_window_handle, CLAP_EXT_GUI, CLAP_WINDOW_API_WIN32,
 };
@@ -25,6 +26,9 @@ use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::path::Path;
 use std::sync::Arc;
+
+/// The sound inputs given to a plugin at most: the first takes the sound, the others silence.
+const MAX_INPUTS: usize = 8;
 
 /// The notes one call to [`Instance::process`] takes at most: more are dropped.
 pub const MAX_NOTES: usize = 256;
@@ -172,6 +176,9 @@ impl Bundle {
             notes: Vec::with_capacity(MAX_NOTES),
             changes: Vec::with_capacity(MAX_PARAMS),
             events: Vec::with_capacity(MAX_NOTES + MAX_PARAMS),
+            inputs: Vec::new(),
+            input: [Vec::new(), Vec::new()],
+            silence: Vec::new(),
             _host: host,
             _bundle: Arc::clone(self),
         };
@@ -240,6 +247,11 @@ pub struct Instance {
     notes: Vec<clap_event_note>,
     changes: Vec<clap_event_param_value>,
     events: Vec<*const clap_event_header>,
+    /// Each sound input's channels, none for an instrument; the sound given to the first, copied
+    /// in before each block, and the silence the others are given.
+    inputs: Vec<u32>,
+    input: [Vec<f32>; 2],
+    silence: Vec<f32>,
     _host: Box<clap_host>,
     _bundle: Arc<Bundle>,
 }
@@ -252,6 +264,10 @@ impl Instance {
         if self.state != State::Initialised {
             return Err(fail("the plugin is already active"));
         }
+        self.inputs = self.input_ports();
+        let frames = max_frames as usize;
+        self.input = [vec![0.0; frames], vec![0.0; frames]];
+        self.silence = vec![0.0; frames];
         // SAFETY: activated once, from the thread that made it
         let activated =
             unsafe { (*self.plugin).activate.is_some_and(|go| go(self.plugin, sample_rate, 1, max_frames)) };
@@ -260,6 +276,33 @@ impl Instance {
         }
         self.state = State::Active;
         Ok(())
+    }
+
+    /// The channels of each of the plugin's sound inputs, one or two: none for an instrument.
+    fn input_ports(&self) -> Vec<u32> {
+        // SAFETY: on the main thread, inactive; the extension lives as long as the plugin
+        let ports = unsafe {
+            (*self.plugin)
+                .get_extension
+                .map_or(std::ptr::null(), |get| get(self.plugin, CLAP_EXT_AUDIO_PORTS.as_ptr()))
+        } as *const clap_plugin_audio_ports;
+        if ports.is_null() {
+            return Vec::new();
+        }
+        let ports = unsafe { &*ports };
+        let count = ports.count.map_or(0, |count| unsafe { count(self.plugin, true) }) as usize;
+        (0..count.min(MAX_INPUTS) as u32)
+            .map(|index| {
+                // SAFETY: the info is filled by the plugin before it is read
+                let mut info: clap_audio_port_info = unsafe { std::mem::zeroed() };
+                let got = ports.get.is_some_and(|get| unsafe { get(self.plugin, index, true, &mut info) });
+                if got {
+                    info.channel_count.clamp(1, 2)
+                } else {
+                    2
+                }
+            })
+            .collect()
     }
 
     /// The settings the plugin lets be moved from outside, those hidden or read only left out.
@@ -293,7 +336,8 @@ impl Instance {
 
     /// Plays one block: the `notes` and the settings `changes` given, each in time order,
     /// sound into `left` and `right`, as long as each other and no longer than the
-    /// activation said. False when the plugin failed.
+    /// activation said. An effect takes the sound they hold first. False when the plugin
+    /// failed.
     pub fn process(
         &mut self,
         notes: &[Note],
@@ -366,6 +410,32 @@ impl Instance {
             get: Some(events_get),
         };
         let output = clap_output_events { ctx: std::ptr::null_mut(), try_push: Some(events_push) };
+        let frames = left.len().min(self.silence.len());
+        let mut in_channels = [[std::ptr::null_mut::<f32>(); 2]; MAX_INPUTS];
+        // SAFETY: plain data, every field set below for the inputs given
+        let mut ins: [clap_audio_buffer; MAX_INPUTS] = unsafe { std::mem::zeroed() };
+        if let Some(&first) = self.inputs.first() {
+            if first == 1 {
+                for (to, (l, r)) in self.input[0].iter_mut().zip(left.iter().zip(right.iter())).take(frames) {
+                    *to = 0.5 * (l + r);
+                }
+            } else {
+                self.input[0][..frames].copy_from_slice(&left[..frames]);
+                self.input[1][..frames].copy_from_slice(&right[..frames]);
+            }
+        }
+        for (port, &count) in self.inputs.iter().enumerate() {
+            for (channel, to) in in_channels[port].iter_mut().enumerate().take(count as usize) {
+                *to = if port == 0 { self.input[channel].as_mut_ptr() } else { self.silence.as_mut_ptr() };
+            }
+            ins[port] = clap_audio_buffer {
+                data32: in_channels[port].as_mut_ptr(),
+                data64: std::ptr::null_mut(),
+                channel_count: count,
+                latency: 0,
+                constant_mask: 0,
+            };
+        }
         let mut channels = [left.as_mut_ptr(), right.as_mut_ptr()];
         let mut out = clap_audio_buffer {
             data32: channels.as_mut_ptr(),
@@ -376,11 +446,11 @@ impl Instance {
         };
         let process = clap_process {
             steady_time: -1,
-            frames_count: left.len() as u32,
+            frames_count: frames as u32,
             transport: std::ptr::null(),
-            audio_inputs: std::ptr::null(),
+            audio_inputs: if self.inputs.is_empty() { std::ptr::null() } else { ins.as_ptr() },
             audio_outputs: &mut out,
-            audio_inputs_count: 0,
+            audio_inputs_count: self.inputs.len() as u32,
             audio_outputs_count: 1,
             in_events: &input,
             out_events: &output,

@@ -100,6 +100,9 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
   à l'échantillon près.
 - ✅ État (extension *state*) enregistré avec le morceau.
 - ✅ Fenêtre du plugin (extension *gui*), ouverte dans une fenêtre de son propre processus.
+- ✅ **Plugins d'effet** sur les pistes de mixage : le son de la piste leur est passé (et leurs
+  entrées en plus reçoivent du silence) ; un bloc en retard laisse passer le son tel quel.
+  Essayé avec `plugins/test-effect`, un gain CLAP fait pour ça.
 - ⬜ Mettre le plugin au premier plan est permis par Sonevo, non vérifié pendant la nuit
   (l'application testée n'était pas au premier plan).
 - ⬜ VST3.

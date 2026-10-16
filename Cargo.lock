@@ -4262,6 +4262,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sonevo-test-effect"
+version = "0.1.0"
+dependencies = [
+ "clap-sys",
+]
+
+[[package]]
 name = "sonevo-test-synth"
 version = "0.1.0"
 dependencies = [

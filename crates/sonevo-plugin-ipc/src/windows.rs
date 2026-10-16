@@ -154,9 +154,10 @@ impl EngineEnd {
         Ok(EngineEnd { mapping: Mapping::make(name, true)?, next: 1 })
     }
 
-    /// Asks for the next block, `frames` long with `notes` and the settings `changes` in it:
-    /// its number.
-    pub fn ask(&mut self, frames: usize, notes: &[Note], changes: &[ParamChange]) -> u64 {
+    /// Asks for the next block, `frames` long with `notes` and the settings `changes` in it,
+    /// and the sound in `left` and `right` for an effect to change: its number.
+    pub fn ask(&mut self, notes: &[Note], changes: &[ParamChange], left: &[f32], right: &[f32]) -> u64 {
+        let frames = left.len().min(right.len()).min(MAX_FRAMES);
         let block = self.next;
         self.next += 1;
         let shared = self.mapping.shared();
@@ -169,7 +170,12 @@ impl EngineEnd {
         // SAFETY: as the notes
         unsafe { (&mut *slot.changes.get())[..changed].copy_from_slice(&changes[..changed]) };
         slot.changed.store(changed as u32, Ordering::Relaxed);
-        slot.frames.store(frames.min(MAX_FRAMES) as u32, Ordering::Relaxed);
+        // SAFETY: as the notes
+        unsafe {
+            (&mut *slot.left.get())[..frames].copy_from_slice(&left[..frames]);
+            (&mut *slot.right.get())[..frames].copy_from_slice(&right[..frames]);
+        }
+        slot.frames.store(frames as u32, Ordering::Relaxed);
         shared.asked.store(block, Ordering::Release);
         // SAFETY: the event is open
         unsafe { SetEvent(self.mapping.ask) };

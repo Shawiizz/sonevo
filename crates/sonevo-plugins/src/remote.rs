@@ -194,15 +194,15 @@ impl Processor for Remote {
             }
         }
         let budget = Duration::from_secs_f64(left.len() as f64 / f64::from(self.sample_rate) * BUDGET);
-        let block = end.ask(left.len(), &self.notes[..count], &self.changes[..changed]);
+        let block = end.ask(&self.notes[..count], &self.changes[..changed], left, right);
         if end.take(block, budget, left, right) {
             self.resend = false;
             self.released = 0;
             self.changed.clear();
         } else {
+            // a block played late: an effect lets the sound through as it came, an instrument
+            // given silence is silent
             self.resend = true;
-            left.fill(0.0);
-            right.fill(0.0);
         }
     }
 

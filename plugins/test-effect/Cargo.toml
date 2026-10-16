@@ -1,0 +1,14 @@
+[package]
+name = "sonevo-test-effect"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+description = "A small CLAP effect to try Sonevo's hosting of effects with"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clap-sys.workspace = true

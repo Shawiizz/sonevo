@@ -1,5 +1,5 @@
-//! These tests play Sonevo's own test synth, built beside them by
-//! `cargo build -p sonevo-test-synth -p sonevo-plugin-host`.
+//! These tests play Sonevo's own test synth and test effect, built beside them by
+//! `cargo build -p sonevo-test-synth -p sonevo-test-effect -p sonevo-plugin-host`.
 
 use sonevo_dsp::{Context, Event, Processor};
 use sonevo_plugins::{scan, Remote};
@@ -9,8 +9,12 @@ use std::time::{Duration, Instant};
 const RATE: f32 = 48_000.0;
 
 fn built() -> PathBuf {
+    built_as("sonevo_test_synth.dll")
+}
+
+fn built_as(name: &str) -> PathBuf {
     let deps = std::env::current_exe().unwrap();
-    deps.parent().unwrap().parent().unwrap().join("sonevo_test_synth.dll")
+    deps.parent().unwrap().parent().unwrap().join(name)
 }
 
 /// A folder with the test synth installed in it, as a CLAP bundle.
@@ -35,6 +39,28 @@ fn play(remote: &mut Remote, events: &[Event], blocks: usize) -> f32 {
 
 fn note(on: bool) -> Event {
     Event { at: 0, key: 60, velocity: 0.9, on }
+}
+
+#[test]
+fn an_effect_changes_the_sound_it_is_given() {
+    let dir = tempfile::tempdir().unwrap();
+    let bundle = dir.path().join("Test Gain.clap");
+    std::fs::copy(built_as("sonevo_test_effect.dll"), &bundle).expect("the test effect is built");
+    let found = scan(&[dir.path().to_owned()]);
+    assert!(!found[0].instrument);
+    let mut remote = Remote::start(&bundle, "dev.sonevo.test-effect", RATE, &[], None).unwrap();
+    let context = Context { sample_rate: RATE, tempo: 120.0, key: None };
+    let tone = |i: usize| (i as f32 * 0.05).sin() * 0.8;
+    // until its process answers, the sound goes through as it is; then at its gain of a half
+    let start = Instant::now();
+    let mut ratio = 1.0;
+    while (ratio - 1.0f32).abs() < 1e-3 && start.elapsed() < Duration::from_secs(10) {
+        let mut left: Vec<f32> = (0..256).map(tone).collect();
+        let mut right = left.clone();
+        remote.process(&context, &[], &mut left, &mut right);
+        ratio = left[100] / tone(100);
+    }
+    assert!((ratio - 0.5).abs() < 1e-3, "{ratio}");
 }
 
 #[test]

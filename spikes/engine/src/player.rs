@@ -30,7 +30,7 @@ impl Player {
         let played = match self {
             Player::Here(instance) => instance.process(notes, &[], left, right),
             Player::Apart(end) => {
-                let block = end.ask(left.len(), notes, &[]);
+                let block = end.ask(notes, &[], left, right);
                 end.take(block, budget, left, right)
             }
         };
