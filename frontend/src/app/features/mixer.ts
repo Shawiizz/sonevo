@@ -25,6 +25,9 @@ const MAX_FADER = gainToFader(1.25);
  * The mixer: the master and every mixer track as a strip, its effects at the top, its
  * level, pan, mute and solo, where it goes. Channels are sent to a track from the rack.
  */
+/** The effect copied last, to be pasted on any mixer track. */
+let copied: Device | null = null;
+
 @Component({
   selector: 'app-mixer',
   imports: [Icon, Knob, Meter, Spectrum],
@@ -507,9 +510,27 @@ export class Mixer {
         label: p.name,
         run: () => add({ type: 'clap', bundle: p.bundle, plugin: p.id }),
       }));
+    const pasted: MenuItem[] = copied
+      ? [
+          {
+            label: this.t('Paste the effect copied'),
+            run: () => {
+              const effect = { ...structuredClone(copied!), id: newId() };
+              void this.studio.putInsert({
+                ...insert,
+                effects: [...(insert.effects ?? []), effect],
+              });
+              this.studio.deviceId.set(effect.id);
+            },
+          },
+          { separator: true, label: '' },
+        ]
+      : [];
     this.menus.below(
       event,
-      plugins.length ? [...builtins, { separator: true, label: '' }, ...plugins] : builtins,
+      plugins.length
+        ? [...pasted, ...builtins, { separator: true, label: '' }, ...plugins]
+        : [...pasted, ...builtins],
     );
   }
 
@@ -524,6 +545,7 @@ export class Mixer {
     };
     this.menus.show(event, [
       { label: t('Show its settings'), run: () => this.show(effect) },
+      { label: t('Copy it, settings and all'), run: () => (copied = structuredClone(effect)) },
       {
         label: effect.enabled === false ? t('Turn on') : t('Turn off'),
         run: () =>

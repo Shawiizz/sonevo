@@ -131,7 +131,8 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Étirer un son** à la longueur de son clip sans changer sa hauteur (WSOLA), pour caler une
   boucle d'un autre tempo ; le son étiré s'ajoute au morceau.
 - ✅ **Transposer un son** d'un clip (de -12 à +12 demi-tons) sans changer sa durée.
-- ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois dosés.
+- ✅ **Mixer** : tranches avec vumètres, fader, pan, mute, solo, effets, sortie, envois dosés ;
+  un effet copié avec ses réglages se colle sur une autre piste.
 - ✅ **Enregistrer l'automation** : l'interrupteur à côté de l'enregistrement, et les boutons
   tournés pendant la lecture s'écrivent dans le clip d'automation du réglage (créé s'il le faut).
 - ✅ Outils du piano roll : humaniser, legato, égrener les accords, à l'envers, deux fois plus

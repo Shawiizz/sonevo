@@ -256,6 +256,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Copy it, settings and all': 'Le copier, avec ses réglages',
+  'Paste the effect copied': "Coller l'effet copié",
   'Its volume…': 'Son volume…',
   Loop: 'Boucle',
   'Loop start': 'Début de boucle',
