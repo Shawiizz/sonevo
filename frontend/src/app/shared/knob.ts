@@ -78,12 +78,15 @@ export function formatValue(value: number, unit: string): string {
       stroke-linecap: round;
     }
     .label {
-      max-width: 72px;
+      display: -webkit-box;
+      max-width: 80px;
       overflow: hidden;
       color: var(--s-text-2);
       font-size: 11px;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      line-height: 1.2;
+      text-align: center;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
     }
     .value {
       color: var(--s-text-3);
