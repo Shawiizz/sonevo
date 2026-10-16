@@ -247,8 +247,10 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 11. **Plugins** : CLAP seulement pour l'instant ; le scan se fait au lancement (rapide sans
     plugins, plus lent avec beaucoup).
 12. **Le premier lancement ouvre la démo** ; les suivants rouvrent le dernier morceau.
-13. **Couleurs** : un violet issu du logo comme accent, sur un noir légèrement bleuté (même
-    structure que Ramure). L'icône : des barres de vumètre qui ondulent du bleu au vert.
+13. **Couleurs** (revues le 16 octobre, à ta demande, d'après Prisme) : une interface de gris
+    neutres, une seule lumière blanche pour ce qui est actif, la couleur laissée à la musique (un
+    trait sur chaque bloc, l'icône de chaque voie, les notes) ; arrondis de 3 px ; le spectre
+    du rouge au violet. L'icône : des barres de vumètre qui ondulent du bleu au vert.
 14. **Le clavier-piano** suit la position des touches (Z à M et Q à P), quelle que soit la
     disposition du clavier ; + et − du pavé numérique changent l'octave.
 15. **Accords** : avec une gamme choisie, l'accord prend les notes de la gamme (une note sur
@@ -258,7 +260,7 @@ Pris pendant la nuit du 15 au 16 octobre, pour avancer sans te réveiller.
 17. **Plugins** : leur état et leurs réglages sont demandés à leur processus ; les réglages
     d'un plugin sont lus une fois par lancement de Sonevo (un plugin mis à jour pendant que
     Sonevo tourne garde ses anciens réglages jusqu'au prochain lancement).
-18. **Thème** : par défaut celui du système ; l'accent violet, ou bleu, vert, orange, rose.
+18. **Thème** : par défaut celui du système ; l'accent blanc, ou violet, bleu, vert, orange, rose.
 19. **Import MIDI** : le tempo du fichier n'est pas appliqué au morceau, et chaque piste
     reçoit un synthé, même la batterie (canal 10) : à toi de changer l'instrument.
 20. **Arpégiateur** : il joue les notes écrites et celles jouées en direct au clavier ; en direct
