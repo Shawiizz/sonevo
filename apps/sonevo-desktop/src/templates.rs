@@ -3,8 +3,8 @@
 
 use crate::demo::{channel, pattern, steps, BAR, STEP};
 use sonevo_project::{
-    builtin, Arp, ArpOrder, Clip, ClipContent, Device, Id, Insert, Note, Pattern, Point, Send, Song, Target,
-    Ticks, COLORS,
+    builtin, Arp, ArpOrder, Clip, ClipContent, Device, Id, Insert, Marker, Note, Pattern, Point, Send, Song,
+    Target, Ticks, COLORS,
 };
 
 /// The template called `name`.
@@ -13,6 +13,7 @@ pub fn song(name: &str) -> Option<Song> {
         "trap" => Some(trap()),
         "lofi" => Some(lofi()),
         "techno" => Some(techno()),
+        "schranz" => Some(schranz()),
         _ => None,
     }
 }
@@ -254,17 +255,173 @@ fn techno() -> Song {
     song
 }
 
+/// 155 beats a minute: a driven kick and the rumble it leaves, sixteenths of hats, a loop of
+/// toms and rims, a saw stab every three steps; a break without the kick, its filter opening,
+/// a riser and a hit into each drop.
+fn schranz() -> Song {
+    let mut song = Song::new("Schranz");
+    song.tempo = 155.0;
+    let mut thump = Insert::new("Kick", COLORS[0]);
+    thump.effects.push(
+        Device::builtin(builtin::DISTORTION).with("drive", 18.0).with("tone", 5000.0).with("output", -8.0),
+    );
+    // the kick's tail, smeared, driven and kept under 180 Hz, ducking under the kick itself
+    let mut rumble = Insert::new("Rumble", COLORS[3]);
+    rumble.effects.push(
+        Device::builtin(builtin::REVERB)
+            .with("size", 0.85)
+            .with("damping", 0.7)
+            .with("width", 0.3)
+            .with("mix", 1.0),
+    );
+    rumble.effects.push(preset(builtin::DISTORTION, "Fuzz").with("tone", 2500.0));
+    rumble.effects.push(Device::builtin(builtin::FILTER).with("cutoff", 180.0).with("resonance", 0.25));
+    let mut duck = Device::builtin(builtin::COMPRESSOR)
+        .with("threshold", -32.0)
+        .with("ratio", 12.0)
+        .with("attack", 0.5)
+        .with("release", 140.0);
+    duck.key = Some(thump.id);
+    rumble.effects.push(duck);
+    rumble.volume = 0.9;
+    thump.sends.push(Send { to: rumble.id, amount: 0.55 });
+    let mut perc = Insert::new("Perc", COLORS[1]);
+    perc.effects.push(preset(builtin::EQ, "Cut the lows"));
+    perc.effects.push(preset(builtin::DISTORTION, "Parallel grit"));
+    let mut space = Insert::new("Space", COLORS[5]);
+    space.effects.push(preset(builtin::EQ, "Cut the lows"));
+    space.effects.push(preset(builtin::DELAY, "Dotted eighth").with("mix", 1.0).with("feedback", 0.35));
+    space.effects.push(preset(builtin::REVERB, "Big hall").with("mix", 1.0));
+    let mut stabs = Insert::new("Stab", COLORS[2]);
+    stabs.effects.push(preset(builtin::DISTORTION, "Crunch"));
+    let mut pump = preset(builtin::COMPRESSOR, "Pump under the kick");
+    pump.key = Some(thump.id);
+    stabs.effects.push(pump);
+    stabs.sends.push(Send { to: space.id, amount: 0.25 });
+    perc.sends.push(Send { to: space.id, amount: 0.08 });
+    // driven into the limiter, as loud as the style is played
+    song.master.effects.push(
+        preset(builtin::DISTORTION, "Warm drive")
+            .with("drive", 6.0)
+            .with("tone", 20000.0)
+            .with("output", 0.0),
+    );
+    song.master.effects.push(preset(builtin::LIMITER, "Loud master"));
+
+    let drum = |sound: f64| Device::builtin(builtin::DRUMS).with("sound", sound);
+    let kick =
+        channel("Kick", 0, drum(0.0).with("tune", -2.0).with("decay", 0.7).with("tone", 0.8), thump.id);
+    let hat = channel("Hat", 4, drum(2.0).with("decay", 0.35).with("tone", 1.0).with("level", -2.0), perc.id);
+    let open =
+        channel("Open hat", 6, drum(4.0).with("decay", 0.7).with("tone", 0.9).with("level", -5.0), perc.id);
+    let clap = channel("Clap", 1, preset(builtin::DRUMS, "Big clap").with("level", -6.0), perc.id);
+    let tom = channel("Tom", 3, drum(5.0).with("tune", 7.0).with("decay", 0.5).with("level", -5.0), perc.id);
+    let rim = channel("Rim", 7, drum(6.0).with("level", -8.0), perc.id);
+    let stab = channel(
+        "Stab",
+        2,
+        Device::builtin(builtin::SYNTH)
+            .with("wave1", 0.0)
+            .with("wave2", 0.0)
+            .with("detune2", 18.0)
+            .with("unison", 2.0)
+            .with("spread", 25.0)
+            .with("cutoff", 1600.0)
+            .with("resonance", 0.35)
+            .with("envAmount", 0.5)
+            .with("filterDecay", 0.12)
+            .with("filterSustain", 0.0)
+            .with("decay", 0.18)
+            .with("sustain", 0.0)
+            .with("release", 0.08)
+            .with("volume", -12.0),
+        stabs.id,
+    );
+    let riser = channel(
+        "Riser",
+        5,
+        preset(builtin::SYNTH, "Noise riser").with("filterAttack", 5.0).with("volume", -16.0),
+        stabs.id,
+    );
+    let hit = channel("Hit", 5, preset(builtin::SYNTH, "Noise hit").with("volume", -6.0), perc.id);
+
+    let four = pattern("Kick", 0, 1, vec![(kick.id, steps(&[0, 4, 8, 12], 60, 1.0))]);
+    let sixteenths: Vec<Note> =
+        (0..16).map(|s| note(s * STEP, STEP, 60, if s % 2 == 0 { 0.45 } else { 0.7 })).collect();
+    let hats = pattern("Hats", 4, 1, vec![(hat.id, sixteenths), (open.id, steps(&[2, 6, 10, 14], 60, 0.8))]);
+    let claps = pattern("Clap", 1, 1, vec![(clap.id, steps(&[4, 12], 60, 0.85))]);
+    let perc_loop = pattern(
+        "Perc loop",
+        3,
+        1,
+        vec![(tom.id, steps(&[3, 7, 10, 13], 60, 0.8)), (rim.id, steps(&[1, 6, 9, 11, 15], 60, 0.7))],
+    );
+    // the stab every three sixteenths, against the kick's four
+    let stab_notes: Vec<Note> = [2, 5, 8, 11, 14]
+        .iter()
+        .flat_map(|&s| [note(s * STEP, STEP, 57, 0.9), note(s * STEP, STEP, 64, 0.8)])
+        .collect();
+    let stab_line = pattern("Stab", 2, 1, vec![(stab.id, stab_notes)]);
+    let rise = pattern("Riser", 5, 4, vec![(riser.id, vec![note(0, 4 * BAR, 60, 0.8)])]);
+    let impact = pattern("Hit", 5, 1, vec![(hit.id, vec![note(0, BAR, 48, 1.0)])]);
+
+    let mut clips = vec![
+        clip(&song, 0, &four, 0, 16),
+        clip(&song, 0, &four, 24, 24),
+        clip(&song, 1, &hats, 4, 16),
+        clip(&song, 1, &hats, 24, 24),
+        clip(&song, 2, &claps, 8, 8),
+        clip(&song, 2, &claps, 24, 24),
+        clip(&song, 3, &perc_loop, 8, 8),
+        clip(&song, 3, &perc_loop, 28, 16),
+        clip(&song, 4, &stab_line, 12, 12),
+        clip(&song, 4, &stab_line, 24, 24),
+        clip(&song, 5, &rise, 12, 4),
+        clip(&song, 5, &rise, 20, 4),
+        clip(&song, 5, &impact, 16, 1),
+        clip(&song, 5, &impact, 24, 1),
+    ];
+    // the stab's filter closed at the break, opening into the drop
+    let points = vec![
+        Point { at: 0, value: 0.45, curve: 0.0 },
+        Point { at: 4 * BAR, value: 0.35, curve: 0.0 },
+        Point { at: 12 * BAR, value: 0.75, curve: 0.0 },
+    ];
+    let target = Target::Param { device: stab.instrument.id, param: "cutoff".into() };
+    clips.push(Clip {
+        id: Id::new(),
+        track: song.tracks[6].id,
+        start: 12 * BAR,
+        length: 12 * BAR,
+        offset: 0,
+        content: ClipContent::Automation { target, points },
+    });
+    song.clips = clips;
+    song.markers = [(0, "Intro"), (12, "Build"), (16, "Break"), (24, "Drop")]
+        .into_iter()
+        .map(|(bar, name)| Marker { id: Id::new(), at: bar * BAR, name: name.into() })
+        .collect();
+    name_tracks(&mut song, &["Kick", "Hats", "Clap", "Perc", "Stab", "FX", "Filter"]);
+    song.channels = vec![kick, hat, open, clap, tom, rim, stab, riser, hit];
+    song.patterns = vec![four, hats, claps, perc_loop, stab_line, rise, impact];
+    song.inserts = vec![thump, rumble, perc, stabs, space];
+    song
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::demo::BAR;
+
     #[test]
-    fn every_template_plays_its_sixteen_bars() {
-        for name in ["trap", "lofi", "techno"] {
+    fn every_template_plays_to_its_end() {
+        for name in ["trap", "lofi", "techno", "schranz"] {
             let mut song = super::song(name).unwrap();
             assert!(song.mend().is_empty(), "{name}");
             let rendered = sonevo_engine::render(&song, None, 48_000);
             assert!(rendered.missing.is_empty(), "{name}: {:?}", rendered.missing);
             let seconds = rendered.left.len() as f64 / 48_000.0;
-            let length = 16.0 * 4.0 * 60.0 / song.tempo;
+            let bars = song.clips.iter().map(|c| c.start + c.length).max().unwrap_or(0) / BAR;
+            let length = bars as f64 * 4.0 * 60.0 / song.tempo;
             assert!(seconds > length && seconds < length + 10.0, "{name}: {seconds}");
             let loudest = rendered.left.iter().chain(&rendered.right).fold(0.0f32, |a, s| a.max(s.abs()));
             assert!(loudest > 0.3 && loudest <= 1.0, "{name}: {loudest}");

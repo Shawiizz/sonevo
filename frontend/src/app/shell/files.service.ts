@@ -10,6 +10,7 @@ export const TEMPLATES = [
   { id: 'trap', label: 'Trap' },
   { id: 'lofi', label: 'Lo-fi' },
   { id: 'techno', label: 'Techno' },
+  { id: 'schranz', label: 'Schranz' },
 ];
 
 /** New, open, save, export: what the File menu and its shortcuts do. */
