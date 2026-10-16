@@ -268,7 +268,7 @@ pub struct Marker {
 
 /// The colours channels, patterns and mixer tracks take in turn.
 pub const COLORS: [&str; 8] =
-    ["#5ab0f0", "#f2b84b", "#8f8bf7", "#ef6f6c", "#5fd3a8", "#e88ad6", "#b4dc5a", "#4fd0d6"];
+    ["#4aa8ff", "#ff9a3c", "#8f7bff", "#ff5442", "#3fd3b5", "#e86bd6", "#a6e25c", "#f5d547"];
 
 impl Song {
     /// A song to start from: four drums in the rack, one pattern, a playlist of a few tracks.

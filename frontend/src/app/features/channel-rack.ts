@@ -215,8 +215,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       background: var(--s-line-strong);
       cursor: pointer;
       &.on {
-        background: var(--s-play);
-        box-shadow: 0 0 6px color-mix(in srgb, var(--s-play) 60%, transparent);
+        background: var(--s-ok);
       }
     }
     .name {
@@ -226,20 +225,22 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       align-items: center;
       gap: 8px;
       padding: 0 10px;
-      border: 0;
-      border-left: 3px solid var(--color);
+      border: 1px solid var(--s-line);
       border-radius: var(--s-radius);
-      background: var(--s-hover);
+      background: var(--s-raised);
       color: var(--s-text);
       text-align: left;
       cursor: pointer;
+      s-icon {
+        color: var(--color);
+      }
       span {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
       }
       &:hover {
-        background: color-mix(in srgb, var(--color) 18%, var(--s-hover));
+        background: var(--s-hover);
       }
     }
     .meter {
@@ -271,7 +272,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       height: 28px;
       padding: 0;
       border: 0;
-      border-radius: 4px;
+      border-radius: 2px;
       background: var(--s-step);
       cursor: pointer;
       &.alt {
@@ -284,8 +285,7 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
         background: var(--s-step-hover);
       }
       &.on {
-        background: var(--color);
-        box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.25);
+        background: var(--s-accent);
       }
     }
     .roll {

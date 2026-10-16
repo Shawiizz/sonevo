@@ -196,7 +196,7 @@ let copied: Device | null = null;
       gap: 6px;
       padding: 6px 6px 8px;
       border-radius: var(--s-radius-panel);
-      border-top: 3px solid var(--color);
+      border-top: 2px solid var(--color);
       background: var(--s-raised);
       min-height: 0;
       &.master {

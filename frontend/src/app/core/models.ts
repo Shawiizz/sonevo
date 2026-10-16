@@ -342,14 +342,14 @@ export type Edit =
   | { type: 'batch'; edits: Edit[] };
 
 export const COLORS = [
-  '#5ab0f0',
-  '#f2b84b',
-  '#8f8bf7',
-  '#ef6f6c',
-  '#5fd3a8',
-  '#e88ad6',
-  '#b4dc5a',
-  '#4fd0d6',
+  '#4aa8ff',
+  '#ff9a3c',
+  '#8f7bff',
+  '#ff5442',
+  '#3fd3b5',
+  '#e86bd6',
+  '#a6e25c',
+  '#f5d547',
 ];
 
 /** Sixty-four random bits, as sixteen hexadecimal digits, as the song's ids are. */

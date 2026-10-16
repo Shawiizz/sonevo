@@ -22,6 +22,13 @@ const MARKS = [
   selector: 's-spectrum',
   template: `
     <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="prism" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0">
+          <stop offset="0" stop-color="#ff5442" />
+          <stop offset="0.5" stop-color="#a6e25c" />
+          <stop offset="1" stop-color="#8f7bff" />
+        </linearGradient>
+      </defs>
       @for (v of shown(); track $index) {
         <rect
           [attr.x]="($index * 100) / shown().length + 0.3"
@@ -49,7 +56,7 @@ const MARKS = [
       background: var(--s-void);
     }
     rect {
-      fill: var(--s-accent);
+      fill: url(#prism);
       opacity: 0.85;
     }
     .mark {

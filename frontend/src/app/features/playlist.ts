@@ -330,16 +330,16 @@ export class Playlist implements OnDestroy {
       const picked = this.selected.has(clip.id);
       const top = y + 2;
       const h = this.laneHeight - 4;
-      g.roundRect(x + 1, top, Math.max(4, w - 2), h, 4).fill({ color, alpha: 0.22 });
-      g.roundRect(x + 1, top, Math.max(4, w - 2), 15, 4).fill({ color, alpha: 0.85 });
+      g.roundRect(x + 1, top, Math.max(4, w - 2), h, 2).fill(palette().clip);
+      g.rect(x + 1, top, 2, h).fill(color);
       if (picked)
-        g.roundRect(x + 1, top, Math.max(4, w - 2), h, 4).stroke({
-          width: 1.5,
+        g.roundRect(x + 1, top, Math.max(4, w - 2), h, 2).stroke({
+          width: 1,
           color: palette().picked,
         });
       if (w > 30) {
-        s.text('▾', x + 4, top, palette().onColor, 11);
-        s.text(this.clipName(clip), Math.max(x + 16, HEADERS + 6), top + 1, palette().onColor, 11);
+        s.text('▾', x + 7, top + 1, palette().text3, 11);
+        s.text(this.clipName(clip), Math.max(x + 19, HEADERS + 6), top + 1, palette().text, 11);
       }
       this.paintContent(s, clip, x, top + 17, w, h - 19, color);
     }

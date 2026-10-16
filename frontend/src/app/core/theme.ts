@@ -5,6 +5,7 @@ export type Theme = 'dark' | 'light';
 
 /** The accents offered, each as it shows on the dark theme and on the light one. */
 export const ACCENTS: Record<string, [string, string]> = {
+  light: ['#f3f1eb', '#111316'],
   violet: ['#8f8bf7', '#6d5ce8'],
   blue: ['#5aa9ff', '#1f6fd6'],
   green: ['#4fd6a0', '#0f8a5f'],

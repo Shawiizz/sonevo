@@ -359,9 +359,9 @@ function folded(text: string): string {
       button {
         height: 24px;
         padding: 0 8px;
-        border: 0;
-        border-radius: 4px;
-        background: var(--s-hover);
+        border: 1px solid var(--s-line-strong);
+        border-radius: var(--s-radius);
+        background: transparent;
         color: var(--s-text-2);
         font-size: 11px;
         cursor: pointer;
@@ -369,8 +369,8 @@ function folded(text: string): string {
           color: var(--s-text);
         }
         &.on {
-          background: var(--s-accent);
-          color: var(--s-on-accent);
+          border-color: var(--s-accent);
+          color: var(--s-text);
         }
       }
     }

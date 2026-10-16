@@ -64,13 +64,13 @@ interface Advice {
     }
     li {
       padding: 10px 12px;
-      border-left: 3px solid var(--s-warn);
+      border-left: 2px solid var(--s-warn);
       border-radius: var(--s-radius);
       background: var(--s-raised);
       font-size: 13px;
       line-height: 1.45;
       &.good {
-        border-left-color: var(--s-play);
+        border-left-color: var(--s-ok);
       }
     }
     .actions {

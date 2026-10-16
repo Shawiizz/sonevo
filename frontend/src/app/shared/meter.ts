@@ -36,7 +36,7 @@ export function gainToDb(gain: number): number {
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(to top, var(--s-play) 0%, var(--s-play) 70%, var(--s-warn) 90%);
+      background: linear-gradient(to top, var(--s-ok) 0%, var(--s-ok) 70%, var(--s-warn) 90%);
       background-size: 100% var(--h, 100%);
       transition: height 60ms linear;
     }
