@@ -26,6 +26,7 @@ fn main() {
             name: format!("P{p}"),
             color: "#fff".into(),
             length: PPQ * 16,
+            swing: 0.0,
             notes: Default::default(),
         };
         for channel in song.channels.iter().skip(p % 8).step_by(8) {

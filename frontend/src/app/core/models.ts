@@ -54,6 +54,8 @@ export interface Pattern {
   name: string;
   color: string;
   length: Ticks;
+  /** From 0 to 1: how late every second sixteenth plays, up to half a sixteenth. */
+  swing?: number;
 }
 
 export interface Track {

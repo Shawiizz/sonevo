@@ -312,6 +312,22 @@ fn a_compressor_listening_to_the_kick_ducks_the_pad() {
 }
 
 #[test]
+fn swing_plays_every_second_sixteenth_late() {
+    let sixteenth =
+        |n: i64| sonevo_project::Note { start: n * PPQ / 4, length: PPQ / 8, key: 60, velocity: 0.8 };
+    let (mut song, _, _) = song(&[sixteenth(1)]);
+    let first_sound = |song: &sonevo_project::Song| {
+        render(song, None, 48_000).left.iter().position(|s| s.abs() > 1e-4).unwrap()
+    };
+    // at 120 beats a minute a sixteenth is 6000 frames; full swing plays it half of one late
+    let straight = first_sound(&song);
+    song.patterns[0].swing = 1.0;
+    let late = first_sound(&song);
+    assert!((straight as i64 - 6000).abs() < 50, "{straight}");
+    assert!((late as i64 - 9000).abs() < 50, "{late}");
+}
+
+#[test]
 fn a_track_listening_to_one_after_it_is_left_alone() {
     let (mut song, _, _) = song(&[note(0, 1, 60)]);
     let a = insert(&mut song, "A");

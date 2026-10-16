@@ -62,6 +62,9 @@ pub struct Pattern {
     pub name: String,
     pub color: Color,
     pub length: Ticks,
+    /// From 0 to 1: how late every second sixteenth plays, up to half a sixteenth.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub swing: f32,
     /// Each channel's notes, in time order. Saved in a file of the pattern's own.
     #[serde(skip)]
     pub notes: BTreeMap<Id, Vec<Note>>,
@@ -262,6 +265,7 @@ impl Song {
             name: "Pattern 1".into(),
             color: COLORS[0].to_owned(),
             length: signature.bar(),
+            swing: 0.0,
             notes: BTreeMap::new(),
         };
         let tracks =

@@ -125,6 +125,21 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
       <span class="hint">{{
         t('Click a step to place a note; double-click a name for the piano roll.')
       }}</span>
+      @if (studio.pattern(); as pattern) {
+        <div
+          class="swing"
+          [title]="t('Swing: every second sixteenth played a little late, for groove')"
+        >
+          <span>{{ t('Swing') }}</span>
+          <s-knob
+            [value]="pattern.swing ?? 0"
+            [default]="0"
+            [size]="22"
+            (changed)="setSwing($event)"
+          />
+          <span class="s-mono">{{ ((pattern.swing ?? 0) * 100).toFixed(0) }}%</span>
+        </div>
+      }
     </div>
   `,
   styles: `
@@ -263,6 +278,21 @@ const DRUM_SOUNDS = ['Kick', 'Snare', 'Closed hat', 'Clap', 'Open hat', 'Tom', '
         border-color: var(--s-line-strong);
       }
     }
+    .swing {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      color: var(--s-text-2);
+      font-size: 12px;
+      .s-mono {
+        min-width: 32px;
+        color: var(--s-text-3);
+      }
+      s-knob ::ng-deep .value {
+        display: none;
+      }
+    }
     .foot {
       flex: none;
       display: flex;
@@ -379,6 +409,12 @@ export class ChannelRack {
         .note(row.channel.id, STEP_KEY, 0.8, true)
         .then(() => setTimeout(() => api.note(row.channel.id, STEP_KEY, 0, false), 120));
     void this.studio.setNotes(pattern.id, row.channel.id, notes);
+  }
+
+  protected setSwing(swing: number): void {
+    const pattern = this.studio.pattern();
+    if (pattern)
+      void this.studio.edit({ type: 'putPattern', pattern: { ...pattern, swing }, index: null });
   }
 
   protected toggleMute(channel: Channel): void {

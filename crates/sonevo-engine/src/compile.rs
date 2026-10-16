@@ -220,6 +220,22 @@ fn audible(inserts: &[&Insert], edges: &[Vec<usize>]) -> Vec<bool> {
     heard.iter().zip(inserts).map(|(&h, i)| h && !i.mute).collect()
 }
 
+/// Where `tick` of a pattern plays, swung: every second sixteenth `late` ticks later, the
+/// ticks between stretched to fit.
+fn swung(tick: Ticks, late: Ticks) -> Ticks {
+    const STEP: Ticks = PPQ / 4;
+    if late == 0 {
+        return tick;
+    }
+    let pair = tick.div_euclid(2 * STEP) * 2 * STEP;
+    let at = tick - pair;
+    pair + if at < STEP {
+        at * (STEP + late) / STEP
+    } else {
+        STEP + late + (at - STEP) * (STEP - late) / STEP
+    }
+}
+
 /// The note events of `pattern` played as a clip from `start` to `end`, `offset` into it.
 fn pattern_events(
     pattern: &Pattern,
@@ -230,6 +246,7 @@ fn pattern_events(
     events: &mut Vec<NoteEvent>,
 ) {
     let length = pattern.length.max(1);
+    let late = (f64::from(pattern.swing.clamp(0.0, 1.0)) * (PPQ / 8) as f64).round() as Ticks;
     let base = start - offset;
     let first = offset.div_euclid(length);
     let last = (offset + (end - start)).div_euclid(length);
@@ -238,11 +255,11 @@ fn pattern_events(
         for repeat in first..=last {
             let from = base + repeat * length;
             for note in notes {
-                let on = from + note.start;
+                let on = from + swung(note.start, late);
                 if on < start || on >= end || note.start >= length {
                     continue;
                 }
-                let off = (on + note.length.max(1)).min(end);
+                let off = (from + swung(note.start + note.length.max(1), late)).max(on + 1).min(end);
                 let velocity = note.velocity.clamp(0.0, 1.0);
                 events.push(NoteEvent { tick: on, channel, key: note.key, velocity, on: true });
                 events.push(NoteEvent { tick: off, channel, key: note.key, velocity: 0.0, on: false });

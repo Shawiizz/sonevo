@@ -38,6 +38,7 @@ fn pattern(name: &str, color: usize, bars: i64, notes: Vec<(Id, Vec<Note>)>) -> 
         name: name.into(),
         color: COLORS[color].into(),
         length: bars * BAR,
+        swing: 0.0,
         notes: notes.into_iter().collect::<BTreeMap<_, _>>(),
     }
 }

@@ -255,6 +255,9 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  Swing: 'Swing',
+  'Swing: every second sixteenth played a little late, for groove':
+    'Swing : une double-croche sur deux jouée un peu en retard, pour le groove',
   'Listens to': 'Écoute',
   'Its own sound': 'Son propre son',
   'When that track gets loud, this one is brought down: the pumping of a bass under the kick.':

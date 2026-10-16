@@ -69,6 +69,7 @@ Légende : ✅ fait · 🔨 en partie · ⬜ à faire
 - ✅ **Effets** : EQ 3 bandes, compresseur, delay au tempo (ping-pong), reverb, distorsion,
   filtre, limiteur avec anticipation.
 - ✅ Tous leurs réglages sont automatisables.
+- ✅ **Swing** par pattern, dans le rack : une double-croche sur deux jouée en retard.
 - ✅ **Sidechain** : un compresseur peut écouter une autre piste de mixage (la basse qui
   « pompe » sous le kick) ; une écoute qui ferait une boucle est ignorée.
 - ✅ LFO du synthé : il fait bouger le filtre, la hauteur ou le volume.
