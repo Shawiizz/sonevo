@@ -91,9 +91,9 @@ import { SOUND_DRAG } from './playlist';
       </div>
     } @else {
       <div class="path">
-        @if (trail().length > 1) {
+        @if (trail().length) {
           <button class="s-bar-btn" (click)="up()" [title]="t('Back')">
-            <s-icon name="chevron" [size]="12" style="transform: rotate(180deg)" />
+            <s-icon name="back" [size]="12" />
           </button>
         }
         <span class="where">{{ here()?.name ?? t('Places') }}</span>
