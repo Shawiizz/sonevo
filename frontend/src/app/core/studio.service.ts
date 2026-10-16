@@ -372,7 +372,6 @@ export class Studio {
     return (await this.edit({ type: 'putInsert', insert, index: null })) ? insert : null;
   }
 
-  /** A new track holding an automation of `target`, flat at `value` (0 to 1) over the song. */
   /** Where the song is now, between two statuses; none when it is not playing as a song. */
   private songTick(): number | null {
     const status = this.status();
@@ -481,6 +480,7 @@ export class Studio {
     });
   }
 
+  /** A new track holding an automation of `target`, flat at `value` (0 to 1) over the song. */
   async automate(target: Target, value: number, name: string): Promise<void> {
     const song = this.song();
     if (!song) return;

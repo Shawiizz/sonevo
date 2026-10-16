@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
-import { builtinName, Channel, COLORS, newId, Note, STEP } from '../core/models';
+import { builtinName, Channel, COLORS, Insert, newId, Note, STEP } from '../core/models';
 import { Studio } from '../core/studio.service';
 import { Files } from '../shell/files.service';
 import { Icon } from '../shared/icon';
@@ -505,11 +505,22 @@ export class ChannelRack {
     this.menus.below(event, items);
   }
 
+  /** A mixer track of the channel's own, named and coloured as it is: undone in one. */
   private async routeToNew(channel: Channel): Promise<void> {
-    const insert = await this.studio.addInsert();
-    if (!insert) return;
-    await this.studio.putInsert({ ...insert, name: channel.name, color: channel.color });
-    await this.studio.putChannel({ ...channel, insert: insert.id });
+    const insert: Insert = {
+      id: newId(),
+      name: channel.name,
+      color: channel.color,
+      volume: 1,
+      pan: 0,
+    };
+    await this.studio.edit({
+      type: 'batch',
+      edits: [
+        { type: 'putInsert', insert, index: null },
+        { type: 'putChannel', channel: { ...channel, insert: insert.id }, index: null },
+      ],
+    });
   }
 
   protected rowMenu(event: MouseEvent, channel: Channel): void {
