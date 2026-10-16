@@ -9,6 +9,9 @@ use crate::{Context, Event, Processor};
 const WAVES: &[&str] = &["Saw", "Square", "Triangle", "Sine"];
 const UNISON: &[&str] = &["1", "2", "3", "4"];
 const VOICE_CHOICES: &[&str] = &["Many", "One"];
+const LFO_SYNC: &[&str] = &["Free", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/4 T", "1/8 T"];
+/// Each choice's beats to an LFO cycle, free first.
+const LFO_BEATS: [f64; 8] = [0.0, 4.0, 2.0, 1.0, 0.5, 0.25, 2.0 / 3.0, 1.0 / 3.0];
 
 pub const PARAMS: &[Param] = &[
     Param::choice("wave1", "Oscillator 1", WAVES, 0),
@@ -35,6 +38,7 @@ pub const PARAMS: &[Param] = &[
     Param::linear("lfoAmount", "LFO depth", 0.0, 1.0, 0.0, ""),
     Param::choice("voices", "Voices", VOICE_CHOICES, 0),
     Param::linear("glide", "Glide", 0.0, 1.0, 0.0, "s"),
+    Param::choice("lfoSync", "LFO in time", LFO_SYNC, 0),
 ];
 
 /// What the LFO moves: the filter (a wah), the pitch (a vibrato), the level (a tremolo).
@@ -91,7 +95,9 @@ impl Voice {
 
 pub struct Synth {
     sample_rate: f32,
-    values: [f64; 24],
+    values: [f64; 25],
+    /// The song's, as the last block played it: the LFO in time follows it.
+    tempo: f64,
     /// The key last pressed, glided from.
     last: Option<f32>,
     /// With a single voice, the keys held in the order pressed.
@@ -110,7 +116,8 @@ impl Synth {
     pub fn new(sample_rate: f32) -> Synth {
         let mut synth = Synth {
             sample_rate,
-            values: [0.0; 24],
+            values: [0.0; 25],
+            tempo: 120.0,
             last: None,
             held: [0; HELD],
             holding: 0,
@@ -145,6 +152,16 @@ impl Synth {
         for voice in &mut self.voices {
             voice.amp.set(rate, s[14] as f32, s[15] as f32, s[16] as f32, s[17] as f32);
             voice.env.set(rate, s[10] as f32, s[11] as f32, s[12] as f32, s[13] as f32);
+        }
+    }
+
+    /// How many times a second the LFO goes round: its speed, or the song's beat.
+    fn lfo_rate(&self) -> f32 {
+        let beats = LFO_BEATS[(self.values[24].round() as usize).min(LFO_BEATS.len() - 1)];
+        if beats > 0.0 {
+            (self.tempo / 60.0 / beats) as f32
+        } else {
+            self.v(20)
         }
     }
 
@@ -253,7 +270,8 @@ impl Synth {
         let unison = self.unison;
         let layout = self.layout;
         let gain = self.gain;
-        let (lfo_target, lfo_step, depth) = (self.values[19].round() as i32, self.v(20) / rate, self.v(21));
+        let (lfo_target, lfo_step, depth) =
+            (self.values[19].round() as i32, self.lfo_rate() / rate, self.v(21));
         let lfo_start = self.lfo;
         // the glide nears its key by this much each time the filter is set: within 5% in its time
         let glide = self.values[23] as f32;
@@ -325,7 +343,8 @@ impl Processor for Synth {
         }
     }
 
-    fn process(&mut self, _context: &Context, events: &[Event], left: &mut [f32], right: &mut [f32]) {
+    fn process(&mut self, context: &Context, events: &[Event], left: &mut [f32], right: &mut [f32]) {
+        self.tempo = context.tempo.max(1.0);
         left.fill(0.0);
         right.fill(0.0);
         let frames = left.len();
@@ -343,7 +362,7 @@ impl Processor for Synth {
             }
         }
         self.render(&mut left[done..], &mut right[done..]);
-        self.lfo = (self.lfo + frames as f32 * self.v(20) / self.sample_rate).fract();
+        self.lfo = (self.lfo + frames as f32 * self.lfo_rate() / self.sample_rate).fract();
     }
 
     fn reset(&mut self) {
@@ -351,5 +370,24 @@ impl Processor for Synth {
         self.holding = 0;
         self.last = None;
         self.apply();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_lfo_in_time_goes_round_with_the_beat() {
+        let mut synth = Synth::new(48_000.0);
+        synth.set(20, 3.0);
+        assert_eq!(synth.lfo_rate(), 3.0);
+        synth.tempo = 120.0;
+        synth.set(24, 3.0);
+        assert_eq!(synth.lfo_rate(), 2.0, "a quarter at 120 beats a minute");
+        synth.set(24, 4.0);
+        assert_eq!(synth.lfo_rate(), 4.0, "an eighth");
+        synth.set(24, 1.0);
+        assert_eq!(synth.lfo_rate(), 0.5, "a bar");
     }
 }

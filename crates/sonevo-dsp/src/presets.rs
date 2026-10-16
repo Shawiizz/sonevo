@@ -47,7 +47,7 @@ pub const PRESETS: &[Preset] = &[
     ]),
     preset(SYNTH, "Wobble bass", &[
         ("wave1", 0.0), ("wave2", 1.0), ("semitones2", -12.0), ("cutoff", 300.0), ("resonance", 0.5),
-        ("envAmount", 0.0), ("sustain", 1.0), ("release", 0.1), ("lfoTarget", 0.0), ("lfoRate", 2.0),
+        ("envAmount", 0.0), ("sustain", 1.0), ("release", 0.1), ("lfoTarget", 0.0), ("lfoSync", 4.0),
         ("lfoAmount", 0.7), ("volume", -8.0), ("voices", 1.0),
     ]),
     preset(SYNTH, "Soft pad", &[
