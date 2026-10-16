@@ -1188,9 +1188,8 @@ export class Playlist implements OnDestroy {
         {
           label: t('Its volume…'),
           run: () =>
-            this.menus.show(
-              event,
-              [6, 3, 0, -3, -6, -12].map((db) => {
+            this.menus.show(event, [
+              ...[6, 3, 0, -3, -6, -12].map((db) => {
                 const gain = 10 ** (db / 20);
                 const now = Math.abs(20 * Math.log10(Math.max(content.gain, 1e-6)) - db) < 0.5;
                 return {
@@ -1198,7 +1197,16 @@ export class Playlist implements OnDestroy {
                   run: change({ gain }),
                 };
               }),
-            ),
+              { separator: true, label: '' },
+              {
+                label: t('As loud as it goes, never clipping'),
+                run: () => {
+                  const peaks = this.studio.sample(content.sample)?.peaks ?? [];
+                  const loudest = peaks.reduce((a, p) => Math.max(a, p), 0);
+                  if (loudest > 0) void change({ gain: 0.98 / loudest })();
+                },
+              },
+            ]),
         },
         { label: t('Fade in…'), run: fades('fadeIn') },
         {

@@ -237,7 +237,7 @@ fn sample_info(app: State<App>, name: String) -> Answer<SampleInfo> {
     if let Some(info) = app.sample_infos.lock().unwrap_or_else(|e| e.into_inner()).get(&name) {
         return Ok(info.clone());
     }
-    if name.contains(['/', '\\']) {
+    if !sonevo_engine::Samples::plain_name(&name) {
         return Err(format!("{name} is not a sound of the song"));
     }
     let path = app.studio().working_folder().join("samples").join(&name);
