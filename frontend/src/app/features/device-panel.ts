@@ -117,7 +117,7 @@ function folded(text: string): string {
         }
       </div>
       <div class="body">
-        <p class="owner">{{ shown.owner }}</p>
+        <p class="owner">{{ named(shown.owner) }}</p>
         @if (about(); as about) {
           <p class="about">{{ t(about) }}</p>
         }

@@ -248,6 +248,8 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  'Add an effect…': 'Ajouter un effet…',
+  'Add an effect to its sounds…': 'Ajouter un effet à ses sons…',
   'Fitting the loop to the tempo…': 'Calage de la boucle au tempo…',
   'Play it again and again': 'Le répéter en boucle',
   'Fit it to the song’s tempo': 'Le recaler au tempo du morceau',

@@ -378,6 +378,35 @@ export class Studio {
     if (done) await this.openPattern(pattern.id);
   }
 
+  /** The effect `kind` put on the sounds the playlist's track `trackId` plays: on its mixer
+   * track, or on one made for it, named as it is, if it plays into none; the effect shown. */
+  async addTrackEffect(trackId: Id, kind: Device['kind']): Promise<void> {
+    const song = this.song();
+    const track = song?.tracks.find((t) => t.id === trackId);
+    if (!song || !track) return;
+    const effect: Device = { id: newId(), kind, params: {} };
+    const into = song.inserts.find((i) => i.id === track.insert);
+    const edits: Edit[] = [];
+    if (into) {
+      const insert = { ...into, effects: [...(into.effects ?? []), effect] };
+      edits.push({ type: 'putInsert', insert, index: null });
+    } else {
+      const insert: Insert = {
+        id: newId(),
+        name: track.name,
+        color: COLORS[song.inserts.length % COLORS.length],
+        volume: 1,
+        pan: 0,
+        effects: [effect],
+      };
+      edits.push(
+        { type: 'putInsert', insert, index: null },
+        { type: 'putTrack', track: { ...track, insert: insert.id }, index: null },
+      );
+    }
+    if (await this.edit({ type: 'batch', edits })) this.deviceId.set(effect.id);
+  }
+
   async addInsert(): Promise<Insert | null> {
     const song = this.song();
     if (!song) return null;

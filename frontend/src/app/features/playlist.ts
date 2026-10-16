@@ -14,6 +14,7 @@ import { I18n } from '../core/i18n';
 import {
   Clip,
   ClipContent,
+  Device,
   Edit,
   Id,
   Marker,
@@ -391,7 +392,8 @@ export class Playlist implements OnDestroy {
         track.mute ? palette().text3 : palette().text,
         12,
       );
-      if (into) s.text(`→ ${into.name}`, 30, y + this.laneHeight / 2 + 1, palette().text3, 10);
+      if (into)
+        s.text(`→ ${this.named(into.name)}`, 30, y + this.laneHeight / 2 + 1, palette().text3, 10);
     });
     g.rect(HEADERS - 1, RULER, 1, height - RULER).fill(palette().line);
 
@@ -1085,6 +1087,10 @@ export class Playlist implements OnDestroy {
           }),
       },
       {
+        label: t('Add an effect to its sounds…'),
+        run: () => this.menus.show(event, this.effects(track.id)),
+      },
+      {
         label: t('Play its sounds into…'),
         run: () => {
           const song = this.studio.song();
@@ -1109,6 +1115,21 @@ export class Playlist implements OnDestroy {
         run: () => this.studio.edit({ type: 'removeTrack', id: track.id }),
       },
     ]);
+  }
+
+  /** The effects that may be put on the sounds of the track `track`: Sonevo's, then the
+   * plugins installed. */
+  private effects(track: Id): MenuItem[] {
+    const add = (kind: Device['kind']) => () => void this.studio.addTrackEffect(track, kind);
+    const builtins: MenuItem[] = this.studio
+      .devices()
+      .filter((d) => !d.instrument)
+      .map((d) => ({ label: this.t(d.label), run: add({ type: 'builtin', name: d.name }) }));
+    const plugins: MenuItem[] = this.studio
+      .plugins()
+      .filter((p) => !p.instrument)
+      .map((p) => ({ label: p.name, run: add({ type: 'clap', bundle: p.bundle, plugin: p.id }) }));
+    return plugins.length ? [...builtins, { separator: true, label: '' }, ...plugins] : builtins;
   }
 
   protected double(event: MouseEvent): void {
@@ -1258,6 +1279,10 @@ export class Playlist implements OnDestroy {
         {
           label: content.reverse ? t('Play it forwards') : t('Play it backwards'),
           run: change({ reverse: !content.reverse }),
+        },
+        {
+          label: t('Add an effect…'),
+          run: () => this.menus.show(event, this.effects(clip.track)),
         },
         {
           label: `${content.repeat ? '✓ ' : ''}${t('Play it again and again')}`,
