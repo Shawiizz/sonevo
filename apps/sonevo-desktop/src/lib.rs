@@ -3,6 +3,7 @@
 
 mod autosave;
 mod demo;
+mod midi;
 mod settings;
 mod studio;
 
@@ -21,6 +22,9 @@ struct App {
     plugins: Mutex<Vec<sonevo_plugins::Found>>,
     sample_infos: Mutex<std::collections::HashMap<String, SampleInfo>>,
     kept: Mutex<Vec<autosave::Kept>>,
+    /// The channel the keyboards play: the one chosen in the interface.
+    played: Mutex<Option<Id>>,
+    keyboards: midi::Inputs,
     settings: Mutex<Settings>,
     settings_path: PathBuf,
 }
@@ -535,6 +539,18 @@ fn keep(app: AppHandle) {
     });
 }
 
+/// The channel the keyboards play from now on.
+#[tauri::command]
+fn play_with_keyboards(app: State<App>, channel: Option<Id>) {
+    *app.played.lock().unwrap_or_else(|e| e.into_inner()) = channel;
+}
+
+/// The keyboards plugged in, by name.
+#[tauri::command]
+fn keyboards(app: State<App>) -> Vec<String> {
+    app.keyboards.lock().unwrap_or_else(|e| e.into_inner()).keys().cloned().collect()
+}
+
 /// The songs an earlier run kept and never saved, found as Sonevo started.
 #[tauri::command]
 fn kept(app: State<App>) -> Vec<autosave::Kept> {
@@ -592,6 +608,20 @@ pub fn run() {
                 plugins: Mutex::new(sonevo_plugins::scan(&folders)),
                 sample_infos: Mutex::new(std::collections::HashMap::new()),
                 kept: Mutex::new(kept),
+                played: Mutex::new(None),
+                keyboards: midi::listen({
+                    let handle = handle.clone();
+                    move |key, velocity, on| {
+                        let state = handle.state::<App>();
+                        let channel = *state.played.lock().unwrap_or_else(|e| e.into_inner());
+                        if let Some(channel) = channel {
+                            if let Some(engine) = state.studio().engine() {
+                                engine.note(channel, key, velocity, on);
+                            }
+                        }
+                        let _ = handle.emit("key", (key, on));
+                    }
+                }),
                 settings: Mutex::new(settings),
                 settings_path,
             };
@@ -632,6 +662,8 @@ pub fn run() {
             kept,
             recover,
             leave,
+            play_with_keyboards,
+            keyboards,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

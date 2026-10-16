@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, effect, Injectable, signal } from '@angular/core';
 import { api } from './api';
 import {
   barLength,
@@ -81,6 +81,11 @@ export class Studio {
     const channel = this.channel();
     return channel ? { device: channel.instrument, owner: channel.name } : null;
   });
+
+  constructor() {
+    // the keyboards plugged in play the channel chosen
+    effect(() => void api.playWithKeyboards(this.channel()?.id ?? null).catch(() => undefined));
+  }
 
   async start(): Promise<void> {
     const [view, devices, plugins] = await Promise.all([api.song(), api.devices(), api.plugins()]);

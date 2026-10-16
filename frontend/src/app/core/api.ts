@@ -62,6 +62,8 @@ export const api = {
   kept: () => invoke<Kept[]>('kept'),
   recover: (path: string, open: boolean) => invoke<View>('recover', { path, open }),
   leave: () => invoke<void>('leave'),
+  playWithKeyboards: (channel: Id | null) => invoke<void>('play_with_keyboards', { channel }),
+  keyboards: () => invoke<string[]>('keyboards'),
   onStatus: (handler: (status: Status) => void): Promise<UnlistenFn> =>
     listen<Status>('status', (e) => handler(e.payload)),
 };

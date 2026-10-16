@@ -26,6 +26,7 @@ tauri-plugin-dialog = "2"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+midir = "0.11"
 
 [dev-dependencies]
 tempfile.workspace = true

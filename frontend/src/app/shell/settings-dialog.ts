@@ -49,6 +49,20 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
           <p class="status" [class.bad]="!!audio().error || audio().failed">{{ audioText() }}</p>
         </section>
         <section>
+          <h3>{{ t('Keyboards') }}</h3>
+          <p class="status">
+            @if (keyboards().length) {
+              {{ t('Plugged in, playing the channel chosen:') }} {{ keyboards().join(', ') }}
+            } @else {
+              {{
+                t(
+                  'No MIDI keyboard plugged in. One plugged in is found by itself, and plays the channel chosen.'
+                )
+              }}
+            }
+          </p>
+        </section>
+        <section>
           <h3>{{ t('Plugins') }}</h3>
           <p class="status">
             {{
@@ -184,11 +198,13 @@ export class SettingsDialog {
   protected readonly buffers = BUFFERS;
   protected readonly settings = signal<Settings | null>(null);
   protected readonly outputs = signal<OutputInfo[]>([]);
+  protected readonly keyboards = signal<string[]>([]);
   protected readonly audio = () => this.studio.status().audio;
 
   constructor() {
     void api.settings().then((s) => this.settings.set(s));
     void api.outputs().then((o) => this.outputs.set(o));
+    void api.keyboards().then((k) => this.keyboards.set(k));
   }
 
   protected outputsOf(driver: string): OutputInfo[] {
