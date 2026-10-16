@@ -190,7 +190,17 @@ export interface Settings {
   language: string | null;
   recent: string[];
   folders: string[];
+  pluginFolders: string[];
   welcomed: boolean;
+}
+
+/** A plugin installed on this computer. */
+export interface PluginInfo {
+  bundle: string;
+  id: string;
+  name: string;
+  vendor: string;
+  instrument: boolean;
 }
 
 export interface Entry {

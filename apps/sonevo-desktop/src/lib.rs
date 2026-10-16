@@ -17,6 +17,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 struct App {
     studio: Mutex<Studio>,
+    plugins: Mutex<Vec<sonevo_plugins::Found>>,
     settings: Mutex<Settings>,
     settings_path: PathBuf,
 }
@@ -275,6 +276,42 @@ fn devices() -> Vec<DeviceInfo> {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct PluginView {
+    bundle: PathBuf,
+    id: String,
+    name: String,
+    vendor: String,
+    instrument: bool,
+}
+
+/// The plugins found on this computer.
+#[tauri::command]
+fn plugins(app: State<App>) -> Vec<PluginView> {
+    app.plugins
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .map(|f| PluginView {
+            bundle: f.bundle.clone(),
+            id: f.id.clone(),
+            name: f.name.clone(),
+            vendor: f.vendor.clone(),
+            instrument: f.instrument,
+        })
+        .collect()
+}
+
+/// Looks for the plugins again, in the folders they are installed in and those added.
+#[tauri::command(async)]
+fn scan_plugins(app: State<App>) -> Vec<PluginView> {
+    let mut folders = sonevo_plugins::standard_folders();
+    folders.extend(app.settings().plugin_folders.iter().cloned());
+    *app.plugins.lock().unwrap_or_else(|e| e.into_inner()) = sonevo_plugins::scan(&folders);
+    plugins(app)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct OutputView {
     driver: &'static str,
     name: String,
@@ -423,7 +460,14 @@ pub fn run() {
                     let _ = studio.open(&last);
                 }
             }
-            let state = App { studio: Mutex::new(studio), settings: Mutex::new(settings), settings_path };
+            let mut folders = sonevo_plugins::standard_folders();
+            folders.extend(settings.plugin_folders.iter().cloned());
+            let state = App {
+                studio: Mutex::new(studio),
+                plugins: Mutex::new(sonevo_plugins::scan(&folders)),
+                settings: Mutex::new(settings),
+                settings_path,
+            };
             state.save_settings();
             app.manage(state);
             watch(handle);
@@ -454,6 +498,8 @@ pub fn run() {
             make_version,
             restore_version,
             compare_version,
+            plugins,
+            scan_plugins,
         ])
         .run(tauri::generate_context!())
         .expect("Sonevo could not start");

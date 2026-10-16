@@ -17,6 +17,8 @@ pub struct Settings {
     pub recent: Vec<PathBuf>,
     /// The folders the browser shows sounds from.
     pub folders: Vec<PathBuf>,
+    /// Folders of plugins, besides those plugins are installed in.
+    pub plugin_folders: Vec<PathBuf>,
     /// Whether the demo was opened already.
     pub welcomed: bool,
 }
@@ -30,6 +32,7 @@ impl Default for Settings {
             language: None,
             recent: Vec::new(),
             folders: Vec::new(),
+            plugin_folders: Vec::new(),
             welcomed: false,
         }
     }

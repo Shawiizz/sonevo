@@ -61,7 +61,26 @@ import { SOUND_DRAG } from './playlist';
           </div>
         }
         <h4>{{ t('Plugins') }}</h4>
-        <p class="hint">{{ t('No CLAP or VST3 plugin found on this computer yet.') }}</p>
+        @for (p of studio.plugins(); track p.bundle + p.id) {
+          @if (p.instrument) {
+            <button
+              class="item"
+              (click)="studio.addPlugin(p)"
+              [title]="p.vendor + ' · ' + t('Add to the channel rack')"
+            >
+              <s-icon name="synth" />
+              <span>{{ p.name }}</span>
+              <s-icon class="plus" name="plus" [size]="12" />
+            </button>
+          } @else {
+            <div class="item static" [title]="p.vendor">
+              <s-icon name="effect" />
+              <span>{{ p.name }}</span>
+            </div>
+          }
+        } @empty {
+          <p class="hint">{{ t('No CLAP plugin found on this computer yet.') }}</p>
+        }
       </div>
     } @else {
       <div class="path">

@@ -203,8 +203,10 @@ export const FR: Record<string, string> = {
   'Add effects from a mixer track, with its « + Effect ».':
     'Ajoute des effets depuis une piste de mixage, avec son « + Effet ».',
   Plugins: 'Plugins',
-  'No CLAP or VST3 plugin found on this computer yet.':
-    'Aucun plugin CLAP ou VST3 trouvé sur cet ordinateur pour l’instant.',
+  'No CLAP plugin found on this computer yet.':
+    'Aucun plugin CLAP trouvé sur cet ordinateur pour l’instant.',
+  'A plugin installed on this computer, played in a process of its own: should it crash, Sonevo plays on.':
+    'Un plugin installé sur cet ordinateur, joué dans son propre processus : s’il plante, Sonevo continue de jouer.',
   Back: 'Retour',
   Places: 'Emplacements',
   'Add a folder': 'Ajouter un dossier',
@@ -253,6 +255,11 @@ export const FR: Record<string, string> = {
   'Exporting…': 'Export en cours…',
   Exported: 'Exporté',
   'Choose sounds': 'Choisir des sons',
+  '{count} plugins found. Sonevo looks where CLAP plugins are installed, and in the folders below.':
+    '{count} plugins trouvés. Sonevo regarde là où s’installent les plugins CLAP, et dans les dossiers ci-dessous.',
+  'Looking…': 'Recherche…',
+  'Look again': 'Chercher à nouveau',
+  'A folder of plugins': 'Un dossier de plugins',
   Versions: 'Versions',
   'Save the song to keep its versions: each save is one, and you can name the ones that matter.':
     'Enregistre le morceau pour garder ses versions : chaque enregistrement en est une, et tu peux nommer celles qui comptent.',

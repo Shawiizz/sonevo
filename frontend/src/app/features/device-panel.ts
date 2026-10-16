@@ -37,7 +37,7 @@ const ABOUT: Record<string, string> = {
         <s-icon [name]="info()?.instrument ? 'synth' : 'effect'" />
         <span>{{ title() }}</span>
         <span class="s-grow"></span>
-        @if (!info()?.instrument) {
+        @if (effect()) {
           <button
             class="s-bar-btn"
             [class.on]="shown.device.enabled !== false"
@@ -97,7 +97,7 @@ const ABOUT: Record<string, string> = {
             }
           </div>
         }
-        @if (!info()) {
+        @if (!info() && !studio.plugin(shown.device)) {
           <p class="s-empty">{{ t('This plugin is not available on this computer.') }}</p>
         }
       </div>
@@ -212,9 +212,26 @@ export class DevicePanel {
     const info = this.info();
     const device = this.shown()?.device;
     if (info) return this.t(info.label);
-    return device?.kind.type === 'clap' ? device.kind.plugin : '';
+    if (!device || device.kind.type !== 'clap') return '';
+    return this.studio.plugin(device)?.name ?? device.kind.plugin;
   });
-  protected readonly about = computed(() => ABOUT[this.info()?.name ?? ''] ?? null);
+  /** Whether the device shown is an effect of the mixer, to be turned off and on. */
+  protected readonly effect = computed(() => {
+    const song = this.studio.song();
+    const id = this.shown()?.device.id;
+    return (
+      !!song && [...song.inserts, song.master].some((i) => i.effects?.some((e) => e.id === id))
+    );
+  });
+  protected readonly about = computed(() => {
+    const device = this.shown()?.device;
+    if (device?.kind.type === 'clap') {
+      return this.studio.plugin(device)
+        ? 'A plugin installed on this computer, played in a process of its own: should it crash, Sonevo plays on.'
+        : null;
+    }
+    return ABOUT[this.info()?.name ?? ''] ?? null;
+  });
 
   /** The settings in groups, as the synth's are: the oscillators, the filter, the shape. */
   protected readonly groups = computed(() => {

@@ -12,6 +12,7 @@ import {
   newId,
   Note,
   Pattern,
+  PluginInfo,
   Status,
   View,
 } from './models';
@@ -36,6 +37,7 @@ export class Studio {
   readonly view = signal<View | null>(null);
   readonly status = signal<Status>(SILENT);
   readonly devices = signal<DeviceInfo[]>([]);
+  readonly plugins = signal<PluginInfo[]>([]);
   readonly error = signal<string | null>(null);
 
   readonly song = computed(() => this.view()?.song ?? null);
@@ -76,8 +78,9 @@ export class Studio {
   });
 
   async start(): Promise<void> {
-    const [view, devices] = await Promise.all([api.song(), api.devices()]);
+    const [view, devices, plugins] = await Promise.all([api.song(), api.devices(), api.plugins()]);
     this.devices.set(devices);
+    this.plugins.set(plugins);
     this.show(view);
     await api.onStatus((status) => this.status.set(status));
   }
@@ -151,9 +154,26 @@ export class Studio {
 
   /** A new channel playing `name`, a built-in instrument; selected once added. */
   async addChannel(name: string, label: string, sample?: string): Promise<void> {
+    const instrument: Device = { id: newId(), kind: { type: 'builtin', name }, params: {}, sample };
+    await this.addChannelOf(instrument, label);
+  }
+
+  /** A new channel playing `plugin`. */
+  async addPlugin(plugin: PluginInfo): Promise<void> {
+    const kind = { type: 'clap' as const, bundle: plugin.bundle, plugin: plugin.id };
+    await this.addChannelOf({ id: newId(), kind, params: {} }, plugin.name);
+  }
+
+  /** The plugin a device plays, if it is one installed. */
+  plugin(device: Device): PluginInfo | null {
+    const kind = device.kind;
+    if (kind.type !== 'clap') return null;
+    return this.plugins().find((p) => p.id === kind.plugin) ?? null;
+  }
+
+  private async addChannelOf(instrument: Device, label: string): Promise<void> {
     const song = this.song();
     if (!song) return;
-    const instrument: Device = { id: newId(), kind: { type: 'builtin', name }, params: {}, sample };
     const channel: Channel = {
       id: newId(),
       name: label,

@@ -7,7 +7,7 @@ use sonevo_engine::{Engine, Meter, Mode};
 use sonevo_project::{Edit, History, Id, Note, Song};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 
 /// The song as the interface shows it: its patterns' notes with it.
 #[derive(Serialize)]
@@ -277,7 +277,12 @@ impl Studio {
             renderer
         });
         match started.map(|output| (output, engine_in.recv())) {
-            Ok((output, Ok(engine))) => {
+            Ok((output, Ok(mut engine))) => {
+                engine.set_plugins(Arc::new(|bundle: &str, id: &str, rate: f32| {
+                    sonevo_plugins::Remote::start(Path::new(bundle), id, rate)
+                        .map(|remote| Box::new(remote) as Box<dyn sonevo_dsp::Processor>)
+                        .map_err(|e| e.to_string())
+                }));
                 self.output = Some(output);
                 self.engine = Some(engine);
                 self.audio_error = None;

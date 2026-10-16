@@ -334,7 +334,7 @@ export class Mixer {
 
   protected label(effect: Device): string {
     const info = this.studio.info(effect);
-    return info ? this.t(info.label) : effect.kind.type === 'clap' ? effect.kind.plugin : '?';
+    return info ? this.t(info.label) : (this.studio.plugin(effect)?.name ?? '?');
   }
 
   protected peak(insert: Insert): number {
@@ -401,21 +401,25 @@ export class Mixer {
   }
 
   protected addMenu(event: MouseEvent, insert: Insert): void {
-    const effects = this.studio.devices().filter((d) => !d.instrument);
+    const add = (kind: Device['kind']) => {
+      const effect: Device = { id: newId(), kind, params: {} };
+      void this.studio.putInsert({ ...insert, effects: [...(insert.effects ?? []), effect] });
+      this.studio.deviceId.set(effect.id);
+    };
+    const builtins: MenuItem[] = this.studio
+      .devices()
+      .filter((d) => !d.instrument)
+      .map((d) => ({ label: this.t(d.label), run: () => add({ type: 'builtin', name: d.name }) }));
+    const plugins: MenuItem[] = this.studio
+      .plugins()
+      .filter((p) => !p.instrument)
+      .map((p) => ({
+        label: p.name,
+        run: () => add({ type: 'clap', bundle: p.bundle, plugin: p.id }),
+      }));
     this.menus.below(
       event,
-      effects.map((d) => ({
-        label: this.t(d.label),
-        run: () => {
-          const effect: Device = {
-            id: newId(),
-            kind: { type: 'builtin', name: d.name },
-            params: {},
-          };
-          void this.studio.putInsert({ ...insert, effects: [...(insert.effects ?? []), effect] });
-          this.studio.deviceId.set(effect.id);
-        },
-      })),
+      plugins.length ? [...builtins, { separator: true, label: '' }, ...plugins] : builtins,
     );
   }
 

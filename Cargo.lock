@@ -4091,6 +4091,7 @@ dependencies = [
  "sonevo-audio",
  "sonevo-dsp",
  "sonevo-engine",
+ "sonevo-plugins",
  "sonevo-project",
  "sonevo-versions",
  "tauri",

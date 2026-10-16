@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { open } from '@tauri-apps/plugin-dialog';
 import { api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { OutputInfo, Settings } from '../core/models';
@@ -46,6 +47,31 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
             </select>
           </label>
           <p class="status" [class.bad]="!!audio().error || audio().failed">{{ audioText() }}</p>
+        </section>
+        <section>
+          <h3>{{ t('Plugins') }}</h3>
+          <p class="status">
+            {{
+              t(
+                '{count} plugins found. Sonevo looks where CLAP plugins are installed, and in the folders below.',
+                { count: studio.plugins().length }
+              )
+            }}
+          </p>
+          @for (folder of s.pluginFolders; track folder) {
+            <div class="folder">
+              <span class="s-mono">{{ folder }}</span>
+              <button class="s-bar-btn" (click)="removeFolder(folder)" [title]="t('Remove')">
+                ×
+              </button>
+            </div>
+          }
+          <div class="row">
+            <button class="s-btn" (click)="addFolder()">{{ t('Add a folder') }}</button>
+            <button class="s-btn" (click)="scan()" [disabled]="scanning()">
+              {{ scanning() ? t('Looking…') : t('Look again') }}
+            </button>
+          </div>
         </section>
         <section>
           <h3>{{ t('Language') }}</h3>
@@ -123,6 +149,23 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
         color: var(--s-warn);
       }
     }
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    .folder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      span {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--s-text-2);
+        font-size: 11px;
+      }
+    }
     .actions {
       display: flex;
       justify-content: flex-end;
@@ -134,7 +177,8 @@ const BUFFERS = [64, 128, 256, 512, 1024, 2048];
 export class SettingsDialog {
   protected readonly t = inject(I18n).t;
   private readonly i18n = inject(I18n);
-  private readonly studio = inject(Studio);
+  protected readonly studio = inject(Studio);
+  protected readonly scanning = signal(false);
   readonly closed = output();
 
   protected readonly buffers = BUFFERS;
@@ -165,6 +209,31 @@ export class SettingsDialog {
     const next = { ...current, ...change };
     this.settings.set(next);
     await api.setSettings(next);
+  }
+
+  protected async addFolder(): Promise<void> {
+    const folder = (await open({ directory: true, title: this.t('A folder of plugins') })) as
+      string | null;
+    const settings = this.settings();
+    if (!folder || !settings || settings.pluginFolders.includes(folder)) return;
+    await this.set({ pluginFolders: [...settings.pluginFolders, folder] });
+    await this.scan();
+  }
+
+  protected async removeFolder(folder: string): Promise<void> {
+    const settings = this.settings();
+    if (!settings) return;
+    await this.set({ pluginFolders: settings.pluginFolders.filter((f) => f !== folder) });
+    await this.scan();
+  }
+
+  protected async scan(): Promise<void> {
+    this.scanning.set(true);
+    try {
+      this.studio.plugins.set(await api.scanPlugins());
+    } finally {
+      this.scanning.set(false);
+    }
   }
 
   protected async setLanguage(language: string | null): Promise<void> {
